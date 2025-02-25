@@ -1,18 +1,18 @@
 import { createRoot } from 'react-dom/client';
-import { Provider as ReduxProvider } from 'react-redux';
 import './index.css';
 import { PersistGate } from 'redux-persist/integration/react';
-import Provider from './providers/index.tsx';
+import { Provider as ReduxProvider } from 'react-redux';
+import { persistor, store } from './store/index.ts';
+import router from './Router.tsx';
 import { RouterProvider } from 'react-router-dom';
-import { persistor, store } from './redux/index.ts';
-import router from './routes/index.tsx';
+import Provider from './Provider.tsx';
 
 createRoot(document.getElementById('root')!).render(
-  <PersistGate loading={null} persistor={persistor}>
-    <ReduxProvider store={store}>
-      <Provider>
-        <RouterProvider router={router} />
-      </Provider>
-    </ReduxProvider>
-  </PersistGate>
+    <PersistGate loading={null} persistor={persistor}>
+      <ReduxProvider store={store}>
+        <Provider>
+          <RouterProvider router={router} />
+        </Provider>
+      </ReduxProvider>
+    </PersistGate>
 );

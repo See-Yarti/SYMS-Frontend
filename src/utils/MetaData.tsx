@@ -1,9 +1,10 @@
-import { Helmet } from 'react-helmet-async';
+import { Helmet } from "react-helmet-async"
+
 
 type MetaDataProps = {
-  title?: string;
-  description?: string;
-};
+  title?: string
+  description?: string
+}
 
 const MetaData = (props: MetaDataProps) => {
   return (
@@ -11,7 +12,7 @@ const MetaData = (props: MetaDataProps) => {
       <title>{props.title}</title>
       <meta name="description" content={props.description} />
     </Helmet>
-  );
-};
+  )
+}
 
-export default MetaData;
+export default MetaData

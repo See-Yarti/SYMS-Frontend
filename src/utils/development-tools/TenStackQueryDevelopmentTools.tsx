@@ -1,5 +1,5 @@
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { isProduction } from "./variables";
+import { isProduction } from "..";
 
 const TenStackQueryDevelopmentTools = () => {
   if (isProduction) return null;

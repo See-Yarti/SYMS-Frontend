@@ -29,7 +29,6 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       '@typescript-eslint/no-unused-vars': 'warn',
       'unused-imports/no-unused-imports': 'warn',
-      '@typescript-eslint/no-unused-vars-experimental': 'warn',
       '@typescript-eslint/no-explicit-any': 'off',
       'react-hooks/exhaustive-deps': 'warn',
       '@typescript-eslint/no-empty-interface': 'off',
