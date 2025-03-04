@@ -1,5 +1,3 @@
-// src/pages/auth/Login-Form.tsx:
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,21 +5,23 @@ import { Label } from '@/components/ui/label';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { LoginFormValues, loginSchema } from '@/types/auth';
-import { EyeIcon, EyeOffIcon, Key, User } from 'lucide-react'; // Added icons
+import { EyeIcon, EyeOffIcon, Key, User } from 'lucide-react';
 import { Icons } from '@/components/icons';
 import { toast } from 'sonner';
 import { useAppDispatch } from '@/store';
 import { loginUser } from '@/store/features/auth.slice';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import useQueryParams from '@/hooks/useQueryParams';
 
 const LoginForm = () => {
   const [showPassword, setShowPassword] = React.useState<boolean>(false);
   const [isLoading, SetIsLoading] = React.useState<boolean>(false);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-
-  const {
+  const queryParams = useQueryParams();
+  const redirectURL = queryParams.get('redirect') || '/';
+   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
@@ -33,9 +33,9 @@ const LoginForm = () => {
     SetIsLoading(true);
     const re = await dispatch(loginUser(data));
     if (re.meta.requestStatus === 'fulfilled') {
-      toast.success('Login Successful');
+      // toast.success('Login Successful');
       SetIsLoading(false);
-      navigate('/', { replace: true });
+      navigate(redirectURL, { replace: true });
       return;
     }
     if (re.meta.requestStatus === 'rejected') {

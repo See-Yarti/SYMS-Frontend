@@ -1,4 +1,4 @@
-import { axiosInstance } from '@/lib/axios';
+import { axiosInstance } from '@/lib/API';
 import { LoginFormValues } from '@/types/auth';
 import { LoginUserInitialData, User } from '@/types/user';
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
@@ -7,27 +7,15 @@ import { AxiosError } from 'axios';
 export type AuthState = {
   isAuthenticated: boolean;
   user: User | null;
+  _aT: string | null;
   error: string | null;
-  exp: number | null;
-  settings: {
-    notifications: {
-      email: boolean;
-      system: boolean;
-    };
-  };
 };
 
 const initialState: AuthState = {
   isAuthenticated: false,
   user: null,
+  _aT: null,
   error: null,
-  exp: null,
-  settings: {
-    notifications: {
-      email: false,
-      system: false,
-    },
-  },
 };
 
 // Async thunk for login
@@ -35,13 +23,10 @@ export const loginUser = createAsyncThunk(
   'auth/login',
   async (loginData: LoginFormValues, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.post(
-        `/auth/login`,
-        {
-          ...loginData,
-        },
-      );
-      return response.data;
+      const response = await axiosInstance.post(`/auth/controller/login`, {
+        ...loginData,
+      });
+      return response.data.data;
     } catch (error) {
       if (error instanceof AxiosError) {
         return rejectWithValue(error.response?.data?.message || 'Login failed');
@@ -52,7 +37,7 @@ export const loginUser = createAsyncThunk(
 );
 
 // Async thunk for logout
-export const logoutUser = createAsyncThunk('auth/logout', async () => {
+export const logoutUser = createAsyncThunk('auth/controller/logout', async () => {
   await axiosInstance.post('/auth/logout');
 });
 
@@ -60,6 +45,9 @@ export const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
+    updateAccessToken: (state, action: PayloadAction<string>) => {
+      state._aT = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -68,12 +56,15 @@ export const authSlice = createSlice({
         state.error = null;
       })
       // Login fulfilled
-      .addCase(loginUser.fulfilled, (state, action: PayloadAction<LoginUserInitialData>) => {
-        state.isAuthenticated = true;
-        state.user = action.payload.user;
-        state.error = null;
-        state.exp = action.payload.exp;
-      })
+      .addCase(
+        loginUser.fulfilled,
+        (state, action: PayloadAction<LoginUserInitialData>) => {
+          state.isAuthenticated = true;
+          state.user = action.payload.user;
+          state.error = null;
+          state._aT = action.payload._aT;
+        },
+      )
 
       // Login rejected
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -81,14 +72,14 @@ export const authSlice = createSlice({
         state.error = action.payload;
         state.isAuthenticated = false;
         state.user = null;
-        state.exp = null;
+        state._aT = null;
       })
       // Logout fulfilled
       .addCase(logoutUser.fulfilled, (state) => {
         state.isAuthenticated = false;
         state.user = null;
         state.error = null;
-        state.exp = null;
+        state._aT = null;
       });
   },
 });

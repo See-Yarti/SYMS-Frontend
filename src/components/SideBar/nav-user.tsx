@@ -24,7 +24,6 @@ import {
 } from '@/components/ui/sidebar';
 import { Link } from 'react-router-dom';
 import React from 'react';
-import LogoutModal from '../Modals/auth/logout.modal';
 
 export function NavUser({
   user,
@@ -100,7 +99,7 @@ export function NavUser({
               Log out
             </DropdownMenuItem> */}
             <React.Suspense>
-              <LogoutModal>
+              {/* <LogoutModal>
                 <span
                   className={
                     'relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground'
@@ -109,7 +108,7 @@ export function NavUser({
                   <LogOut className="mr-2 h-4 w-4" />
                   Logout
                 </span>
-              </LogoutModal>
+              </LogoutModal> */}
             </React.Suspense>
           </DropdownMenuContent>
         </DropdownMenu>

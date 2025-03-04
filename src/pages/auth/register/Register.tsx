@@ -1,14 +1,14 @@
 // src/pages/auth/Login.tsx:
 
-import LoginForm from './Register-Form';
 import { Label } from '@/components/ui/label';
 import React from 'react';
 import { Link } from 'react-router-dom';
 import BlurFade from '@/components/ui/blur-fade';
 import { useTheme } from 'next-themes';
 import { motion } from 'framer-motion';
+import RegisterForm from './Register-Form';
 
-const Regsiter = () => {
+const Register = () => {
   const { setTheme } = useTheme();
 
   React.useEffect(() => {
@@ -37,7 +37,7 @@ const Regsiter = () => {
                       Enter your data to send query for Registration.
                     </Label>
                   </div>
-                  <LoginForm />
+                  <RegisterForm />
                   <div className="flex items-center justify-center w-full my-5">
                     <div className="flex-1 h-px bg-gray-200" />
                     <span className="px-4 text-gray-500">or</span>
@@ -77,4 +77,4 @@ const Regsiter = () => {
   );
 };
 
-export default Regsiter;
+export default Register;

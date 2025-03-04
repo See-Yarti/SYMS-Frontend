@@ -4,17 +4,11 @@
 
 import { useAppSelector } from '@/store';
 import { User } from '@/types/user';
-import ManufacturerDashboard from './dashboard/ManufacturerDashboard';
-import DistributorDashboard from './dashboard/DistributorDashboard';
 
 // So in that case we have to create a different Home page for different levels of users.
 const Home = () => {
   const user = useAppSelector((state) => state.auth.user) as User;
-  return user.level === 'manufacturer' ? (
-    <ManufacturerDashboard />
-  ) : (
-    <DistributorDashboard />
-  );
+  return <>{user.name}</>;
 };
 
 export default Home;

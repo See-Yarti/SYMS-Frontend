@@ -5,7 +5,7 @@ import { RootState } from './store';
 
 const PublicRoute: React.FC<NavigateProps> = (props) => {
   const isAuthenticated = useSelector(
-    (state: RootState) => state.auth.exp !== null && state.auth.exp > Date.now(),
+    (state: RootState) => state.auth.isAuthenticated,
   );
 
   if (isAuthenticated) {
