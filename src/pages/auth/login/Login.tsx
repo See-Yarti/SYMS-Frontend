@@ -14,6 +14,7 @@ const Login = () => {
 
   React.useEffect(() => {
     setTheme('light'); // Set your theme here after component mounts
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

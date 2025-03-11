@@ -48,13 +48,13 @@ axiosInstance.interceptors.response.use(
         const oldToken = state.auth._aT;
 
         const refreshResponse = await axios.get(
-          `https://${import.meta.env.VITE_API_URL}/auth/controller/token/refresh`,
+          import.meta.env.VITE_API_REFRESH_TOKEN_URL,
           {
             headers: { Authorization: `Bearer ${oldToken}` },
           },
         );
 
-        const newToken = refreshResponse.data.data._aT;
+        const newToken = refreshResponse.data.data.token._aT;
 
         store.dispatch(AuthActions.updateAccessToken(newToken));
 

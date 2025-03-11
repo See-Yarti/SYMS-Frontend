@@ -3,6 +3,8 @@ import { LoginFormValues } from '@/types/auth';
 import { LoginUserInitialData, User } from '@/types/user';
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { AxiosError } from 'axios';
+import { useSelector } from 'react-redux';
+import { RootState, store, useAppSelector } from '..';
 
 export type AuthState = {
   isAuthenticated: boolean;
@@ -38,7 +40,14 @@ export const loginUser = createAsyncThunk(
 
 // Async thunk for logout
 export const logoutUser = createAsyncThunk('auth/controller/logout', async () => {
-  await axiosInstance.post('/auth/logout');
+  const state = store.getState() as RootState;
+  console.log(state)
+  const _at = state.auth._aT; 
+  await axiosInstance.post('/auth/controller/logout',{
+    Headers: {
+      Authorization: `Bearer ${_at}`
+    }
+  });
 });
 
 export const authSlice = createSlice({

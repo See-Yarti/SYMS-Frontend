@@ -1,8 +1,8 @@
 import * as React from 'react';
 import {
   Box,
+  ChevronLeft,
   ChevronRight,
-  GalleryVerticalEnd,
   Layers2,
   Layers3,
   LucideIcon,
@@ -11,19 +11,12 @@ import {
   UsersRound,
 } from 'lucide-react';
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import { NavUser } from '@/components/SideBar/nav-user';
-import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarHeader,
   SidebarMenuSub,
-  SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
 } from '@/components/ui/sidebar';
@@ -35,7 +28,7 @@ import {
 import { Link } from 'react-router-dom';
 import { useAppSelector } from '@/store';
 import { User } from '@/types/user';
-import CommandBox from './command-box';
+import { NavUser } from './nav-user';
 
 type SideBarRoutedItem = {
   title: string;
@@ -47,11 +40,10 @@ type SideBarRoutedItem = {
 
 type DropdownItem = {
   title: string;
-  url: string;
   slug: string;
   icon: LucideIcon;
   type: 'dropdown';
-  items?: SideBarRoutedItem[];
+  items: (SideBarRoutedItem | DropdownItem)[]; // Can contain both
 };
 
 const sideBarlinks: (DropdownItem | SideBarRoutedItem)[] = [
@@ -65,15 +57,14 @@ const sideBarlinks: (DropdownItem | SideBarRoutedItem)[] = [
   {
     title: 'Vendors',
     type: 'routed',
-    url: '/clients',
-    slug: 'clients',
+    url: '/vendors',
+    slug: 'vendors',
     icon: UsersRound,
   },
   {
     title: 'Catalog',
     type: 'dropdown',
     slug: 'catalog',
-    url: '#',
     icon: NotebookTabs,
     items: [
       {
@@ -93,9 +84,24 @@ const sideBarlinks: (DropdownItem | SideBarRoutedItem)[] = [
       {
         title: 'Products',
         slug: 'products',
-        url: '/catalog/products',
-        type: 'routed',
+        type: 'dropdown', // Nested dropdown inside 'Catalog'
         icon: Box,
+        items: [
+          {
+            title: 'New Arrivals',
+            slug: 'new-arrivals',
+            url: '/catalog/products/new-arrivals',
+            type: 'routed',
+            icon: Layers2,
+          },
+          {
+            title: 'Best Sellers',
+            slug: 'best-sellers',
+            url: '/catalog/products/best-sellers',
+            type: 'routed',
+            icon: Layers3,
+          },
+        ],
       },
     ],
   },
@@ -103,105 +109,78 @@ const sideBarlinks: (DropdownItem | SideBarRoutedItem)[] = [
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const firstIndex = location.pathname.split('/')[1] || '/';
-  const { firstName, email, image } = useAppSelector((state) => state.auth.user) as User;
+  const { email, name } = useAppSelector((state) => state.auth.user) as User;
+
+  // Stack to track multi-level navigation
+  const [selectedPath, setSelectedPath] = React.useState<number[]>([]);
+
+  // Get the current menu level based on selectedPath
+  let currentMenu: (DropdownItem | SideBarRoutedItem)[] = sideBarlinks;
+  for (const index of selectedPath) {
+    if (currentMenu[index] && currentMenu[index].type === 'dropdown') {
+      currentMenu = (currentMenu[index] as DropdownItem).items;
+    } else {
+      break;
+    }
+  }
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              variant={'outline'}
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <GalleryVerticalEnd className="size-4" />
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">SYMS</span>
-                <span className="truncate text-xs">Controller</span>
-              </div>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-        <CommandBox />
+        <SidebarMenu></SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup className="px-2">
           <SidebarMenu className="gap-2">
-            <SidebarMenuItem>
-              <SidebarMenuButton className="font-medium">
-                Navigation
-              </SidebarMenuButton>
-              <SidebarMenuSub className="ml-0 border-l-0 px-1.5">
-                {sideBarlinks.map((item) =>
-                  item.type === 'routed' ? (
-                    <SidebarMenuSubItem key={item.title}>
-                      <SidebarMenuButton
-                        tooltip={item.title}
-                      // isActive={item.slug == firstIndex}
-                      >
-                        <Link
-                          to={item.url}
-                          className="flex w-full items-center gap-2"
-                        >
-                          {item.icon && <item.icon className="w-4 h-4" />}
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuSubItem>
-                  ) : (
-                    <Collapsible
-                      key={item.title}
-                      asChild
-                      defaultOpen={item.slug == firstIndex}
-                      className="group/collapsible"
-                    >
-                      <SidebarMenuItem>
-                        <CollapsibleTrigger asChild>
-                          <SidebarMenuButton tooltip={item.title}>
-                            {item.icon && <item.icon />}
-                            <span>{item.title}</span>
-                            <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                          </SidebarMenuButton>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <SidebarMenuSub className="gap-2">
-                            {item.items?.map((subItem) => (
-                              <SidebarMenuSubItem key={subItem.title}>
-                                <SidebarMenuSubButton
-                                  asChild
-                                // isActive={subItem.slug == lastIndex}
-                                >
-                                  <Link to={subItem.url}>
-                                    <>
-                                      {subItem.icon && (
-                                        <subItem.icon className="w-4 h-4" />
-                                      )}
+            {/* Show Back Button if Inside a Nested Menu */}
+            {selectedPath.length > 0 && (
+              <SidebarMenuItem className=''>
+                <SidebarMenuButton
+                  className="font-medium"
+                  onClick={() => setSelectedPath(selectedPath.slice(0, -1))}
+                >
+                  <ChevronLeft className="transition-transform duration-200" />
+                  Back
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
 
-                                      <span>{subItem.title}</span>
-                                    </>
-                                  </Link>
-                                </SidebarMenuSubButton>
-                              </SidebarMenuSubItem>
-                            ))}
-                          </SidebarMenuSub>
-                        </CollapsibleContent>
-                      </SidebarMenuItem>
-                    </Collapsible>
-                  ),
-                )}
-              </SidebarMenuSub>
-            </SidebarMenuItem>
+            {/* Render Current Level Menu */}
+            {currentMenu.map((item, index) =>
+              item.type === 'routed' ? (
+                <SidebarMenuSubItem key={item.title} className='px-1'>
+                  <SidebarMenuButton tooltip={item.title} className='text-sm'>
+                    <Link
+                      to={item.url}
+                      className="flex w-full items-center gap-2"
+                    >
+                      {item.icon && <item.icon className="w-4 h-4" />}
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuSubItem>
+              ) : (
+                <SidebarMenuSubItem key={item.title} className='px-1'>
+                  <SidebarMenuButton
+                    tooltip={item.title}
+                    onClick={() => setSelectedPath([...selectedPath, index])} // Navigate deeper
+                  >
+                    {item.icon && <item.icon className="w-4 h-4" />}
+                    <span>{item.title}</span>
+                    <ChevronRight className="ml-auto transition-transform duration-200 w-4 h-4" />
+                  </SidebarMenuButton>
+                </SidebarMenuSubItem>
+              ),
+            )}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
         <NavUser
           user={{
-            name: firstName,
+            name: name,
             email: email,
-            avatar: image,
+            avatar: '',
           }}
         />
       </SidebarFooter>

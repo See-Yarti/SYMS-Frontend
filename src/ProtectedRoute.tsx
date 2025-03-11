@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, Outlet, NavigateProps } from 'react-router-dom';
+import { Navigate, Outlet, NavigateProps, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { RootState } from './store';
 
@@ -8,8 +8,10 @@ const ProtectedRoute: React.FC<NavigateProps> = (props) => {
     (state: RootState) => state.auth.isAuthenticated,
   );
 
+  const location = useLocation();
+
   if (!isAuthenticated) {
-    return <Navigate {...props} to="/auth/login" />;
+    return <Navigate {...props} to={`/auth/login?redirect=${encodeURIComponent(location.pathname)}`} />;
   }
 
   return <Outlet />;
