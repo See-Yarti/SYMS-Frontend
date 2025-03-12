@@ -1,140 +1,125 @@
 import {
-  Album,
-  Atom,
   Box,
-  BringToFront,
-  FilePlus2,
-  Handshake,
   Layers2,
   Layers3,
+  LucideIcon,
   NotebookTabs,
-  NotepadText,
   PanelLeftDashed,
-  ScrollText,
-  Settings,
-  ShieldHalf,
-  User,
   UsersRound,
 } from 'lucide-react';
-import { Roles } from './user';
 
-export type LinkItem = {
-  type: 'link';
+export type SideBarRoutedItem = {
   title: string;
-  link: string;
-  role: Roles[] | 'all';
+  url: string;
+  icon: LucideIcon;
   slug: string;
-  icon: React.ComponentType<any>;
+  type: 'routed';
 };
 
 export type DropdownItem = {
-  type: 'dropdown';
   title: string;
-  role: Roles[] | 'all';
-  icon: React.ComponentType<any>;
-  subLink: LinkItem[];
+  slug: string;
+  icon: LucideIcon;
+  type: 'dropdown';
+  items: (SideBarRoutedItem | DropdownItem)[]; // Can contain both
 };
 
 export type SeparationItem = {
-  type: 'separation';
+  type: "separation";
   title: string;
+  isHorizontal?: boolean;
+  position?: 'bottom' | 'top';
 };
 
-export const SideBarLinks: (LinkItem | DropdownItem | SeparationItem)[] = [
+export const sideBarLinks: (DropdownItem | SideBarRoutedItem | SeparationItem)[] = [
   {
-    type: 'separation',
-    title: 'Navigation',
+    type: "separation",
+    title: "Navigation",
   },
   {
-    type: 'link',
     title: 'Dashboard',
-    role: 'all',
-    link: '/',
+    type: 'routed',
+    url: '/',
     slug: '/',
     icon: PanelLeftDashed,
   },
   {
-    type: 'link',
-    title: 'Clients',
-    role: ['controller', 'od', 'md'],
-    link: '/clients',
-    slug: 'clients',
+    title: 'Vendors',
+    type: 'routed',
+    url: '/vendors',
+    slug: 'vendors',
     icon: UsersRound,
   },
   {
-    type: 'dropdown',
-    title: 'Teams',
-    icon: ShieldHalf,
-    role: ['controller', 'od', 'md'],
-    subLink: [
-      {
-        type: 'link',
-        title: 'Operators',
-        role: ['controller', 'od'],
-        link: 'teams/operators',
-        slug: 'operators',
-        icon: Handshake,
-      },
-      {
-        type: 'link',
-        title: 'Marketing',
-        role: ['controller', 'md'],
-        link: 'teams/marketing',
-        slug: 'marketing',
-        icon: Atom,
-      },
-    ],
-  },
-  {
-    type: 'dropdown',
     title: 'Catalog',
-    role: 'all',
+    type: 'dropdown',
+    slug: 'catalog',
     icon: NotebookTabs,
-    subLink: [
+    items: [
       {
-        type: 'link',
         title: 'Categories',
-        role: 'all',
-        link: 'catalog/categories',
         slug: 'categories',
+        url: '/catalog/categories',
+        type: 'routed',
         icon: Layers2,
       },
       {
-        type: 'link',
-        title: 'Sub-Categories',
-        role: 'all',
-        link: 'catalog/sub-categories',
+        title: 'Sub Categories',
         slug: 'sub-categories',
+        url: '/catalog/sub-categories',
+        type: 'routed',
         icon: Layers3,
       },
       {
-        type: 'link',
         title: 'Products',
-        role: 'all',
-        link: 'catalog/products',
         slug: 'products',
+        type: 'dropdown', // Nested dropdown inside 'Catalog'
         icon: Box,
+        items: [
+          {
+            title: 'New Arrivals',
+            slug: 'new-arrivals',
+            url: '/catalog/products/new-arrivals',
+            type: 'routed',
+            icon: Layers2,
+          },
+          {
+            title: 'Best Sellers',
+            slug: 'best-sellers',
+            url: '/catalog/products/best-sellers',
+            type: 'routed',
+            icon: Layers3,
+          },
+        ],
       },
     ],
   },
   {
-    type: 'separation',
-    title: 'Helpful Links',
+    type: "separation",
+    title: "Helpful Links",
+    isHorizontal: true,
+    position: 'top',
   },
   {
-    type: 'link',
-    title: 'Profile',
-    role: 'all',
-    link: 'profile',
-    slug: 'profile',
-    icon: User,
-  },
-  {
-    type: 'link',
     title: 'Settings',
-    role: 'all',
-    link: '/settings',
+    type: 'dropdown',
     slug: 'settings',
-    icon: Settings,
+    icon: Box,
+    items: [
+      {
+        title: 'Appearance',
+        slug: 'appearance',
+        url: '/setting/appearance',
+        type: 'routed',
+        icon: Layers2,
+      },
+      {
+        title: 'Profile Changes',
+        slug: 'profile-changes',
+        url: '/setting/profile-changes',
+        type: 'routed',
+        icon: Layers3,
+      },
+    ],
   },
 ];

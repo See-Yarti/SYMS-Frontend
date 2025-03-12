@@ -1,121 +1,36 @@
 import * as React from 'react';
 import {
-  Box,
-  ChevronLeft,
-  ChevronRight,
-  Layers2,
-  Layers3,
-  LucideIcon,
-  NotebookTabs,
-  PanelLeftDashed,
-  UsersRound,
-} from 'lucide-react';
-import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarHeader,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarRail,
-} from '@/components/ui/sidebar';
-import {
-  SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
 } from '@/components/ui/sidebar';
-import { Link } from 'react-router-dom';
+import { SidebarMenu } from '@/components/ui/sidebar';
 import { useAppSelector } from '@/store';
 import { User } from '@/types/user';
 import { NavUser } from './nav-user';
-
-type SideBarRoutedItem = {
-  title: string;
-  url: string;
-  icon: LucideIcon;
-  slug: string;
-  type: 'routed';
-};
-
-type DropdownItem = {
-  title: string;
-  slug: string;
-  icon: LucideIcon;
-  type: 'dropdown';
-  items: (SideBarRoutedItem | DropdownItem)[]; // Can contain both
-};
-
-const sideBarlinks: (DropdownItem | SideBarRoutedItem)[] = [
-  {
-    title: 'Dashboard',
-    type: 'routed',
-    url: '/',
-    slug: '/',
-    icon: PanelLeftDashed,
-  },
-  {
-    title: 'Vendors',
-    type: 'routed',
-    url: '/vendors',
-    slug: 'vendors',
-    icon: UsersRound,
-  },
-  {
-    title: 'Catalog',
-    type: 'dropdown',
-    slug: 'catalog',
-    icon: NotebookTabs,
-    items: [
-      {
-        title: 'Categories',
-        slug: 'categories',
-        url: '/catalog/categories',
-        type: 'routed',
-        icon: Layers2,
-      },
-      {
-        title: 'Sub Categories',
-        slug: 'sub-categories',
-        url: '/catalog/sub-categories',
-        type: 'routed',
-        icon: Layers3,
-      },
-      {
-        title: 'Products',
-        slug: 'products',
-        type: 'dropdown', // Nested dropdown inside 'Catalog'
-        icon: Box,
-        items: [
-          {
-            title: 'New Arrivals',
-            slug: 'new-arrivals',
-            url: '/catalog/products/new-arrivals',
-            type: 'routed',
-            icon: Layers2,
-          },
-          {
-            title: 'Best Sellers',
-            slug: 'best-sellers',
-            url: '/catalog/products/best-sellers',
-            type: 'routed',
-            icon: Layers3,
-          },
-        ],
-      },
-    ],
-  },
-];
+import {
+  DropdownItem,
+  SeparationItem,
+  sideBarLinks,
+  SideBarRoutedItem,
+} from '@/types/SideBarLinks';
+import { SidebarBackButton } from './SidebarBackButton';
+import { SidebarMenuItems } from './SidebarMenuItems';
+import { Command } from 'lucide-react';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const firstIndex = location.pathname.split('/')[1] || '/';
-  const { email, name } = useAppSelector((state) => state.auth.user) as User;
-
-  // Stack to track multi-level navigation
+  const { email, name, role } = useAppSelector(
+    (state) => state.auth.user,
+  ) as User;
   const [selectedPath, setSelectedPath] = React.useState<number[]>([]);
 
-  // Get the current menu level based on selectedPath
-  let currentMenu: (DropdownItem | SideBarRoutedItem)[] = sideBarlinks;
+  let currentMenu: (DropdownItem | SideBarRoutedItem | SeparationItem)[] =
+    sideBarLinks;
   for (const index of selectedPath) {
     if (currentMenu[index] && currentMenu[index].type === 'dropdown') {
       currentMenu = (currentMenu[index] as DropdownItem).items;
@@ -127,62 +42,40 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
-        <SidebarMenu></SidebarMenu>
+        <SidebarMenu>
+          <SidebarMenuItem className="flex items-center gap-2">
+            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-sidebar-primary-foreground">
+              <Command className="size-5" />
+            </div>
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-semibold">
+                {role.split('')[0].toLocaleUpperCase() + role.slice(1)} Portal
+              </span>
+              <span className="truncate text-xs">{name}</span>
+            </div>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup className="px-2">
           <SidebarMenu className="gap-2">
-            {/* Show Back Button if Inside a Nested Menu */}
-            {selectedPath.length > 0 && (
-              <SidebarMenuItem className=''>
-                <SidebarMenuButton
-                  className="font-medium"
-                  onClick={() => setSelectedPath(selectedPath.slice(0, -1))}
-                >
-                  <ChevronLeft className="transition-transform duration-200" />
-                  Back
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )}
+            {/* Back Button */}
+            <SidebarBackButton
+              selectedPath={selectedPath}
+              setSelectedPath={setSelectedPath}
+            />
 
-            {/* Render Current Level Menu */}
-            {currentMenu.map((item, index) =>
-              item.type === 'routed' ? (
-                <SidebarMenuSubItem key={item.title} className='px-1'>
-                  <SidebarMenuButton tooltip={item.title} className='text-sm'>
-                    <Link
-                      to={item.url}
-                      className="flex w-full items-center gap-2"
-                    >
-                      {item.icon && <item.icon className="w-4 h-4" />}
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuSubItem>
-              ) : (
-                <SidebarMenuSubItem key={item.title} className='px-1'>
-                  <SidebarMenuButton
-                    tooltip={item.title}
-                    onClick={() => setSelectedPath([...selectedPath, index])} // Navigate deeper
-                  >
-                    {item.icon && <item.icon className="w-4 h-4" />}
-                    <span>{item.title}</span>
-                    <ChevronRight className="ml-auto transition-transform duration-200 w-4 h-4" />
-                  </SidebarMenuButton>
-                </SidebarMenuSubItem>
-              ),
-            )}
+            {/* Render Sidebar Menu Items */}
+            <SidebarMenuItems
+              currentMenu={currentMenu}
+              selectedPath={selectedPath}
+              setSelectedPath={setSelectedPath}
+            />
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <NavUser
-          user={{
-            name: name,
-            email: email,
-            avatar: '',
-          }}
-        />
+        <NavUser user={{ name, email, avatar: '' }} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

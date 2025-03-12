@@ -21,7 +21,7 @@ const Provider = (props: ProviderProps) => {
         <QueryClientProvider client={queryClient}>
           <Toaster richColors={true} />
           {props.children}
-          <TenStackQueryDevelopmentTools />
+          {/* <TenStackQueryDevelopmentTools /> */}
         </QueryClientProvider>
       </HelmetProvider>
     </ThemeProvider>

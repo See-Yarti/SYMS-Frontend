@@ -5,9 +5,6 @@ import Login from './pages/auth/login/Login';
 import PublicRoute from './PublicRoute';
 import Home from './pages/Home';
 import ProtectedRoute from './ProtectedRoute';
-import SettingsSidebar from './pages/settings/Sidebar';
-import ProfileChanges from './pages/settings/profile-changes';
-import Appearance from './pages/settings/Appearance';
 import Register from './pages/auth/register/Register';
 
 const router = createBrowserRouter([
@@ -26,20 +23,6 @@ const router = createBrowserRouter([
           {
             path: 'dashboard',
             element: <Home />,
-          },
-          {
-            path: '/settings',
-            element: <SettingsSidebar />,
-            children: [
-              {
-                path: '',
-                element: <Appearance />,
-              },
-              {
-                path: 'profile-changes',
-                element: <ProfileChanges />,
-              },
-            ],
           },
         ],
       },
