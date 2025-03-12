@@ -50,13 +50,17 @@ function SidebarSeparationItem({ item }: { item: SeparationItem }) {
   return (
     <React.Fragment>
       {item.isHorizontal && item.position == 'top' && (
-        <Separator className="mr-2 h-[2px]" />
+        <div className="flex justify-center items-center">
+          <Separator className="mr-2 h-[1.5px] w-1/2" />
+        </div>
       )}
       <Label className="text-xs text-muted-foreground dark:text-gray-50 font-medium font-abel">
         {item.title}
       </Label>
       {item.isHorizontal && item.position == 'bottom' && (
-        <Separator className="mr-2 h-[2px]" />
+        <div className="flex justify-center items-center">
+          <Separator className="mr-2 h-[1.5px] w-1/2" />
+        </div>
       )}
     </React.Fragment>
   );
