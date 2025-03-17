@@ -3,7 +3,7 @@ import { useInView } from 'react-intersection-observer';
 import { useAppSelector } from '@/store';
 import EachNotification, {
   INotification,
-} from '../Cards/notifications/each-notification';
+} from './each-notification';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { axiosInstance } from '@/lib/API';
 
@@ -30,12 +30,14 @@ const NotificationsList = () => {
   const {
     data: Notifications,
     isLoading,
+    isError,
     fetchNextPage,
     hasNextPage,
     isFetching,
     isFetchingNextPage,
   } = useInfiniteQuery({
     initialPageParam: 1,
+    refetchOnWindowFocus: false,
     queryKey: ['notifications', userid],
     queryFn: async ({ pageParam = 1 }) =>
       FetchNotifications({ page: pageParam as number, limit }),
@@ -59,10 +61,29 @@ const NotificationsList = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inView]);
 
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 gap-2 pt-2">
+        {Array(80)
+          .fill(null)
+          .map((_, index) => {
+            return (
+              <div
+                key={index}
+                className="mb-1 items-start bg-background rounded-md p-1 h-[55px] animate-pulse"
+              />
+            );
+          })}
+      </div>
+    );
+  }
+  if (isError) {
+    return <></>;
+  }
   return (
     <React.Fragment>
-      <div className="grid grid-cols-1 gap-2 pt-2">
-        {/* {Notifications &&
+      <div className="grid grid-cols-1 gap-3 py-2">
+        {Notifications &&
           Notifications.pages.flatMap((page) =>
             page.map((notification: INotification, index: number) => (
               <EachNotification
@@ -70,15 +91,7 @@ const NotificationsList = () => {
                 key={notification.id || index}
               />
             )),
-          )} */}
-        {Array(80)
-          .fill(null)
-          .map((_, index) => {
-            return (
-              <div className="mb-1 items-start bg-background rounded-md p-1 h-[55px] animate-pulse" />
-            );
-          })}
-
+          )}
         <div className="flex justify-center items-center mt-5">
           <button
             ref={ref}

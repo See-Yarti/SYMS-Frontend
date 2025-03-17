@@ -5,9 +5,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarHeader,
-  SidebarMenuButton,
   SidebarMenuItem,
-  SidebarRail,
 } from '@/components/ui/sidebar';
 import { SidebarMenu } from '@/components/ui/sidebar';
 import { useAppSelector } from '@/store';
@@ -21,7 +19,8 @@ import {
 } from '@/types/SideBarLinks';
 import { SidebarBackButton } from './sidebar-back-button';
 import { Command } from 'lucide-react';
-import { SidebarMenuItems } from './sidebar-menu-Items';
+import { SidebarMenuItems } from './sidebar-menu-items';
+import { ScrollArea } from '../ui/scroll-area';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { email, name, role } = useAppSelector(
@@ -40,7 +39,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }
 
   return (
-    <Sidebar collapsible="offcanvas" {...props}>
+    <Sidebar collapsible="offcanvas" {...props} className=''>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem className="flex items-center gap-2">
@@ -56,8 +55,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup className="px-2">
+      <SidebarContent className='overflow-y-hidden py-2 px-1'>
+        <ScrollArea className="h-full">
+        {/* <SidebarGroup className="px-2 "> */}
           <SidebarMenu className="gap-2">
             {/* Back Button */}
             <SidebarBackButton
@@ -72,7 +72,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               setSelectedPath={setSelectedPath}
             />
           </SidebarMenu>
-        </SidebarGroup>
+        {/* </SidebarGroup> */}
+        </ScrollArea>
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={{ name, email, avatar: '' }} />

@@ -25,16 +25,20 @@ export type DropdownItem = {
 };
 
 export type SeparationItem = {
-  type: "separation";
+  type: 'separation';
   title: string;
   isHorizontal?: boolean;
   position?: 'bottom' | 'top';
 };
 
-export const sideBarLinks: (DropdownItem | SideBarRoutedItem | SeparationItem)[] = [
+export const sideBarLinks: (
+  | DropdownItem
+  | SideBarRoutedItem
+  | SeparationItem
+)[] = [
   {
-    type: "separation",
-    title: "Navigation",
+    type: 'separation',
+    title: 'Navigation',
   },
   {
     title: 'Dashboard',
@@ -73,7 +77,7 @@ export const sideBarLinks: (DropdownItem | SideBarRoutedItem | SeparationItem)[]
       {
         title: 'Products',
         slug: 'products',
-        type: 'dropdown', // Nested dropdown inside 'Catalog'
+        type: 'dropdown',
         icon: Box,
         items: [
           {
@@ -90,36 +94,254 @@ export const sideBarLinks: (DropdownItem | SideBarRoutedItem | SeparationItem)[]
             type: 'routed',
             icon: Layers3,
           },
+          {
+            title: 'Discounted Items',
+            slug: 'discounted-items',
+            url: '/catalog/products/discounted-items',
+            type: 'routed',
+            icon: Layers2,
+          },
+          {
+            title: 'Featured Products',
+            slug: 'featured-products',
+            url: '/catalog/products/featured-products',
+            type: 'routed',
+            icon: Box,
+          },
         ],
       },
     ],
   },
   {
-    type: "separation",
-    title: "Helpful Links",
-    isHorizontal: true,
-    position: 'top',
-  },
-  {
-    title: 'Settings',
+    title: 'Orders',
     type: 'dropdown',
-    slug: 'settings',
-    icon: Box,
+    slug: 'orders',
+    icon: NotebookTabs,
     items: [
       {
-        title: 'Appearance',
-        slug: 'appearance',
-        url: '/setting/appearance',
+        title: 'All Orders',
+        slug: 'all-orders',
+        url: '/orders/all-orders',
         type: 'routed',
         icon: Layers2,
       },
       {
-        title: 'Profile Changes',
-        slug: 'profile-changes',
-        url: '/setting/profile-changes',
+        title: 'Pending Orders',
+        slug: 'pending-orders',
+        url: '/orders/pending-orders',
         type: 'routed',
         icon: Layers3,
       },
+      {
+        title: 'Completed Orders',
+        slug: 'completed-orders',
+        url: '/orders/completed-orders',
+        type: 'routed',
+        icon: Layers3,
+      },
+      {
+        title: 'Returns & Refunds',
+        slug: 'returns-refunds',
+        url: '/orders/returns-refunds',
+        type: 'routed',
+        icon: Layers2,
+      },
     ],
+  },
+  {
+    title: 'Customers',
+    type: 'dropdown',
+    slug: 'customers',
+    icon: UsersRound,
+    items: [
+      {
+        title: 'All Customers',
+        slug: 'all-customers',
+        url: '/customers/all-customers',
+        type: 'routed',
+        icon: Layers2,
+      },
+      {
+        title: 'Loyalty Program',
+        slug: 'loyalty-program',
+        url: '/customers/loyalty-program',
+        type: 'routed',
+        icon: Layers3,
+      },
+      {
+        title: 'Customer Feedback',
+        slug: 'customer-feedback',
+        url: '/customers/feedback',
+        type: 'routed',
+        icon: Box,
+      },
+    ],
+  },
+  {
+    title: 'Analytics',
+    type: 'dropdown',
+    slug: 'analytics',
+    icon: NotebookTabs,
+    items: [
+      {
+        title: 'Sales Reports',
+        slug: 'sales-reports',
+        url: '/analytics/sales-reports',
+        type: 'routed',
+        icon: Layers2,
+      },
+      {
+        title: 'Customer Insights',
+        slug: 'customer-insights',
+        url: '/analytics/customer-insights',
+        type: 'routed',
+        icon: Layers3,
+      },
+      {
+        title: 'Revenue Trends',
+        slug: 'revenue-trends',
+        url: '/analytics/revenue-trends',
+        type: 'routed',
+        icon: Box,
+      },
+    ],
+  },
+  {
+    type: 'separation',
+    title: 'Management',
+  },
+  {
+    title: 'User Management',
+    type: 'dropdown',
+    slug: 'user-management',
+    icon: UsersRound,
+    items: [
+      {
+        title: 'All Users',
+        slug: 'all-users',
+        url: '/user-management/all-users',
+        type: 'routed',
+        icon: Layers2,
+      },
+      {
+        title: 'Roles & Permissions',
+        slug: 'roles-permissions',
+        url: '/user-management/roles-permissions',
+        type: 'routed',
+        icon: Layers3,
+      },
+      {
+        title: 'Access Logs',
+        slug: 'access-logs',
+        url: '/user-management/access-logs',
+        type: 'routed',
+        icon: Box,
+      },
+    ],
+  },
+  {
+    title: 'Marketing',
+    type: 'dropdown',
+    slug: 'marketing',
+    icon: NotebookTabs,
+    items: [
+      {
+        title: 'Campaigns',
+        slug: 'campaigns',
+        url: '/marketing/campaigns',
+        type: 'routed',
+        icon: Layers2,
+      },
+      {
+        title: 'Email Marketing',
+        slug: 'email-marketing',
+        url: '/marketing/email-marketing',
+        type: 'routed',
+        icon: Layers3,
+      },
+      {
+        title: 'SEO Optimization',
+        slug: 'seo-optimization',
+        url: '/marketing/seo-optimization',
+        type: 'routed',
+        icon: Box,
+      },
+    ],
+  },
+  {
+    title: 'Finance',
+    type: 'dropdown',
+    slug: 'finance',
+    icon: NotebookTabs,
+    items: [
+      {
+        title: 'Invoices',
+        slug: 'invoices',
+        url: '/finance/invoices',
+        type: 'routed',
+        icon: Layers2,
+      },
+      {
+        title: 'Payments',
+        slug: 'payments',
+        url: '/finance/payments',
+        type: 'routed',
+        icon: Layers3,
+      },
+      {
+        title: 'Tax Reports',
+        slug: 'tax-reports',
+        url: '/finance/tax-reports',
+        type: 'routed',
+        icon: Box,
+      },
+    ],
+  },
+  {
+    title: 'Logistics',
+    type: 'dropdown',
+    slug: 'logistics',
+    icon: NotebookTabs,
+    items: [
+      {
+        title: 'Shipping',
+        slug: 'shipping',
+        url: '/logistics/shipping',
+        type: 'routed',
+        icon: Layers2,
+      },
+      {
+        title: 'Tracking',
+        slug: 'tracking',
+        url: '/logistics/tracking',
+        type: 'routed',
+        icon: Layers3,
+      },
+      {
+        title: 'Warehouse',
+        slug: 'warehouse',
+        url: '/logistics/warehouse',
+        type: 'routed',
+        icon: Box,
+      },
+    ],
+  },
+  {
+    type: 'separation',
+    title: 'Settings & Support',
+  },
+  {
+    title: 'Settings',
+    type: 'routed',
+    url: '/settings',
+    slug: 'settings',
+    icon: Box,
+  },
+  {
+    title: 'Help Center',
+    type: 'routed',
+    url: '/help',
+    slug: 'help',
+    icon: NotebookTabs,
   },
 ];
