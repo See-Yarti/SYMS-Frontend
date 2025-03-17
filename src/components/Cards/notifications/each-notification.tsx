@@ -2,11 +2,13 @@ import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
 
-interface INotification {
-  title: string;
-  description: string;
+export interface INotification {
+  id: string;
+  message: string;
   image: string;
+  link?: string;
   fallback: string;
+  createdAt: string;
 }
 
 const EachNotification = ({
@@ -29,10 +31,12 @@ const EachNotification = ({
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col  h-full">
-            <Label className="text-sm font-normal">{notification.title}</Label>
-            <span className="text-sm text-muted-foreground">
+            <Label className="text-sm font-normal">
+              {notification.message}
+            </Label>
+            {/* <span className="text-sm text-muted-foreground">
               {notification.description}
-            </span>
+            </span> */}
           </div>
         </div>
       </div>

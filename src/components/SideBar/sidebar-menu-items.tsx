@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { SidebarMenuSubItem, SidebarMenuButton } from '@/components/ui/sidebar';
 import {
   DropdownItem,
@@ -9,7 +9,6 @@ import {
 } from '@/types/SideBarLinks';
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
-import { motion } from 'framer-motion';
 interface SidebarMenuItemsProps {
   currentMenu: (DropdownItem | SideBarRoutedItem | SeparationItem)[];
   selectedPath: number[];

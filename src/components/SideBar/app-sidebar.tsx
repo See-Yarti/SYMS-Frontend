@@ -19,9 +19,9 @@ import {
   sideBarLinks,
   SideBarRoutedItem,
 } from '@/types/SideBarLinks';
-import { SidebarBackButton } from './SidebarBackButton';
-import { SidebarMenuItems } from './SidebarMenuItems';
+import { SidebarBackButton } from './sidebar-back-button';
 import { Command } from 'lucide-react';
+import { SidebarMenuItems } from './sidebar-menu-Items';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { email, name, role } = useAppSelector(
