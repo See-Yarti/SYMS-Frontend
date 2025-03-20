@@ -13,22 +13,18 @@ const Login = () => {
   const { setTheme } = useTheme();
 
   React.useEffect(() => {
-    setTheme('light'); // Set your theme here after component mounts
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    setTheme('light'); 
+  }, [setTheme]);
 
   return (
     <React.Fragment>
-      {/* Root container with full viewport height and no overflow */}
       <div className="min-h-screen bg-gradient-to-r from-blue-50 to-purple-50 flex items-center justify-center light overflow-hidden">
-        {/* Grid container for split layout */}
         <div className="w-full h-screen grid lg:grid-cols-2 p-4">
-          {/* Left Side: Login Form */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.8 }}
-            className="flex items-center justify-center p-8 overflow-y-auto" // Allow scrolling only inside this container
+            className="flex items-center justify-center p-8 overflow-y-auto"
           >
             <div className="w-full max-w-md">
               <div className="flex-1">
@@ -63,7 +59,7 @@ const Login = () => {
                   </div>
                   <div className="mt-6">
                     <p className="text-start text-sm text-gray-500">
-                      Don&apos;t have an account?{' '}
+                      Don't have an account?{' '}
                       <Link
                         to="/register"
                         className="font-medium text-gray-600 hover:text-gray-800"
@@ -94,5 +90,4 @@ const Login = () => {
     </React.Fragment>
   );
 };
-
 export default Login;

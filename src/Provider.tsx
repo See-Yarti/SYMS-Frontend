@@ -1,6 +1,5 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import TenStackQueryDevelopmentTools from './utils/development-tools/TenStackQueryDevelopmentTools';
 import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from './theme-provider';

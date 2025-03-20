@@ -50,9 +50,12 @@ export const useFetchInfiniteData = ({
 // Post Data Hook
 export const usePostData = (endpoint: string) => {
   return useMutation({
-    mutationFn: async (body: any) => {
-      const { data } = await axiosInstance.post(endpoint, body);
-      return data;
+    mutationFn: async (data: { id: string; password: string }) => {
+      const url = endpoint.replace(':id', data.id); // Replace :id with the actual id
+      console.log('Request URL:', url); // Debugging
+      console.log('Request Payload:', { password: data.password }); // Debugging
+      const { data: responseData } = await axiosInstance.post(url, { password: data.password });
+      return responseData;
     },
   });
 };

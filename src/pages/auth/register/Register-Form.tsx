@@ -1,5 +1,3 @@
-// src/pages/auth/Register-Form.tsx:
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,11 +5,12 @@ import { Label } from '@/components/ui/label';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { User, Phone, Home, FileText } from 'lucide-react'; // Added icons
+import { User, Phone, Home, FileText } from 'lucide-react';
 import { Icons } from '@/components/icons';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import PhoneInput from 'react-phone-number-input';
+import "react-phone-number-input/style.css";
 import { motion } from 'framer-motion';
 import {
   Select,
@@ -20,13 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import axios from 'axios';
 
 // Define the schema for the registration form
 const registerSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  phone: z.string().min(1, 'Phone is required'),
+  phone: z.string().min(1, 'Phone is required'), // Keep as 'phone' for the form
   companyName: z.string().min(1, 'Company Name is required'),
-  companyEmail: z.string().email('Invalid company email address'),
+  companyEmail: z.string().email('Invalid company email address'), // Keep as 'companyEmail' for the form
   designation: z.string().min(1, 'Designation is required'),
   vatNumber: z.string().min(1, 'VAT Number is required'),
   companyAddress: z.string().min(1, 'Company Address is required'),
@@ -48,7 +48,6 @@ const emiratesList = [
 
 const RegisterForm = () => {
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
-  const [tradeLicenseBase64, setTradeLicenseBase64] = React.useState<string | null>(null); // Store Base64 string
   const navigate = useNavigate();
 
   const {
@@ -56,61 +55,57 @@ const RegisterForm = () => {
     handleSubmit,
     control,
     formState: { errors, isSubmitting },
-    setValue,
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
   });
 
-  // Convert file to Base64
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const base64 = await convertFileToBase64(file);
-      setTradeLicenseBase64(base64); // Store Base64 string
-      setValue('tradeLicense', file); // Update form value
-    }
-  };
-
-  // Helper function to convert file to Base64
-  const convertFileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
   const handleRegister = async (data: RegisterFormValues) => {
     setIsLoading(true);
-
-    // Map emirates to state for backend
-    const payload = {
-      name: data.name,
-      phone: data.phone,
-      companyName: data.companyName,
-      companyEmail: data.companyEmail,
-      designation: data.designation,
-      vatNumber: data.vatNumber,
-      companyAddress: data.companyAddress,
-      state: data.emirates, // Map emirates to state
-      tradeLicense: tradeLicenseBase64, // Use Base64 string
-    };
-
-    console.log(payload);
-
-    // Simulate API call
+  
+    const formData = new FormData();
+  
+    formData.append('name', data.name);
+    formData.append('phoneNumber', data.phone);
+    formData.append('companyName', data.companyName);
+    formData.append('email', data.companyEmail);
+    formData.append('designation', data.designation);
+    formData.append('taxRefNumber', data.vatNumber); // Ensure this matches the backend field name
+    formData.append('companyAddress', data.companyAddress);
+    formData.append('state', data.emirates);
+  
+    if (data.tradeLicense) {
+      formData.append('tradeLicense', data.tradeLicense, data.tradeLicense.name);
+    }
+  
+    // Log FormData contents
+    for (const [key, value] of formData.entries()) {
+      console.log(key, value);
+    }
+  
     try {
-      toast.success('Registration Successful');
-      setIsLoading(false);
-      navigate('/', { replace: true });
+      const response = await axios.post(
+        'http://localhost:4000/api/auth/controller/vendor/register',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+  
+      if (response.status === 201) {
+        toast.success('Registration Successful');
+        navigate('/', { replace: true });
+      } else {
+        toast.error('Registration Failed');
+      }
     } catch (error) {
       console.error('Registration failed:', error);
       toast.error('Registration Failed');
+    } finally {
       setIsLoading(false);
     }
   };
-
   return (
     <motion.form
       initial={{ opacity: 0, y: 20 }}
@@ -119,6 +114,7 @@ const RegisterForm = () => {
       onSubmit={handleSubmit(handleRegister)}
       className="grid gap-4"
     >
+
       {/* Grid layout for two fields per row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Name Field */}
@@ -291,22 +287,30 @@ const RegisterForm = () => {
       </div>
 
       {/* Trade License Field */}
-      <div className="grid gap-3">
-        <Label htmlFor="tradeLicense" className="text-gray-700 text-sm flex items-center">
-          <FileText className="h-4 w-4 mr-2 text-gray-600" /> Trade License
-        </Label>
-        <Input
-          id="tradeLicense"
-          type="file"
-          accept=".pdf,image/*"
-          disabled={isSubmitting || isLoading}
-          onChange={handleFileChange}
-          className="focus:ring-1 focus:ring-gray-700 pl-6"
-        />
-        {errors.tradeLicense && (
-          <span className="text-red-500 text-sm">{errors.tradeLicense.message}</span>
-        )}
-      </div>
+      {/* Trade License Field */}
+<div className="grid gap-3">
+  <Label htmlFor="tradeLicense" className="text-gray-700 text-sm flex items-center">
+    <FileText className="h-4 w-4 mr-2 text-gray-600" /> Trade License
+  </Label>
+  <Controller
+    control={control}
+    name="tradeLicense"
+    defaultValue={undefined}
+    render={({ field: { onChange } }) => (
+      <Input
+        id="tradeLicense"
+        type="file"
+        accept=".pdf,image/*"
+        disabled={isSubmitting || isLoading}
+        onChange={(e) => onChange(e.target.files?.[0] || undefined)}
+        className="focus:ring-1 focus:ring-gray-700 pl-6"
+      />
+    )}
+  />
+  {errors.tradeLicense && (
+    <span className="text-red-500 text-sm">{errors.tradeLicense.message}</span>
+  )}
+</div>
 
       {/* Submit Button */}
       <Button

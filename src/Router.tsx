@@ -6,6 +6,7 @@ import PublicRoute from './PublicRoute';
 import Home from './pages/Home';
 import ProtectedRoute from './ProtectedRoute';
 import Register from './pages/auth/register/Register';
+import Vendors from './pages/vendors/Vendors';
 
 const router = createBrowserRouter([
   {
@@ -23,6 +24,10 @@ const router = createBrowserRouter([
           {
             path: 'dashboard',
             element: <Home />,
+          },
+          {
+            path: 'vendors',
+            element: <Vendors />,
           },
         ],
       },

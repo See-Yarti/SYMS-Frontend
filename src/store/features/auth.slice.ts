@@ -3,8 +3,7 @@ import { LoginFormValues } from '@/types/auth';
 import { LoginUserInitialData, User } from '@/types/user';
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { AxiosError } from 'axios';
-import { useSelector } from 'react-redux';
-import { RootState, store, useAppSelector } from '..';
+import { RootState, store } from '..';
 
 export type AuthState = {
   isAuthenticated: boolean;
@@ -76,7 +75,6 @@ export const authSlice = createSlice({
       )
 
       // Login rejected
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .addCase(loginUser.rejected, (state, action: PayloadAction<any>) => {
         state.error = action.payload;
         state.isAuthenticated = false;

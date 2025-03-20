@@ -1,7 +1,6 @@
 import {
-  Bell,
   ChevronsUpDown,
-  LogOut,
+  LogOutIcon,
   Settings,
   UserPen,
 } from 'lucide-react';
@@ -22,8 +21,10 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import React from 'react';
+import { useAppDispatch } from '@/store';
+import { logoutUser } from '@/store/features/auth.slice';
 
 export function NavUser({
   user,
@@ -35,6 +36,17 @@ export function NavUser({
   };
 }) {
   const { isMobile } = useSidebar();
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await dispatch(logoutUser()).unwrap();
+      navigate('/auth/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
 
   return (
     <SidebarMenu>
@@ -89,26 +101,13 @@ export function NavUser({
                 </DropdownMenuItem>
               </Link>
 
-              <DropdownMenuItem>
-                <Bell className="mr-2 h-4 w-4" />
-                Notifications
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOutIcon className="mr-2 h-4 w-4" />
+                Logout
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            {/* <DropdownMenuItem>
-              Log out
-            </DropdownMenuItem> */}
             <React.Suspense>
-              {/* <LogoutModal>
-                <span
-                  className={
-                    'relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground'
-                  }
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Logout
-                </span>
-              </LogoutModal> */}
             </React.Suspense>
           </DropdownMenuContent>
         </DropdownMenu>
