@@ -9,6 +9,7 @@ export type AuthState = {
   isAuthenticated: boolean;
   user: User | null;
   _aT: string | null;
+  _rT: string | null;
   error: string | null;
 };
 
@@ -16,6 +17,7 @@ const initialState: AuthState = {
   isAuthenticated: false,
   user: null,
   _aT: null,
+  _rT: null,
   error: null,
 };
 
@@ -27,6 +29,7 @@ export const loginUser = createAsyncThunk(
       const response = await axiosInstance.post(`/auth/controller/login`, {
         ...loginData,
       });
+      console.log(response.data);
       return response.data.data;
     } catch (error) {
       if (error instanceof AxiosError) {
@@ -40,11 +43,10 @@ export const loginUser = createAsyncThunk(
 // Async thunk for logout
 export const logoutUser = createAsyncThunk('auth/controller/logout', async () => {
   const state = store.getState() as RootState;
-  console.log(state)
-  const _at = state.auth._aT; 
+  const _rt = state.auth._rT; 
   await axiosInstance.post('/auth/controller/logout',{
     Headers: {
-      Authorization: `Bearer ${_at}`
+      Authorization: `Bearer ${_rt}`
     }
   });
 });
@@ -56,6 +58,9 @@ export const authSlice = createSlice({
     updateAccessToken: (state, action: PayloadAction<string>) => {
       state._aT = action.payload;
     },
+    updateRefreshToken: (state, action: PayloadAction<string>) => {
+      state._rT = action.payload;
+    }
   },
   extraReducers: (builder) => {
     builder
@@ -71,6 +76,7 @@ export const authSlice = createSlice({
           state.user = action.payload.user;
           state.error = null;
           state._aT = action.payload._aT;
+          state._rT = action.payload._rT;
         },
       )
 
@@ -80,6 +86,7 @@ export const authSlice = createSlice({
         state.isAuthenticated = false;
         state.user = null;
         state._aT = null;
+        state._rT = null;
       })
       // Logout fulfilled
       .addCase(logoutUser.fulfilled, (state) => {
@@ -87,6 +94,7 @@ export const authSlice = createSlice({
         state.user = null;
         state.error = null;
         state._aT = null;
+        state._rT = null;
       });
   },
 });

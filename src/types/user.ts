@@ -15,4 +15,5 @@ export type LoginUserInitialData = {
   unReadNotifications: number;
   readNotifications: number;
   _aT: string;
+  _rT: string;
 };

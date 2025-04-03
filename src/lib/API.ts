@@ -17,7 +17,6 @@ axiosInstance.interceptors.request.use(
   (config) => {
     const state = store.getState() as RootState;
     const token = state.auth._aT;
-
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -45,23 +44,24 @@ axiosInstance.interceptors.response.use(
 
       try {
         const state = store.getState() as RootState;
-        const oldToken = state.auth._aT;
+        const refreshToken = state.auth._rT;
 
         const refreshResponse = await axios.get(
           import.meta.env.VITE_API_REFRESH_TOKEN_URL,
           {
-            headers: { Authorization: `Bearer ${oldToken}` },
+            headers: { Authorization: `Bearer ${refreshToken}` },
           },
         );
 
-        const newToken = refreshResponse.data.data.token._aT;
-
-        store.dispatch(AuthActions.updateAccessToken(newToken));
+        const newAccessToken = refreshResponse.data.data.tokens._aT;
+        const newRefreshToken = refreshResponse.data.data.tokens._rT;
+        store.dispatch(AuthActions.updateAccessToken(newAccessToken));
+        store.dispatch(AuthActions.updateRefreshToken(newRefreshToken));
 
         failedQueue.forEach((callback) => callback());
         failedQueue = [];
 
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
         store.dispatch(logoutUser());
