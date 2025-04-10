@@ -6,13 +6,22 @@ import { fetchVendors, fetchVendorById, deleteVendor } from '../../lib/vendor';
 import { usePostData } from '@/hooks/useApi';
 import PasswordDialog from '@/components/Dialog/PasswordDialog';
 
+type User = {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    avatarUrl: string;
+    phoneNumber: string;
+    gender: string;
+};
+
 type Vendor = {
     id: string;
-    user: {
-        name: string;
-        email: string;
-    };
+    user?: User; // Made optional since detail response doesn't include it
     companyName: string;
+    companyAddress: string;
+    vendorState: string;
     isVendorVerified: boolean;
     designation?: string;
     taxRefNumber?: string;
@@ -30,16 +39,17 @@ const VendorTable: React.FC = () => {
     const [vendorList, setVendorList] = useState<Vendor[]>([]);
     const [confirmationName, setConfirmationName] = useState('');
 
-    const { mutate: verifyVendor } = usePostData('/vendor/:id/verify');
+    const { mutate: verifyVendor } = usePostData<{ vendorId: string; newPassword: string }>('/vendor/verify');
 
     useEffect(() => {
         const loadVendors = async () => {
             try {
                 const response = await fetchVendors();
-                setVendorList(response.data.vendors);
+                setVendorList(response.data || []);
             } catch (error) {
                 console.log(error);
                 toast.error('Failed to fetch vendors');
+                setVendorList([]);
             }
         };
 
@@ -49,7 +59,12 @@ const VendorTable: React.FC = () => {
     const handleClickOpen = async (vendorId: string) => {
         try {
             const response = await fetchVendorById(vendorId);
-            setSelectedVendor(response.data);
+            // Find the full vendor data from the list to get user info
+            const fullVendorData = vendorList.find(v => v.id === vendorId);
+            setSelectedVendor({
+                ...response.data,
+                user: fullVendorData?.user // Merge user data from list with detail response
+            });
             setOpenDetail(true);
         } catch (error) {
             console.log(error);
@@ -77,35 +92,47 @@ const VendorTable: React.FC = () => {
         setOpenPasswordDialog(true);
     };
 
-    const handlePasswordSubmit = async (password: string) => {
+    const handlePasswordSubmit = async (newPassword: string) => {
         if (!selectedVendor) return;
-      
-        try {
-          await verifyVendor(
-            { id: selectedVendor.id, password }, // Pass id and password
-            {
-              onSuccess: () => {
-                setVendorList(vendorList.map(vendor =>
-                  vendor.id === selectedVendor.id ? { ...vendor, isVendorVerified: true } : vendor
-                ));
-                toast.success('Vendor verified successfully');
-              },
-              onError: () => {
-                toast.error('Failed to verify vendor');
-              },
-            }
-          );
-        } catch (error) {
-          console.log(error);
-          toast.error('Failed to verify vendor');
+
+        if (typeof selectedVendor.id !== 'string' || selectedVendor.id.trim() === '') {
+            toast.error('Invalid vendor ID');
+            return;
         }
-      };
+        if (typeof newPassword !== 'string' || newPassword.length < 6) {
+            toast.error('Password must be at least 6 characters long');
+            return;
+        }
+
+        try {
+            verifyVendor(
+                { vendorId: selectedVendor.id, newPassword },
+                {
+                    onSuccess: () => {
+                        setVendorList(vendorList.map(vendor => vendor.id === selectedVendor.id ? { ...vendor, isVendorVerified: true } : vendor));
+                        toast.success('Vendor verified successfully');
+                        setOpenPasswordDialog(false);
+                    },
+                    onError: () => {
+                        toast.error('Failed to verify vendor');
+                    },
+                }
+            );
+        } catch (error) {
+            console.log(error);
+            toast.error('Failed to verify vendor');
+        }
+    };
+
+
 
     const handleDelete = async () => {
-        if (confirmationName === selectedVendor?.user.name) {
+        if (!selectedVendor) return;
+
+        if (confirmationName === selectedVendor.user?.name) {
             try {
                 await deleteVendor(selectedVendor.id);
-                setVendorList(vendorList.filter(vendor => vendor.id !== selectedVendor?.id));
+                setVendorList(vendorList.filter(vendor => vendor.id !== selectedVendor.id));
                 setOpenDeleteDialog(false);
                 setConfirmationName('');
                 toast.success('Vendor was deleted');
@@ -123,7 +150,7 @@ const VendorTable: React.FC = () => {
             <TableContainer className="overflow-hidden">
                 <Table>
                     <TableHead>
-                        <TableRow>
+                        <TableRow >
                             <TableCell>Avatar</TableCell>
                             <TableCell>Name</TableCell>
                             <TableCell>Company Name</TableCell>
@@ -133,42 +160,53 @@ const VendorTable: React.FC = () => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {vendorList.map((vendor) => (
-                            <TableRow key={vendor.id}>
-                                <TableCell>
-                                    <Avatar src={`https://ui-avatars.com/api/?name=${vendor.user.name}`} alt={vendor.user.name} />
-                                </TableCell>
-                                <TableCell>{vendor.user.name}</TableCell>
-                                <TableCell>{vendor.companyName}</TableCell>
-                                <TableCell>{vendor.user.email}</TableCell>
-                                <TableCell>
-                                    <Switch
-                                        checked={vendor.isVendorVerified}
-                                        onChange={() => handleStatusChange(vendor.id)}
-                                        color="primary"
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <Button
-                                        variant="outlined"
-                                        color="primary"
-                                        onClick={() => handleClickOpen(vendor.id)}
-                                        startIcon={<VisibilityIcon />}
-                                    >
-                                        View Detail
-                                    </Button>
-                                    <Button
-                                        variant="outlined"
-                                        color="error"
-                                        onClick={() => handleDeleteOpen(vendor)}
-                                        startIcon={<DeleteIcon />}
-                                        sx={{ marginLeft: '8px' }}
-                                    >
-                                        Delete
-                                    </Button>
+                        {vendorList && vendorList.length > 0 ? (
+                            vendorList.map((vendor) => (
+                                <TableRow key={vendor.id}>
+                                    <TableCell>
+                                        <Avatar
+                                            src={vendor.user?.avatarUrl || `https://ui-avatars.com/api/?name=${vendor.user?.name || 'V'}`}
+                                            alt={vendor.user?.name || 'Vendor'}
+                                        />
+                                    </TableCell>
+                                    <TableCell>{vendor.user?.name || 'N/A'}</TableCell>
+                                    <TableCell>{vendor.companyName}</TableCell>
+                                    <TableCell>{vendor.user?.email || 'N/A'}</TableCell>
+                                    <TableCell>
+                                        <Switch
+                                            checked={vendor.isVendorVerified}
+                                            onChange={() => handleStatusChange(vendor.id)}
+                                            color="primary"
+                                        />
+                                    </TableCell>
+                                    <TableCell>
+                                        <Button
+                                            variant="outlined"
+                                            color="primary"
+                                            onClick={() => handleClickOpen(vendor.id)}
+                                            startIcon={<VisibilityIcon />}
+                                        >
+                                            View Detail
+                                        </Button>
+                                        <Button
+                                            variant="outlined"
+                                            color="error"
+                                            onClick={() => handleDeleteOpen(vendor)}
+                                            startIcon={<DeleteIcon />}
+                                            sx={{ marginLeft: '8px' }}
+                                        >
+                                            Delete
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={6} align="center">
+                                    No vendor data found
                                 </TableCell>
                             </TableRow>
-                        ))}
+                        )}
                     </TableBody>
                 </Table>
             </TableContainer>
@@ -180,31 +218,53 @@ const VendorTable: React.FC = () => {
                     {selectedVendor && (
                         <Box className="space-y-4">
                             <div className="flex items-center space-x-4">
-                                <Avatar src={`https://ui-avatars.com/api/?name=${selectedVendor.user.name}`} sx={{ width: 56, height: 56 }} />
+                                <Avatar
+                                    src={selectedVendor.user?.avatarUrl || `https://ui-avatars.com/api/?name=${selectedVendor.user?.name || 'V'}`}
+                                    sx={{ width: 56, height: 56 }}
+                                />
                                 <div>
-                                    <Typography variant="h6">{selectedVendor.user.name}</Typography>
-                                    <Typography variant="body2">{selectedVendor.designation}</Typography>
+                                    <Typography variant="h6">{selectedVendor.user?.name || 'N/A'}</Typography>
+                                    <Typography variant="body2">{selectedVendor.designation || 'N/A'}</Typography>
                                 </div>
                             </div>
-                            <Typography><strong>Company Name:</strong> {selectedVendor.companyName}</Typography>
-                            <Typography><strong>Company Email:</strong> {selectedVendor.user.email}</Typography>
-                            <Typography><strong>Tax Reference Number:</strong> {selectedVendor.taxRefNumber}</Typography>
+                            <Typography><strong>Company Name:</strong> {selectedVendor.companyName || 'N/A'}</Typography>
+                            <Typography><strong>Company Email:</strong> {selectedVendor.user?.email || 'N/A'}</Typography>
+                            <Typography><strong>Company Address:</strong> {selectedVendor.companyAddress || 'N/A'}</Typography>
+                            <Typography><strong>Vendor State:</strong> {selectedVendor.vendorState || 'N/A'}</Typography>
+                            {selectedVendor.taxRefNumber && (
+                                <Typography>
+                                    <strong>Tax Reference Number:</strong>
+                                    <a
+                                        href={selectedVendor.taxRefNumber}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{ color: 'blue', textDecoration: 'underline', marginLeft: '8px' }}
+                                    >
+                                        View Tax Reference
+                                    </a>
+                                </Typography>
+                            )}
+                            {selectedVendor.tradeLicense && (
+                                <Typography>
+                                    <strong>Trade License: </strong>
+                                    <a
+                                        href={selectedVendor.tradeLicense}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{ color: 'blue', textDecoration: 'underline', marginLeft: '8px' }}
+                                    >
+                                        View Trade License
+                                    </a>
+                                </Typography>
+                            )}
                             <Typography>
-                                <strong>Trade License: </strong>
-                                <a
-                                    href={selectedVendor.tradeLicense}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{ color: 'blue', textDecoration: 'underline' }}
-                                >
-                                    View Trade License
-                                </a>
+                                <strong>Status:</strong> {selectedVendor.isVendorVerified ? 'Verified' : 'Not Verified'}
                             </Typography>
                             <Typography>
-                                <strong>Created At:</strong> {selectedVendor.createdAt ? new Date(selectedVendor.createdAt).toLocaleString() : ''}
+                                <strong>Created At:</strong> {selectedVendor.createdAt ? new Date(selectedVendor.createdAt).toLocaleString() : 'N/A'}
                             </Typography>
                             <Typography>
-                                <strong>Updated At:</strong> {selectedVendor.updatedAt ? new Date(selectedVendor.updatedAt).toLocaleString() : ''}
+                                <strong>Updated At:</strong> {selectedVendor.updatedAt ? new Date(selectedVendor.updatedAt).toLocaleString() : 'N/A'}
                             </Typography>
                         </Box>
                     )}
@@ -218,7 +278,7 @@ const VendorTable: React.FC = () => {
             <Dialog open={openDeleteDialog} onClose={handleDeleteClose}>
                 <DialogTitle>Confirm Delete</DialogTitle>
                 <DialogContent>
-                    <Typography>To confirm deletion, please type the vendor name "{selectedVendor?.user.name}"</Typography>
+                    <Typography>To confirm deletion, please type the vendor name "{selectedVendor?.user?.name || ''}"</Typography>
                     <TextField
                         fullWidth
                         value={confirmationName}

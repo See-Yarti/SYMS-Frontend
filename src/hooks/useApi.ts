@@ -48,13 +48,11 @@ export const useFetchInfiniteData = ({
   });
 };
 // Post Data Hook
-export const usePostData = (endpoint: string) => {
+// Updated usePostData hook in src/hooks/useApi.ts
+export const usePostData = <TData = unknown>(endpoint: string) => {
   return useMutation({
-    mutationFn: async (data: { id: string; password: string }) => {
-      const url = endpoint.replace(':id', data.id); // Replace :id with the actual id
-      console.log('Request URL:', url); // Debugging
-      console.log('Request Payload:', { password: data.password }); // Debugging
-      const { data: responseData } = await axiosInstance.post(url, { password: data.password });
+    mutationFn: async (data: TData) => {
+      const { data: responseData } = await axiosInstance.post(endpoint, data);
       return responseData;
     },
   });

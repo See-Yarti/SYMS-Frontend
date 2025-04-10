@@ -24,14 +24,14 @@ import axios from 'axios';
 // Define the schema for the registration form
 const registerSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  phone: z.string().min(1, 'Phone is required'), // Keep as 'phone' for the form
+  phone: z.string().min(1, 'Phone is required'),
   companyName: z.string().min(1, 'Company Name is required'),
-  companyEmail: z.string().email('Invalid company email address'), // Keep as 'companyEmail' for the form
+  companyEmail: z.string().email('Invalid company email address'),
   designation: z.string().min(1, 'Designation is required'),
-  vatNumber: z.string().min(1, 'VAT Number is required'),
+  vatNumber: z.instanceof(File, { message: 'VAT document is required' }),
   companyAddress: z.string().min(1, 'Company Address is required'),
   emirates: z.string().min(1, 'Emirates is required'),
-  tradeLicense: z.instanceof(File).refine(file => file.size > 0, 'Trade License is required'),
+  tradeLicense: z.instanceof(File, { message: 'Trade license is required' }),
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
@@ -63,28 +63,25 @@ const RegisterForm = () => {
     setIsLoading(true);
   
     const formData = new FormData();
-  
     formData.append('name', data.name);
     formData.append('phoneNumber', data.phone);
     formData.append('companyName', data.companyName);
     formData.append('email', data.companyEmail);
     formData.append('designation', data.designation);
-    formData.append('taxRefNumber', data.vatNumber); // Ensure this matches the backend field name
     formData.append('companyAddress', data.companyAddress);
     formData.append('state', data.emirates);
-  
-    if (data.tradeLicense) {
-      formData.append('tradeLicense', data.tradeLicense, data.tradeLicense.name);
+    
+    // Append files if they exist
+    if (data.vatNumber) {
+      formData.append('taxRefNumber', data.vatNumber);
     }
-  
-    // Log FormData contents
-    for (const [key, value] of formData.entries()) {
-      console.log(key, value);
+    if (data.tradeLicense) {
+      formData.append('tradeLicense', data.tradeLicense);
     }
   
     try {
       const response = await axios.post(
-        'http://localhost:4000/api/auth/controller/vendor/register',
+        'http://localhost:3000/api/vendor/create', // Updated endpoint
         formData,
         {
           headers: {
@@ -93,15 +90,15 @@ const RegisterForm = () => {
         }
       );
   
-      if (response.status === 201) {
-        toast.success('Registration Successful');
-        navigate('/', { replace: true });
+      if (response.data.success) {
+        toast.success('Vendor created successfully');
+        navigate('/vendors'); // Or wherever you want to redirect
       } else {
-        toast.error('Registration Failed');
+        toast.error('Failed to create vendor');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Registration failed:', error);
-      toast.error('Registration Failed');
+      toast.error(error.response?.data?.message || 'Registration Failed');
     } finally {
       setIsLoading(false);
     }
@@ -141,20 +138,21 @@ const RegisterForm = () => {
             <Phone className="h-4 w-4 mr-2 text-gray-600" /> Phone Number
           </Label>
           <Controller
-            name="phone"
-            control={control}
-            defaultValue=""
-            render={({ field }) => (
-              <PhoneInput
-                {...field}
-                defaultCountry="AE" // Set default country to UAE
-                international
-                withCountryCallingCode
-                placeholder="Enter phone number"
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-700 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-              />
-            )}
-          />
+  name="phone"
+  control={control}
+  render={({ field }) => (
+    <PhoneInput
+      {...field}
+      international
+      defaultCountry="AE"
+      withCountryCallingCode
+      onChange={field.onChange}
+      value={field.value}
+      placeholder="Enter phone number"
+      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-700 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+    />
+  )}
+/>
           {errors.phone && (
             <span className="text-red-500 text-sm">{errors.phone.message}</span>
           )}
@@ -225,13 +223,20 @@ const RegisterForm = () => {
           <Label htmlFor="vatNumber" className="text-gray-700 text-sm flex items-center">
             <FileText className="h-4 w-4 mr-2 text-gray-600" /> VAT Number
           </Label>
-          <Input
-            id="vatNumber"
-            type="text"
-            placeholder="VAT123456"
-            disabled={isSubmitting || isLoading}
-            {...register('vatNumber')}
-            className="focus:ring-2 focus:ring-purple-500 pl-6"
+          <Controller
+            control={control}
+            name='vatNumber'
+            defaultValue={undefined}
+            render={({ field: { onChange } }) => (
+              <Input
+                id="vatNumber"
+                type="file"
+                accept=".pdf,image/*"
+                disabled={isSubmitting || isLoading}
+                onChange={(e) => onChange(e.target.files?.[0] || undefined)}
+                className="focus:ring-1 focus:ring-gray-700 pl-6"
+              />
+            )}
           />
           {errors.vatNumber && (
             <span className="text-red-500 text-sm">{errors.vatNumber.message}</span>
@@ -287,30 +292,29 @@ const RegisterForm = () => {
       </div>
 
       {/* Trade License Field */}
-      {/* Trade License Field */}
-<div className="grid gap-3">
-  <Label htmlFor="tradeLicense" className="text-gray-700 text-sm flex items-center">
-    <FileText className="h-4 w-4 mr-2 text-gray-600" /> Trade License
-  </Label>
-  <Controller
-    control={control}
-    name="tradeLicense"
-    defaultValue={undefined}
-    render={({ field: { onChange } }) => (
-      <Input
-        id="tradeLicense"
-        type="file"
-        accept=".pdf,image/*"
-        disabled={isSubmitting || isLoading}
-        onChange={(e) => onChange(e.target.files?.[0] || undefined)}
-        className="focus:ring-1 focus:ring-gray-700 pl-6"
-      />
-    )}
-  />
-  {errors.tradeLicense && (
-    <span className="text-red-500 text-sm">{errors.tradeLicense.message}</span>
-  )}
-</div>
+      <div className="grid gap-3">
+        <Label htmlFor="tradeLicense" className="text-gray-700 text-sm flex items-center">
+          <FileText className="h-4 w-4 mr-2 text-gray-600" /> Trade License
+        </Label>
+        <Controller
+          control={control}
+          name="tradeLicense"
+          defaultValue={undefined}
+          render={({ field: { onChange } }) => (
+            <Input
+              id="tradeLicense"
+              type="file"
+              accept=".pdf,image/*"
+              disabled={isSubmitting || isLoading}
+              onChange={(e) => onChange(e.target.files?.[0] || undefined)}
+              className="focus:ring-1 focus:ring-gray-700 pl-6"
+            />
+          )}
+        />
+        {errors.tradeLicense && (
+          <span className="text-red-500 text-sm">{errors.tradeLicense.message}</span>
+        )}
+      </div>
 
       {/* Submit Button */}
       <Button

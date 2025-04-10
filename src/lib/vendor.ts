@@ -10,10 +10,10 @@ export const fetchVendorById = async (id: string) => {
   return response.data;
 };
 
-export const verifyVendor = async (id: string, password: string) => {
-    const response = await axiosInstance.post(`/vendor/${id}/verify`, { password });
-    return response.data;
-  };
+export const verifyVendor = async (vendorId: string, newPassword: string) => {
+  const response = await axiosInstance.post('/vendor/verify', { vendorId, newPassword });
+  return response.data;
+};
 
 export const deleteVendor = async (id: string) => {
   const response = await axiosInstance.delete(`/vendor/${id}`);
