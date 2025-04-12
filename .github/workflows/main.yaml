@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build_and_push:
+  Build_Docker_Image:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -28,9 +28,9 @@ jobs:
           docker push ${{ secrets.DOCKER_HUB_USERNAME }}/seeyarti-client:latest
           docker push ${{ secrets.DOCKER_HUB_USERNAME }}/seeyarti-client:${{ github.sha }}
 
-  deploy:
+  Transfer_Files_To_VPS:
     runs-on: ubuntu-latest
-    needs: build_and_push
+    needs: Build_Docker_Image
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -40,7 +40,7 @@ jobs:
 
       - name: Replace the Docker image in docker-compose.yaml
         run: |
-          sed -i 's|${DOCKER_IMAGE}|${{ secrets.DOCKER_HUB_USERNAME }}/seeyarti-client:${{ github.sha }}|g' docker-compose.yaml
+          sed -i 's|${Build_Docker_Image}|${{ secrets.DOCKER_HUB_USERNAME }}/seeyarti-client:${{ github.sha }}|g' docker-compose.yaml
 
       - name: Transfer docker-compose.yaml as docker-compose.yaml
         env:
