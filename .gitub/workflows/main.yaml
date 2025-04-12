@@ -1,0 +1,83 @@
+name: CI/CD Pipeline for seeyarti-client
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_and_push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+
+      - name: Build and push Docker image
+        run: |
+          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/seeyarti-client:latest .
+          docker tag ${{ secrets.DOCKER_HUB_USERNAME }}/seeyarti-client:latest ${{ secrets.DOCKER_HUB_USERNAME }}/seeyarti-client:${{ github.sha }}
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/seeyarti-client:latest
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/seeyarti-client:${{ github.sha }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build_and_push
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Replace the Docker image in docker-compose.yaml
+        run: |
+          sed -i 's|${DOCKER_IMAGE}|${{ secrets.DOCKER_HUB_USERNAME }}/seeyarti-client:${{ github.sha }}|g' docker-compose.yaml
+
+      - name: Transfer docker-compose.yaml as docker-compose.yaml
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          USERNAME: ${{ secrets.VPS_USERNAME }}
+          PASSWORD: ${{ secrets.VPS_PASSWORD }}
+          SUDO_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          sshpass -p "$PASSWORD" scp -o StrictHostKeyChecking=no docker-compose.yaml $USERNAME@$HOST:/tmp/docker-compose.yaml
+          sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no $USERNAME@$HOST "echo '$SUDO_PASSWORD' | sudo -S mkdir -p /home/${{ secrets.VPS_USERNAME }}/seeyarti-client && echo '$SUDO_PASSWORD' | sudo -S mv /tmp/docker-compose.yaml /home/${{ secrets.VPS_USERNAME }}/seeyarti-client/docker-compose.yaml"
+
+      - name: Transfer .env.production
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          USERNAME: ${{ secrets.VPS_USERNAME }}
+          PASSWORD: ${{ secrets.VPS_PASSWORD }}
+          SUDO_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          sshpass -p "$PASSWORD" scp -o StrictHostKeyChecking=no .env.production $USERNAME@$HOST:/tmp/.env.production
+          sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no $USERNAME@$HOST "echo '$SUDO_PASSWORD' | sudo -S mv /tmp/.env.production /home/${{ secrets.VPS_USERNAME }}/seeyarti-client/.env"
+
+  Deployment:
+    runs-on: ubuntu-latest
+    needs: Transfer_Files_To_VPS
+    steps:
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Deploy on VPS using docker-compose
+        env:
+          HOST: ${{ secrets.VPS_HOST }}
+          USERNAME: ${{ secrets.VPS_USERNAME }}
+          PASSWORD: ${{ secrets.VPS_PASSWORD }}
+          SUDO_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no $USERNAME@$HOST "
+          cd /home/${{ secrets.VPS_USERNAME }}/seeyarti-client &&
+          echo '$SUDO_PASSWORD' | sudo -S docker-compose pull &&
+          echo '$SUDO_PASSWORD' | sudo -S docker-compose down &&
+          echo '$SUDO_PASSWORD' | sudo -S docker-compose -f docker-compose.yaml --env-file=config/env/.env  up -d --force-recreate"
