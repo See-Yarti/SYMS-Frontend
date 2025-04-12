@@ -40,7 +40,7 @@ jobs:
 
       - name: Replace the Docker image in docker-compose.yaml
         run: |
-          sed -i 's|${Build_Docker_Image}|${{ secrets.DOCKER_HUB_USERNAME }}/seeyarti-client:${{ github.sha }}|g' docker-compose.yaml
+          sed -i 's|${DOCKER_IMAGE}|${{ secrets.DOCKER_HUB_USERNAME }}/seeyarti-client:${{ github.sha }}|g' docker-compose.yaml
 
       - name: Transfer docker-compose.yaml as docker-compose.yaml
         env:
