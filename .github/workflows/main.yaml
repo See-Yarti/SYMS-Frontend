@@ -80,4 +80,4 @@ jobs:
           cd /home/${{ secrets.VPS_USERNAME }}/seeyarti-client &&
           echo '$SUDO_PASSWORD' | sudo -S docker-compose pull &&
           echo '$SUDO_PASSWORD' | sudo -S docker-compose down &&
-          echo '$SUDO_PASSWORD' | sudo -S docker-compose -f docker-compose.yaml --env-file=config/env/.env  up -d --force-recreate"
+          echo '$SUDO_PASSWORD' | sudo -S docker-compose up -d --force-recreate"
