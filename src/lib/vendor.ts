@@ -1,3 +1,4 @@
+// src/lib/VendorTable.ts:
 import { axiosInstance } from '@/lib/API';
 
 export const fetchVendors = async (limit: number = 10, page: number = 1) => {

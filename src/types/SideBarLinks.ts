@@ -6,6 +6,7 @@ import {
   NotebookTabs,
   PanelLeftDashed,
   UsersRound,
+  Package
 } from 'lucide-react';
 
 export type SideBarRoutedItem = {
@@ -21,7 +22,7 @@ export type DropdownItem = {
   slug: string;
   icon: LucideIcon;
   type: 'dropdown';
-  items: (SideBarRoutedItem | DropdownItem)[]; // Can contain both
+  items: (SideBarRoutedItem | DropdownItem)[];
 };
 
 export type SeparationItem = {
@@ -31,11 +32,37 @@ export type SeparationItem = {
   position?: 'bottom' | 'top';
 };
 
+export type DynamicProductTypeItem = {
+  title: string;
+  slug: string;
+  type: 'dynamic-product-type';
+  icon: LucideIcon;
+  items: DynamicCategoryItem[];
+};
+
+export type DynamicCategoryItem = {
+  title: string;
+  slug: string;
+  type: 'dynamic-category';
+  productTypeSlug: string;
+  items?: DynamicSubCategoryItem[];
+};
+
+export type DynamicSubCategoryItem = {
+  title: string;
+  slug: string;
+  type: 'dynamic-subcategory';
+  categorySlug: string;
+  productTypeSlug: string;
+};
+
 export const sideBarLinks: (
   | DropdownItem
   | SideBarRoutedItem
   | SeparationItem
+  | DynamicProductTypeItem
 )[] = [
+
   {
     type: 'separation',
     title: 'Navigation',
@@ -55,63 +82,70 @@ export const sideBarLinks: (
     icon: UsersRound,
   },
   {
-    title: 'Catalog',
-    type: 'dropdown',
-    slug: 'catalog',
-    icon: NotebookTabs,
-    items: [
-      {
-        title: 'Categories',
-        slug: 'categories',
-        url: '/catalog/categories',
-        type: 'routed',
-        icon: Layers2,
-      },
-      {
-        title: 'Sub Categories',
-        slug: 'sub-categories',
-        url: '/catalog/sub-categories',
-        type: 'routed',
-        icon: Layers3,
-      },
-      {
-        title: 'Products',
-        slug: 'products',
-        type: 'dropdown',
-        icon: Box,
-        items: [
-          {
-            title: 'New Arrivals',
-            slug: 'new-arrivals',
-            url: '/catalog/products/new-arrivals',
-            type: 'routed',
-            icon: Layers2,
-          },
-          {
-            title: 'Best Sellers',
-            slug: 'best-sellers',
-            url: '/catalog/products/best-sellers',
-            type: 'routed',
-            icon: Layers3,
-          },
-          {
-            title: 'Discounted Items',
-            slug: 'discounted-items',
-            url: '/catalog/products/discounted-items',
-            type: 'routed',
-            icon: Layers2,
-          },
-          {
-            title: 'Featured Products',
-            slug: 'featured-products',
-            url: '/catalog/products/featured-products',
-            type: 'routed',
-            icon: Box,
-          },
-        ],
-      },
-    ],
+    title: 'Product Types',
+    type: 'dynamic-product-type',
+    slug: 'product-types',
+    icon: Package,
+    items: [], // Will be populated dynamically
   },
+  // {
+  //   title: 'Catalog',
+  //   type: 'dropdown',
+  //   slug: 'catalog',
+  //   icon: NotebookTabs,
+  //   items: [
+  //     {
+  //       title: 'Categories',
+  //       slug: 'categories',
+  //       url: '/catalog/categories',
+  //       type: 'routed',
+  //       icon: Layers2,
+  //     },
+  //     {
+  //       title: 'Sub Categories',
+  //       slug: 'sub-categories',
+  //       url: '/catalog/sub-categories',
+  //       type: 'routed',
+  //       icon: Layers3,
+  //     },
+  //     {
+  //       title: 'Products',
+  //       slug: 'products',
+  //       type: 'dropdown',
+  //       icon: Box,
+  //       items: [
+  //         {
+  //           title: 'New Arrivals',
+  //           slug: 'new-arrivals',
+  //           url: '/catalog/products/new-arrivals',
+  //           type: 'routed',
+  //           icon: Layers2,
+  //         },
+  //         {
+  //           title: 'Best Sellers',
+  //           slug: 'best-sellers',
+  //           url: '/catalog/products/best-sellers',
+  //           type: 'routed',
+  //           icon: Layers3,
+  //         },
+  //         {
+  //           title: 'Discounted Items',
+  //           slug: 'discounted-items',
+  //           url: '/catalog/products/discounted-items',
+  //           type: 'routed',
+  //           icon: Layers2,
+  //         },
+  //         {
+  //           title: 'Featured Products',
+  //           slug: 'featured-products',
+  //           url: '/catalog/products/featured-products',
+  //           type: 'routed',
+  //           icon: Box,
+  //         },
+  //       ],
+  //     },
+  //   ],
+  // },
   {
     title: 'Orders',
     type: 'dropdown',

@@ -1,3 +1,5 @@
+// src/hooks/useAppDispatch.ts:
+
 import { axiosInstance } from '@/lib/API';
 import { useQuery, useMutation, useInfiniteQuery } from '@tanstack/react-query';
 
@@ -11,7 +13,6 @@ export const useFetchData = (endpoint: string, queryKey: string) => {
     retry: false, // Prevent React Query from retrying on its own (Axios handles it)
   });
 };
-
 interface InfiniteQueryOptions {
   queryKey: string;
   endpoint: string;

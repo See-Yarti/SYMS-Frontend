@@ -12,6 +12,7 @@ import { User } from '@/types/user';
 import { NavUser } from './nav-user';
 import {
   DropdownItem,
+  DynamicProductTypeItem,
   SeparationItem,
   sideBarLinks,
   SideBarRoutedItem,
@@ -27,8 +28,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   ) as User;
   const [selectedPath, setSelectedPath] = React.useState<number[]>([]);
 
-  let currentMenu: (DropdownItem | SideBarRoutedItem | SeparationItem)[] =
-    sideBarLinks;
+  let currentMenu = sideBarLinks as (DropdownItem | SideBarRoutedItem | SeparationItem | DynamicProductTypeItem)[];
   for (const index of selectedPath) {
     if (currentMenu[index] && currentMenu[index].type === 'dropdown') {
       currentMenu = (currentMenu[index] as DropdownItem).items;
@@ -66,7 +66,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
             {/* Render Sidebar Menu Items */}
             <SidebarMenuItems
-              currentMenu={currentMenu}
+              currentMenu={currentMenu as any}
               selectedPath={selectedPath}
               setSelectedPath={setSelectedPath}
             />

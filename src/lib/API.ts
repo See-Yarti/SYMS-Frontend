@@ -1,3 +1,5 @@
+// src/lib/API.ts:
+
 import axios from 'axios';
 import { RootState, store } from '@/store';
 import { AuthActions, logoutUser } from '@/store/features/auth.slice';
