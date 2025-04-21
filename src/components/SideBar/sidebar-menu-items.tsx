@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Package, Tag, Plus, Trash2, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { SidebarMenuSubItem, SidebarMenuButton } from '@/components/ui/sidebar';
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
-import axios from 'axios';
 import { toast } from 'sonner';
+import { axiosInstance } from '@/lib/API';
 
 type SideBarItem = {
   type: 'separation' | 'routed' | 'dropdown' | 'dynamic-product-type';
@@ -27,36 +28,20 @@ interface SidebarMenuItemsProps {
   setSelectedPath: React.Dispatch<React.SetStateAction<number[]>>;
 }
 
-const api = axios.create({
-  baseURL: 'http://localhost:3000/api',
-});
-
 export function SidebarMenuItems({
   currentMenu,
   selectedPath,
   setSelectedPath,
 }: SidebarMenuItemsProps) {
-  const [productTypes, setProductTypes] = useState<any[]>([]);
-  const [loadingProductTypes, setLoadingProductTypes] = useState(false);
+  const { data: productTypesData, isLoading: isLoadingProductTypes } = useQuery({
+    queryKey: ['productTypes'],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get('/product-type');
+      return data;
+    },
+  });
 
-  useEffect(() => {
-    const fetchProductTypes = async () => {
-      setLoadingProductTypes(true);
-      try {
-        const response = await api.get('/product-type');
-        if (response.data.success) {
-          setProductTypes(response.data.data.productTypes || []);
-        }
-      } catch (error) {
-        console.error('Error fetching product types:', error);
-        toast.error('Failed to load product types');
-      } finally {
-        setLoadingProductTypes(false);
-      }
-    };
-
-    fetchProductTypes();
-  }, []);
+  const productTypes = productTypesData?.data?.productTypes || [];
 
   return (
     <>
@@ -72,14 +57,14 @@ export function SidebarMenuItems({
         if (item.type === 'dynamic-product-type') {
           return (
             <React.Fragment key="product-types-section">
-              {loadingProductTypes ? (
+              {isLoadingProductTypes ? (
                 <div className="px-4 py-2 text-sm text-muted-foreground flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Loading product types...
                 </div>
               ) : (
                 <>
-                  {productTypes.map((productType) => (
+                  {productTypes.map((productType: any) => (
                     <ProductTypeItem
                       key={productType.id}
                       productType={productType}
@@ -107,14 +92,15 @@ export function SidebarMenuItems({
 
 function ProductTypeItem({ productType }: { productType: any }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(false);
   const [openCategoryId, setOpenCategoryId] = useState<string | null>(null);
+  const [subCategories, setSubCategories] = useState<Record<string, any[]>>({});
+  const [isLoadingSubCategories, setIsLoadingSubCategories] = useState<Record<string, boolean>>({});
+  const queryClient = useQueryClient();
 
-  const fetchCategories = async () => {
-    setLoadingCategories(true);
-    try {
-      const response = await api.get('/category', {
+  const { data: categoriesData, isLoading: isLoadingCategories } = useQuery({
+    queryKey: ['categories', productType.slug],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get('/category', {
         params: {
           productTypeSlug: productType.slug,
           limit: 10,
@@ -123,21 +109,17 @@ function ProductTypeItem({ productType }: { productType: any }) {
           sortOrder: 'desc'
         }
       });
+      return data;
+    },
+    enabled: isOpen,
+  });
 
-      if (response.data.success && response.data.data?.categories) {
-        setCategories(response.data.data.categories);
-      }
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      toast.error('Failed to load categories');
-    } finally {
-      setLoadingCategories(false);
-    }
-  };
+  const categories = categoriesData?.data?.categories || [];
 
   const fetchSubCategories = async (categorySlug: string) => {
+    setIsLoadingSubCategories(prev => ({ ...prev, [categorySlug]: true }));
     try {
-      const response = await api.get('/sub-category', {
+      const { data } = await axiosInstance.get('/sub-category', {
         params: {
           categorySlug: categorySlug,
           limit: 10,
@@ -146,181 +128,13 @@ function ProductTypeItem({ productType }: { productType: any }) {
           sortOrder: 'desc'
         }
       });
-
-      if (response.data.success && response.data.data?.subCategories) {
-        return response.data.data.subCategories;
-      }
-      return [];
+      return data.data?.subCategories || [];
     } catch (error) {
       console.error('Error fetching subcategories:', error);
-      toast.error('Failed to load subcategories');
       return [];
+    } finally {
+      setIsLoadingSubCategories(prev => ({ ...prev, [categorySlug]: false }));
     }
-  };
-
-  const handleDeleteCategory = async (category: any) => {
-    try {
-      // Check if category has subcategories
-      if (category.subCategories?.length > 0) {
-        toast.error('Cannot delete category: It contains subcategories');
-        return;
-      }
-  
-      let inputValue = '';
-      let toastId: string | number;
-      const confirmed = await new Promise<boolean>((resolve) => {
-        const dialog = (
-          <Dialog open={true} onOpenChange={(open) => {
-            if (!open) {
-              toast.dismiss(toastId);
-              resolve(false);
-            }
-          }}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Delete Category</DialogTitle>
-                <DialogDescription>
-                  Are you sure you want to delete "{category.name}"? This action cannot be undone.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Type the category name to confirm</Label>
-                  <Input
-                    placeholder={`Type "${category.name}"`}
-                    onChange={(e) => {
-                      inputValue = e.target.value;
-                    }}
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      toast.dismiss(toastId);
-                      resolve(false);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => {
-                      if (inputValue === category.name) {
-                        toast.dismiss(toastId);
-                        resolve(true);
-                      } else {
-                        toast.error('Name does not match');
-                      }
-                    }}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        );
-  
-        toastId = toast.custom(() => dialog, {
-          duration: Infinity,
-        });
-      });
-  
-      if (!confirmed) return;
-  
-      await api.delete(`/category/${category.slug}`);
-      setCategories(categories.filter(c => c.slug !== category.slug));
-      toast.success(`Category "${category.name}" deleted successfully`);
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Failed to delete category';
-      toast.error(errorMessage);
-    }
-  };
-  
-  const handleDeleteSubCategory = async (subCategory: any, categoryId: string) => {
-    try {
-      let inputValue = '';
-      let toastId: string | number;
-      const confirmed = await new Promise<boolean>((resolve) => {
-        const dialog = (
-          <Dialog open={true} onOpenChange={(open) => {
-            if (!open) {
-              toast.dismiss(toastId);
-              resolve(false);
-            }
-          }}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Delete Subcategory</DialogTitle>
-                <DialogDescription>
-                  Are you sure you want to delete "{subCategory.name}"? This action cannot be undone.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>Type the subcategory name to confirm</Label>
-                  <Input
-                    placeholder={`Type "${subCategory.name}"`}
-                    onChange={(e) => {
-                      inputValue = e.target.value;
-                    }}
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      toast.dismiss(toastId);
-                      resolve(false);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => {
-                      if (inputValue === subCategory.name) {
-                        toast.dismiss(toastId);
-                        resolve(true);
-                      } else {
-                        toast.error('Name does not match');
-                      }
-                    }}
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        );
-  
-        toastId = toast.custom(() => dialog, {
-          duration: Infinity,
-        });
-      });
-  
-      if (!confirmed) return;
-  
-      await api.delete(`/sub-category/${subCategory.slug}`);
-      setCategories(categories.map(c =>
-        c.id === categoryId
-          ? { ...c, subCategories: c.subCategories.filter((sc: any) => sc.slug !== subCategory.slug) }
-          : c
-      ));
-      toast.success(`Subcategory "${subCategory.name}" deleted successfully`);
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Failed to delete subcategory';
-      toast.error(errorMessage);
-    }
-  };
-
-  const handleProductTypeClick = async () => {
-    if (!isOpen && categories.length === 0) {
-      await fetchCategories();
-    }
-    setIsOpen(!isOpen);
   };
 
   const handleCategoryClick = async (categoryId: string, categorySlug: string) => {
@@ -328,13 +142,231 @@ function ProductTypeItem({ productType }: { productType: any }) {
       setOpenCategoryId(null);
     } else {
       setOpenCategoryId(categoryId);
-      const category = categories.find(c => c.id === categoryId);
-      if (category && !category.subCategories) {
-        const subCategories = await fetchSubCategories(categorySlug);
-        setCategories(categories.map(c =>
-          c.id === categoryId ? { ...c, subCategories } : c
-        ));
+      if (!subCategories[categorySlug]) {
+        const fetchedSubCategories = await fetchSubCategories(categorySlug);
+        setSubCategories(prev => ({
+          ...prev,
+          [categorySlug]: fetchedSubCategories
+        }));
       }
+    }
+  };
+
+  const { mutate: deleteCategory, isPending: isDeletingCategory } = useMutation({
+    mutationFn: async (categorySlug: string) => {
+      await axiosInstance.delete(`/category/${categorySlug}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories', productType.slug] });
+      toast.success('Category deleted successfully');
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Failed to delete category';
+      toast.error(errorMessage);
+    }
+  });
+
+  const { mutate: deleteSubCategory, isPending: isDeletingSubCategory } = useMutation({
+    mutationFn: async ({ subCategorySlug, categorySlug }: { subCategorySlug: string; categorySlug: string }) => {
+      await axiosInstance.delete(`/sub-category/${subCategorySlug}`);
+      return { categorySlug };
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['categories', productType.slug] });
+      fetchSubCategories(variables.categorySlug).then(fetchedSubCategories => {
+        setSubCategories(prev => ({
+          ...prev,
+          [variables.categorySlug]: fetchedSubCategories
+        }));
+      });
+      toast.success('Subcategory deleted successfully');
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Failed to delete subcategory';
+      toast.error(errorMessage);
+    }
+  });
+
+  const { mutate: createCategory, isPending: isCreatingCategory } = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const { data } = await axiosInstance.post('/category/create', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories', productType.slug] });
+      toast.success('Category created successfully');
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Failed to create category';
+      toast.error(errorMessage);
+    }
+  });
+
+  const { mutate: createSubCategory, isPending: isCreatingSubCategory } = useMutation({
+    mutationFn: async ({ formData, categorySlug }: { formData: FormData; categorySlug: string }) => {
+      const { data } = await axiosInstance.post('/sub-category/create', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return { data, categorySlug };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['categories', productType.slug] });
+      fetchSubCategories(result.categorySlug).then(fetchedSubCategories => {
+        setSubCategories(prev => ({
+          ...prev,
+          [result.categorySlug]: fetchedSubCategories
+        }));
+      });
+      toast.success('Subcategory created successfully');
+    },
+    onError: (error: any) => {
+      const errorMessage = error.response?.data?.message || 'Failed to create subcategory';
+      toast.error(errorMessage);
+    }
+  });
+
+  const handleDeleteCategory = async (category: any) => {
+    if (subCategories[category.slug]?.length > 0) {
+      toast.error('Cannot delete category: It contains subcategories');
+      return;
+    }
+
+    let inputValue = '';
+    let toastId: string | number;
+    const confirmed = await new Promise<boolean>((resolve) => {
+      const dialog = (
+        <Dialog open={true} onOpenChange={(open) => {
+          if (!open) {
+            toast.dismiss(toastId);
+            resolve(false);
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Category</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete "{category.name}"? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Type the category name to confirm</Label>
+                <Input
+                  placeholder={`Type "${category.name}"`}
+                  onChange={(e) => {
+                    inputValue = e.target.value;
+                  }}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    toast.dismiss(toastId);
+                    resolve(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    if (inputValue === category.name) {
+                      toast.dismiss(toastId);
+                      resolve(true);
+                    } else {
+                      toast.error('Name does not match');
+                    }
+                  }}
+                >
+                  {isDeletingCategory ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      );
+
+      toastId = toast.custom(() => dialog, {
+        duration: Infinity,
+      });
+    });
+
+    if (confirmed) {
+      deleteCategory(category.slug);
+    }
+  };
+
+  const handleDeleteSubCategory = async (subCategory: any, categorySlug: string) => {
+    let inputValue = '';
+    let toastId: string | number;
+    const confirmed = await new Promise<boolean>((resolve) => {
+      const dialog = (
+        <Dialog open={true} onOpenChange={(open) => {
+          if (!open) {
+            toast.dismiss(toastId);
+            resolve(false);
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Subcategory</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete "{subCategory.name}"? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Type the subcategory name to confirm</Label>
+                <Input
+                  placeholder={`Type "${subCategory.name}"`}
+                  onChange={(e) => {
+                    inputValue = e.target.value;
+                  }}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    toast.dismiss(toastId);
+                    resolve(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    if (inputValue === subCategory.name) {
+                      toast.dismiss(toastId);
+                      resolve(true);
+                    } else {
+                      toast.error('Name does not match');
+                    }
+                  }}
+                >
+                  {isDeletingSubCategory ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      );
+
+      toastId = toast.custom(() => dialog, {
+        duration: Infinity,
+      });
+    });
+
+    if (confirmed) {
+      deleteSubCategory({ subCategorySlug: subCategory.slug, categorySlug });
     }
   };
 
@@ -343,7 +375,7 @@ function ProductTypeItem({ productType }: { productType: any }) {
       <div className="flex items-center group">
         <SidebarMenuButton
           tooltip={productType.name}
-          onClick={handleProductTypeClick}
+          onClick={() => setIsOpen(!isOpen)}
           className="text-sm flex-1"
         >
           <Package className="w-4 h-4" />
@@ -354,14 +386,14 @@ function ProductTypeItem({ productType }: { productType: any }) {
 
       {isOpen && (
         <div className="ml-4 max-h-96 overflow-y-auto">
-          {loadingCategories ? (
+          {isLoadingCategories ? (
             <div className="px-4 py-1 text-sm text-muted-foreground flex items-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" />
               Loading categories...
             </div>
           ) : categories.length > 0 ? (
             <>
-              {categories.map((category) => (
+              {categories.map((category: any) => (
                 <div key={category.id} className="pl-2">
                   <div className="flex items-center group/category-container">
                     <div
@@ -370,9 +402,9 @@ function ProductTypeItem({ productType }: { productType: any }) {
                     >
                       <Tag className="w-4 h-4 mr-2" />
                       <span className="text-sm flex-1">{category.name}</span>
-                      {category.subCategories?.length > 0 && (
-                        <ChevronRight className={`w-4 h-4 transition-transform ${openCategoryId === category.id ? 'rotate-90' : ''}`} />
-                      )}
+                      <ChevronRight
+                        className={`ml-auto w-4 h-4 transition-transform ${openCategoryId === category.id ? 'rotate-90' : ''}`}
+                      />
                     </div>
                     <Button
                       variant="ghost"
@@ -387,48 +419,56 @@ function ProductTypeItem({ productType }: { productType: any }) {
                     </Button>
                   </div>
 
-                  {openCategoryId === category.id && category.subCategories && (
+                  {openCategoryId === category.id && (
                     <div className="ml-4 pl-2 border-l-2 border-gray-200 dark:border-gray-700">
-                      {category.subCategories.length > 0 ? (
-                        category.subCategories.map((subCategory: any) => (
-                          <div key={subCategory.id} className="flex items-center group/subcategory-container">
-                            <Link
-                              to={`/products/${productType.slug}/${category.slug}/${subCategory.slug}`}
-                              className="flex items-center gap-2 text-sm p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex-1"
+                      {isLoadingSubCategories[category.slug] ? (
+                        <div className="px-4 py-1 text-sm text-muted-foreground flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Loading subcategories...
+                        </div>
+                      ) : (
+                        <>
+                          {subCategories[category.slug]?.length > 0 ? (
+                            subCategories[category.slug].map((subCategory: any) => (
+                              <div key={subCategory.id} className="flex items-center group/subcategory-container">
+                                <Link
+                                  to={`/products/${productType.slug}/${category.slug}/${subCategory.slug}`}
+                                  className="flex items-center gap-2 text-sm p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex-1"
+                                >
+                                  <span className="ml-4">• {subCategory.name}</span>
+                                </Link>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 opacity-0 group-hover/subcategory-container:opacity-100"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteSubCategory(subCategory, category.slug);
+                                  }}
+                                >
+                                  <Trash2 className="w-3 h-3 text-destructive" />
+                                </Button>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-sm text-muted-foreground ml-4 py-1">
+                              No subcategories found
+                            </div>
+                          )}
+                          <div className="mt-1 mb-2 mx-2 p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors">
+                            <AddSubCategoryDialog
+                              categorySlug={category.slug}
+                              onCreate={(formData) => createSubCategory({ formData, categorySlug: category.slug })}
+                              isCreating={isCreatingSubCategory}
                             >
-                              <span className="ml-4">• {subCategory.name}</span>
-                            </Link>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 opacity-0 group-hover/subcategory-container:opacity-100"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteSubCategory(subCategory, category.id);
-                              }}
-                            >
-                              <Trash2 className="w-3 h-3 text-destructive" />
-                            </Button>
+                              <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground py-1">
+                                <Plus className="w-4 h-4" />
+                                <span>Add Subcategory</span>
+                              </div>
+                            </AddSubCategoryDialog>
                           </div>
-                        ))
-                      ) : null}
-                      <div className="mt-1 mb-2 mx-2 p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors">
-                        <AddSubCategoryDialog
-                          categorySlug={category.slug}
-                          onSuccess={(newSubCategory) => {
-                            setCategories(categories.map(c =>
-                              c.id === category.id
-                                ? { ...c, subCategories: [...(c.subCategories || []), newSubCategory] }
-                                : c
-                            ));
-                            if (openCategoryId !== category.id) setOpenCategoryId(category.id);
-                          }}                        >
-                          <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground py-1">
-                            <Plus className="w-4 h-4" />
-                            <span>Add Subcategory</span>
-                          </div>
-                        </AddSubCategoryDialog>
-                      </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -436,10 +476,8 @@ function ProductTypeItem({ productType }: { productType: any }) {
               <div className="mt-2 mb-1 mx-2 p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors">
                 <AddCategoryDialog
                   productTypeSlug={productType.slug}
-                  onSuccess={(newCategory) => {
-                    setCategories([...categories, newCategory]);
-                    if (!isOpen) setIsOpen(true);
-                  }}
+                  onCreate={createCategory}
+                  isCreating={isCreatingCategory}
                 >
                   <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground py-1">
                     <Plus className="w-4 h-4" />
@@ -452,10 +490,8 @@ function ProductTypeItem({ productType }: { productType: any }) {
             <div className="mt-2 mb-1 mx-2 p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors">
               <AddCategoryDialog
                 productTypeSlug={productType.slug}
-                onSuccess={(newCategory) => {
-                  setCategories([...categories, newCategory]);
-                  if (!isOpen) setIsOpen(true);
-                }}
+                onCreate={createCategory}
+                isCreating={isCreatingCategory}
               >
                 <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground py-1">
                   <Plus className="w-4 h-4" />
@@ -470,63 +506,50 @@ function ProductTypeItem({ productType }: { productType: any }) {
   );
 }
 
+// ... (keep all other component implementations the same as in previous code)
+
 function AddCategoryDialog({
   productTypeSlug,
-  onSuccess,
+  onCreate,
+  isCreating,
   children
 }: {
-  productTypeSlug: string,
-  onSuccess: (category: any) => void,
-  children?: React.ReactNode
+  productTypeSlug: string;
+  onCreate: (formData: FormData) => void;
+  isCreating: boolean;
+  children?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [image, setImage] = useState<File | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name) return;
-
-    setLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append('productTypeSlug', productTypeSlug);
-      formData.append('name', name);
-      formData.append('description', description);
-      if (image) formData.append('image', image);
-
-      const response = await api.post('/category/create', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      if (response.data.success) {
-        onSuccess(response.data.data.category);
-        setOpen(false);
-        toast.success("Category created successfully");
-        setName('');
-        setDescription('');
-        setImage(null);
-      }
-    } catch (error: unknown) {
-      console.error('Failed to create category:', error);
-      toast.error("Failed to create category");
-    } finally {
-      setLoading(false);
+    if (!name.trim()) {
+      toast.error('Category name is required');
+      return;
     }
+
+    const formData = new FormData();
+    formData.append('productTypeSlug', productTypeSlug);
+    formData.append('name', name);
+    formData.append('description', description);
+    if (image) {
+      formData.append('image', image);
+    }
+
+    onCreate(formData);
+    setOpen(false);
+    setName('');
+    setDescription('');
+    setImage(null);
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {children || (
-          <Button variant="ghost" size="icon" className="h-6 w-6">
-            <Plus className="w-3 h-3" />
-          </Button>
-        )}
+        {children}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -578,8 +601,8 @@ function AddCategoryDialog({
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create'}
+            <Button type="submit" disabled={isCreating}>
+              {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create'}
             </Button>
           </div>
         </form>
@@ -590,61 +613,46 @@ function AddCategoryDialog({
 
 function AddSubCategoryDialog({
   categorySlug,
-  onSuccess,
+  onCreate,
+  isCreating,
   children
 }: {
-  categorySlug: string,
-  onSuccess: (subCategory: any) => void,
-  children?: React.ReactNode
+  categorySlug: string;
+  onCreate: (formData: FormData) => void;
+  isCreating: boolean;
+  children?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [image, setImage] = useState<File | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name) return;
-
-    setLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append('categorySlug', categorySlug);
-      formData.append('name', name);
-      formData.append('description', description);
-      if (image) formData.append('image', image);
-
-      const response = await api.post('/sub-category/create', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      if (response.data.success) {
-        onSuccess(response.data.data.subCategory);
-        setOpen(false);
-        toast.success("Subcategory created successfully");
-        setName('');
-        setDescription('');
-        setImage(null);
-      }
-    } catch (error: unknown) {
-      console.error('Failed to create subcategory:', error);
-      toast.error("Failed to create subcategory");
-    } finally {
-      setLoading(false);
+    if (!name.trim()) {
+      toast.error('Subcategory name is required');
+      return;
     }
+
+    const formData = new FormData();
+    formData.append('categorySlug', categorySlug);
+    formData.append('name', name);
+    formData.append('description', description);
+    if (image) {
+      formData.append('image', image);
+    }
+
+    onCreate(formData);
+    setOpen(false);
+    setName('');
+    setDescription('');
+    setImage(null);
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {children || (
-          <Button variant="ghost" size="icon" className="h-6 w-6">
-            <Plus className="w-3 h-3" />
-          </Button>
-        )}
+        {children}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -696,8 +704,8 @@ function AddSubCategoryDialog({
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create'}
+            <Button type="submit" disabled={isCreating}>
+              {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Create'}
             </Button>
           </div>
         </form>

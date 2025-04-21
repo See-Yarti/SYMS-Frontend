@@ -1,4 +1,4 @@
-// src/hooks/useAppDispatch.ts:
+// src/hooks/useApi.ts:
 
 import { axiosInstance } from '@/lib/API';
 import { useQuery, useMutation, useInfiniteQuery } from '@tanstack/react-query';
@@ -49,12 +49,37 @@ export const useFetchInfiniteData = ({
   });
 };
 // Post Data Hook
-// Updated usePostData hook in src/hooks/useApi.ts
-export const usePostData = <TData = unknown>(endpoint: string) => {
-  return useMutation({
+// Updated usePostData hook with better typing and file upload support
+export const usePostData = <TData = unknown, TResponse = unknown>(endpoint: string) => {
+  return useMutation<TResponse, Error, TData>({
     mutationFn: async (data: TData) => {
       const { data: responseData } = await axiosInstance.post(endpoint, data);
       return responseData;
     },
   });
 };
+
+// Specialized hook for file uploads
+export const useUploadFile = <TResponse = unknown>(endpoint: string) => {
+  return useMutation<TResponse, Error, FormData>({
+    mutationFn: async (formData: FormData) => {
+      const { data } = await axiosInstance.post(endpoint, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return data;
+    },
+  });
+};
+
+// src/hooks/useApi.ts (add this to your existing file)
+export const useDeleteVendor = () => {
+  return useMutation({
+    mutationFn: async (vendorId: string) => {
+      const { data } = await axiosInstance.delete(`/vendor/${vendorId}`);
+      return data;
+    },
+  });
+};
+
