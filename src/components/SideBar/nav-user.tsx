@@ -1,3 +1,5 @@
+// src/components/SideBar/nav-user.tsx:
+
 import {
   ChevronsUpDown,
   LogOutIcon,

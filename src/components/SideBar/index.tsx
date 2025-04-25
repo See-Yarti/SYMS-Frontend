@@ -1,3 +1,5 @@
+// src/components/SideBar/index.tsx:
+
 import { Outlet } from 'react-router-dom';
 import ThemeSelect from '../Select/Theme-Select';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '../ui/sidebar';

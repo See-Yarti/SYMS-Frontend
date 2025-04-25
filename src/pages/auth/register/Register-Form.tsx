@@ -1,3 +1,4 @@
+// src/pages/auth/register/Register-Form.tsx
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import axios from 'axios';
+import { useUploadFile } from '@/hooks/useApi';
 
 // Define the schema for the registration form
 const registerSchema = z.object({
@@ -47,21 +48,19 @@ const emiratesList = [
 ];
 
 const RegisterForm = () => {
-  const [isLoading, setIsLoading] = React.useState<boolean>(false);
   const navigate = useNavigate();
+  const { mutate: uploadFile, isPending } = useUploadFile<{ success: boolean }>('/vendor/create');
 
   const {
     register,
     handleSubmit,
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
   });
 
-  const handleRegister = async (data: RegisterFormValues) => {
-    setIsLoading(true);
-  
+  const handleRegister = (data: RegisterFormValues) => {
     const formData = new FormData();
     formData.append('name', data.name);
     formData.append('phoneNumber', data.phone);
@@ -70,48 +69,38 @@ const RegisterForm = () => {
     formData.append('designation', data.designation);
     formData.append('companyAddress', data.companyAddress);
     formData.append('state', data.emirates);
-    
-    // Append files if they exist
+
     if (data.vatNumber) {
       formData.append('taxRefNumber', data.vatNumber);
     }
     if (data.tradeLicense) {
       formData.append('tradeLicense', data.tradeLicense);
     }
-  
-    try {
-      const response = await axios.post(
-        'http://localhost:3000/api/vendor/create', // Updated endpoint
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
+
+    uploadFile(formData, {
+      onSuccess: (response) => {
+        if (response.success) {
+          toast.success('Operator created successfully');
+          navigate('/vendors');
+        } else {
+          toast.error('Failed to create Operator');
         }
-      );
-  
-      if (response.data.success) {
-        toast.success('Vendor created successfully');
-        navigate('/vendors'); // Or wherever you want to redirect
-      } else {
-        toast.error('Failed to create vendor');
+      },
+      onError: (error) => {
+        console.error('Registration failed:', error);
+        toast.error('Operator already exists');
       }
-    } catch (error: any) {
-      console.error('Registration failed:', error);
-      toast.error(error.response?.data?.message || 'Registration Failed');
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
+
   return (
     <motion.form
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
       onSubmit={handleSubmit(handleRegister)}
-      className="grid gap-4"
+      className="grid gap-4 "
     >
-
       {/* Grid layout for two fields per row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Name Field */}
@@ -123,7 +112,7 @@ const RegisterForm = () => {
             id="name"
             type="text"
             placeholder="John Doe"
-            disabled={isSubmitting || isLoading}
+            disabled={isPending}
             {...register('name')}
             className="focus:ring-2 focus:ring-purple-500 pl-6"
           />
@@ -138,21 +127,21 @@ const RegisterForm = () => {
             <Phone className="h-4 w-4 mr-2 text-gray-600" /> Phone Number
           </Label>
           <Controller
-  name="phone"
-  control={control}
-  render={({ field }) => (
-    <PhoneInput
-      {...field}
-      international
-      defaultCountry="AE"
-      withCountryCallingCode
-      onChange={field.onChange}
-      value={field.value}
-      placeholder="Enter phone number"
-      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-700 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-    />
-  )}
-/>
+            name="phone"
+            control={control}
+            render={({ field }) => (
+              <PhoneInput
+                {...field}
+                international
+                defaultCountry="AE"
+                withCountryCallingCode
+                onChange={field.onChange}
+                value={field.value}
+                placeholder="Enter phone number"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-700 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+              />
+            )}
+          />
           {errors.phone && (
             <span className="text-red-500 text-sm">{errors.phone.message}</span>
           )}
@@ -170,7 +159,7 @@ const RegisterForm = () => {
             id="companyName"
             type="text"
             placeholder="Company Name"
-            disabled={isSubmitting || isLoading}
+            disabled={isPending}
             {...register('companyName')}
             className="focus:ring-2 focus:ring-purple-500 pl-6"
           />
@@ -188,7 +177,7 @@ const RegisterForm = () => {
             id="companyEmail"
             type="email"
             placeholder="company@example.com"
-            disabled={isSubmitting || isLoading}
+            disabled={isPending}
             {...register('companyEmail')}
             className="focus:ring-2 focus:ring-purple-500 pl-6"
           />
@@ -209,7 +198,7 @@ const RegisterForm = () => {
             id="designation"
             type="text"
             placeholder="Designation"
-            disabled={isSubmitting || isLoading}
+            disabled={isPending}
             {...register('designation')}
             className="focus:ring-2 focus:ring-purple-500 pl-6"
           />
@@ -232,7 +221,7 @@ const RegisterForm = () => {
                 id="vatNumber"
                 type="file"
                 accept=".pdf,image/*"
-                disabled={isSubmitting || isLoading}
+                disabled={isPending}
                 onChange={(e) => onChange(e.target.files?.[0] || undefined)}
                 className="focus:ring-1 focus:ring-gray-700 pl-6"
               />
@@ -253,7 +242,7 @@ const RegisterForm = () => {
           id="companyAddress"
           type="text"
           placeholder="Company Address"
-          disabled={isSubmitting || isLoading}
+          disabled={isPending}
           {...register('companyAddress')}
           className="focus:ring-2 focus:ring-purple-500 pl-6"
         />
@@ -305,7 +294,7 @@ const RegisterForm = () => {
               id="tradeLicense"
               type="file"
               accept=".pdf,image/*"
-              disabled={isSubmitting || isLoading}
+              disabled={isPending}
               onChange={(e) => onChange(e.target.files?.[0] || undefined)}
               className="focus:ring-1 focus:ring-gray-700 pl-6"
             />
@@ -319,11 +308,11 @@ const RegisterForm = () => {
       {/* Submit Button */}
       <Button
         type="submit"
-        disabled={isSubmitting || isLoading}
+        disabled={isPending}
         className="w-full bg-gradient-to-r from-gray-600 to-gray-800 hover:from-gray-700 hover:to-gray-900 text-white font-semibold py-2 rounded-lg transition-all duration-300 flex items-center justify-center"
         size={'sm'}
       >
-        {isLoading && <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />}
+        {isPending && <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />}
         Register
       </Button>
     </motion.form>

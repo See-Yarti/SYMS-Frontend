@@ -1,3 +1,5 @@
+// src/components/SideBar/sidebar-back-button.tsx:
+
 import React from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';

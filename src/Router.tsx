@@ -6,7 +6,8 @@ import PublicRoute from './PublicRoute';
 import Home from './pages/Home';
 import ProtectedRoute from './ProtectedRoute';
 import Register from './pages/auth/register/Register';
-import Vendors from './pages/vendors/Vendors';
+import OperatorRegister from './pages/operators/register/Register';
+import Operators from './pages/operators/Operators';
 
 const router = createBrowserRouter([
   {
@@ -26,8 +27,12 @@ const router = createBrowserRouter([
             element: <Home />,
           },
           {
-            path: 'vendors',
-            element: <Vendors />,
+            path: 'operators',
+            element: <Operators />,
+          },
+          {
+            path: 'operatorsregister',
+            element: <OperatorRegister />,
           },
         ],
       },

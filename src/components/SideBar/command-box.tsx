@@ -1,6 +1,7 @@
+// src/components/SideBar/command-box.tsx:
+
 import React from 'react';
 import {
-  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -8,7 +9,6 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-  CommandShortcut,
 } from '@/components/ui/command';
 import { Button } from '../ui/button';
 import { Search } from 'lucide-react';

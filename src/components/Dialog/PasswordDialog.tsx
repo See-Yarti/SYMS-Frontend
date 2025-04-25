@@ -16,9 +16,9 @@ const PasswordDialog: React.FC<PasswordDialogProps> = ({ open, onClose, onSubmit
     };
 
     return (
-        <Dialog open={open} onClose={onClose}>
-            <DialogTitle>Set Password</DialogTitle>
-            <DialogContent>
+        <Dialog open={open} onClose={onClose} className=''>
+            <DialogTitle className='dark:text-white dark:bg-gray-800'>Set Password</DialogTitle>
+            <DialogContent className='dark:text-white dark:bg-gray-800'>
                 <TextField
                     fullWidth
                     label="Password"
@@ -26,9 +26,10 @@ const PasswordDialog: React.FC<PasswordDialogProps> = ({ open, onClose, onSubmit
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     margin="normal"
+                    className='dark:bg-gray-600'
                 />
             </DialogContent>
-            <DialogActions>
+            <DialogActions className='dark:text-white dark:bg-gray-800'>
                 <Button onClick={onClose} color="primary">
                     Cancel
                 </Button>
