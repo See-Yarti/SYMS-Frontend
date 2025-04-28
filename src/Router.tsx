@@ -8,6 +8,8 @@ import ProtectedRoute from './ProtectedRoute';
 import Register from './pages/auth/register/Register';
 import OperatorRegister from './pages/operators/register/Register';
 import Operators from './pages/operators/Operators';
+import Products from './pages/products/Products';
+
 
 const router = createBrowserRouter([
   {
@@ -29,6 +31,10 @@ const router = createBrowserRouter([
           {
             path: 'operators',
             element: <Operators />,
+          },
+          {
+            path: 'products',
+            element: <Products />,
           },
           {
             path: 'operatorsregister',

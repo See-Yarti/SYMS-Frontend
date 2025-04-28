@@ -1,5 +1,5 @@
 export type Genders = 'male' | 'female' | 'other';
-export type Roles = 'controller' | 'od' | 'md' | 'c' | 'cm' | 'cwu';
+export type Roles = 'controller' | 'od' | 'md' | 'c' | 'cm' | 'cwu' | 'admin' | 'operator';
 
 export type User = {
   email: string;
@@ -7,6 +7,7 @@ export type User = {
   id: string;
   name: string;
   isFirstLogin: boolean;
+  avatarUrl: string | null;
 };
 
 export type LoginUserInitialData = {

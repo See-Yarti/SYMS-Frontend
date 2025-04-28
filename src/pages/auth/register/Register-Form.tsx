@@ -49,7 +49,7 @@ const emiratesList = [
 
 const RegisterForm = () => {
   const navigate = useNavigate();
-  const { mutate: uploadFile, isPending } = useUploadFile<{ success: boolean }>('/vendor/create');
+  const { mutate: uploadFile, isPending } = useUploadFile<{ success: boolean }>('/operator/create');
 
   const {
     register,
@@ -81,7 +81,7 @@ const RegisterForm = () => {
       onSuccess: (response) => {
         if (response.success) {
           toast.success('Operator created successfully');
-          navigate('/vendors');
+          navigate('/operators');
         } else {
           toast.error('Failed to create Operator');
         }

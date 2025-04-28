@@ -1,5 +1,4 @@
 // src/types/SideBarLinks.ts
-
 import {
   Box,
   Layers2,
@@ -11,35 +10,34 @@ import {
   Package
 } from 'lucide-react';
 
-export type SideBarRoutedItem = {
+export type SideBarItem = {
+  type: 'separation' | 'routed' | 'dropdown';
   title: string;
-  url: string;
-  icon: LucideIcon;
-  slug: string;
-  type: 'routed';
-};
-
-export type DropdownItem = {
-  title: string;
-  slug: string;
-  icon: LucideIcon;
-  type: 'dropdown';
-  items: (SideBarRoutedItem | DropdownItem)[];
-};
-
-export type SeparationItem = {
-  type: 'separation';
-  title: string;
+  url?: string;
+  slug?: string;
+  icon?: LucideIcon;
   isHorizontal?: boolean;
   position?: 'bottom' | 'top';
+  items?: SideBarItem[];
+  badge?: string | number;
+  roles?: ('admin' | 'operator')[];
 };
 
-export const sideBarLinks: (
-  | DropdownItem
-  | SideBarRoutedItem
-  | SeparationItem
-)[] = [
+export type SideBarRoutedItem = SideBarItem & {
+  type: 'routed';
+  url: string;
+};
 
+export type DropdownItem = SideBarItem & {
+  type: 'dropdown';
+  items: SideBarItem[];
+};
+
+export type SeparationItem = SideBarItem & {
+  type: 'separation';
+};
+
+export const sideBarLinks: SideBarItem[] = [
   {
     type: 'separation',
     title: 'Navigation',
@@ -50,6 +48,7 @@ export const sideBarLinks: (
     url: '/',
     slug: '/',
     icon: PanelLeftDashed,
+    roles: ['admin', 'operator']
   },
   {
     title: 'Operators',
@@ -57,6 +56,7 @@ export const sideBarLinks: (
     url: '/operators',
     slug: 'operators',
     icon: UsersRound,
+    roles: ['admin']
   },
   {
     title: 'Cars',
@@ -64,12 +64,14 @@ export const sideBarLinks: (
     url: '/products',
     slug: 'products',
     icon: Package,
+    roles: ['admin', 'operator']
   },
   {
     title: 'Orders',
     type: 'dropdown',
     slug: 'orders',
     icon: NotebookTabs,
+    roles: ['admin', 'operator'],
     items: [
       {
         title: 'All Orders',
@@ -104,12 +106,14 @@ export const sideBarLinks: (
   {
     type: 'separation',
     title: 'Management',
+    roles: ['admin']
   },
   {
     title: 'User Management',
     type: 'dropdown',
     slug: 'user-management',
     icon: UsersRound,
+    roles: ['admin'],
     items: [
       {
         title: 'All Users',
@@ -144,6 +148,7 @@ export const sideBarLinks: (
     url: '/settings',
     slug: 'settings',
     icon: Box,
+    roles: ['admin', 'operator']
   },
   {
     title: 'Help Center',
@@ -151,5 +156,6 @@ export const sideBarLinks: (
     url: '/help',
     slug: 'help',
     icon: NotebookTabs,
+    roles: ['admin', 'operator']
   },
 ];

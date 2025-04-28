@@ -1,4 +1,4 @@
-// src/components/SideBar/sidebar-menu-items.tsx:
+// src/components/SideBar/sidebar-menu-items.tsx
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronRight, ChevronDown } from 'lucide-react';
@@ -7,18 +7,7 @@ import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
-
-type SideBarItem = {
-  type: 'separation' | 'routed' | 'dropdown' | 'dynamic-product-type';
-  title: string;
-  url?: string;
-  slug?: string;
-  icon?: React.ComponentType<{ className?: string }>;
-  isHorizontal?: boolean;
-  position?: 'bottom' | 'top';
-  items?: SideBarItem[];
-  badge?: string | number;
-};
+import { SideBarItem } from '@/types/SideBarLinks';
 
 interface SidebarMenuItemsProps {
   currentMenu: SideBarItem[];
@@ -37,20 +26,22 @@ export function SidebarMenuItems({
     <>
       {currentMenu.map((item, index) => {
         if (item.type === 'separation') {
-          return <SidebarSeparationItem key={item.title} item={item} />;
+          return <SidebarSeparationItem key={`${item.title}-${index}`} item={item} />;
         }
 
         if (item.type === 'routed') {
-          return <SidebarRoutedItem 
-            key={item.title} 
-            item={item} 
-            isActive={location.pathname === item.url} 
-          />;
+          return (
+            <SidebarRoutedItem 
+              key={`${item.title}-${index}`}
+              item={item}
+              isActive={location.pathname === item.url}
+            />
+          );
         }
 
         return (
           <SidebarDropdownItem
-            key={item.title}
+            key={`${item.title}-${index}`}
             item={item}
             index={index}
             selectedPath={selectedPath}
@@ -68,7 +59,7 @@ export function SidebarMenuItems({
 function SidebarSeparationItem({ item }: { item: SideBarItem }) {
   return (
     <React.Fragment>
-      {item.isHorizontal && item.position == 'top' && (
+      {item.isHorizontal && item.position === 'top' && (
         <div className="flex justify-center items-center">
           <Separator className="mr-2 h-[1.5px] w-1/2" />
         </div>
@@ -76,7 +67,7 @@ function SidebarSeparationItem({ item }: { item: SideBarItem }) {
       <Label className="text-xs text-muted-foreground dark:text-gray-50 font-medium px-2 py-1">
         {item.title}
       </Label>
-      {item.isHorizontal && item.position == 'bottom' && (
+      {item.isHorizontal && item.position === 'bottom' && (
         <div className="flex justify-center items-center">
           <Separator className="mr-2 h-[1.5px] w-1/2" />
         </div>

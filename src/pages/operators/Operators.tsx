@@ -65,9 +65,9 @@ const OperatorTable: React.FC = () => {
     isLoading: isOperatorsLoading,
     error: operatorsError,
     refetch: refetchOperators
-  } = useFetchData('/vendor', 'operators');
+  } = useFetchData('/operator', 'operators');
 
-  const { mutate: verifyOperator } = usePostData<{ operatorId: string; newPassword: string }>('/vendor/verify');
+  const { mutate: verifyOperator } = usePostData<{ operatorId: string; newPassword: string }>('/operator/verify');
   const { mutate: deleteOperator } = useDeleteVendor();
 
   const operatorList = operatorsData?.data || [];
@@ -216,7 +216,6 @@ const OperatorTable: React.FC = () => {
                         onClick={() => handleDeleteOpen(operator)}
                       >
                         <Trash2 className="h-4 w-4" />
-                        Delete
                       </Button>
                     </div>
                   </TableCell>
@@ -255,34 +254,34 @@ const OperatorTable: React.FC = () => {
               <div className="grid gap-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Company Name</Label>
+                    <Label className='font-bold'>Company Name</Label>
                     <p>{selectedOperator.companyName}</p>
                   </div>
                   <div>
-                    <Label>Email</Label>
+                    <Label className='font-bold'>Email</Label>
                     <p>{selectedOperator.user?.email || 'N/A'}</p>
                   </div>
                 </div>
 
                 <div>
-                  <Label>Company Address</Label>
+                  <Label className='font-bold'>Company Address</Label>
                   <p>{selectedOperator.companyAddress || 'N/A'}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Emirate</Label>
+                    <Label className='font-bold'>Emirate</Label>
                     <p>{selectedOperator.operatorState || 'N/A'}</p>
                   </div>
                   <div>
-                    <Label>Status</Label>
+                    <Label className='font-bold'>Status</Label>
                     <p>{selectedOperator.isOperatorVerified ? 'Verified' : 'Pending Verification'}</p>
                   </div>
                 </div>
 
                 {selectedOperator.taxRefNumber && (
                   <div>
-                    <Label>Tax Reference : </Label>
+                    <Label className='font-bold'>Tax Reference : </Label>
                     <a
                       href={selectedOperator.taxRefNumber}
                       target="_blank"
@@ -296,7 +295,7 @@ const OperatorTable: React.FC = () => {
 
                 {selectedOperator.tradeLicense && (
                   <div>
-                    <Label>Trade License : </Label>
+                    <Label className='font-bold'>Trade License : </Label>
                     <a
                       href={selectedOperator.tradeLicense}
                       target="_blank"
@@ -310,11 +309,11 @@ const OperatorTable: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Created At</Label>
+                    <Label className='font-bold'>Created At</Label>
                     <p>{selectedOperator.createdAt ? new Date(selectedOperator.createdAt).toLocaleString() : 'N/A'}</p>
                   </div>
                   <div>
-                    <Label>Updated At</Label>
+                    <Label className='font-bold'>Updated At</Label>
                     <p>{selectedOperator.updatedAt ? new Date(selectedOperator.updatedAt).toLocaleString() : 'N/A'}</p>
                   </div>
                 </div>

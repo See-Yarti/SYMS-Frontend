@@ -66,7 +66,7 @@ interface RegisterFormProps {
 
 const RegisterForm: React.FC<RegisterFormProps> = ({ currentStep, setCurrentStep }) => {
   const navigate = useNavigate();
-  const { mutate: uploadFile, isPending } = useUploadFile<{ success: boolean }>('/vendor/create');
+  const { mutate: uploadFile, isPending } = useUploadFile<{ success: boolean }>('/operator/create');
 
   const {
     register,

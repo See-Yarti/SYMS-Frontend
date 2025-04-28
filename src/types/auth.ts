@@ -9,3 +9,5 @@ export const loginSchema = z.object({
 
 // TypeScript type inferred from the schema
 export type LoginFormValues = z.infer<typeof loginSchema>;
+
+export type Roles = 'admin' | 'operator';
