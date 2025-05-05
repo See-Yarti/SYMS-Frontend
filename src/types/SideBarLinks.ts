@@ -51,6 +51,14 @@ export const sideBarLinks: SideBarItem[] = [
     roles: ['admin', 'operator']
   },
   {
+    title: 'Companies',
+    type: 'routed',
+    url: '/companies',
+    slug: 'companies',
+    icon: UsersRound,
+    roles: ['admin']
+  },
+  {
     title: 'Operators',
     type: 'routed',
     url: '/operators',

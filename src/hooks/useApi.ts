@@ -2,6 +2,12 @@
 
 import { axiosInstance } from '@/lib/API';
 import { useQuery, useMutation, useInfiniteQuery } from '@tanstack/react-query';
+import {
+  CompaniesResponse,
+  CompanyResponse,
+  UnverifyCompanyPayload,
+  VerificationResponse,
+} from '@/types/company';
 
 export const useFetchData = (endpoint: string, queryKey: string) => {
   return useQuery({
@@ -50,7 +56,9 @@ export const useFetchInfiniteData = ({
 };
 // Post Data Hook
 // Updated usePostData hook with better typing and file upload support
-export const usePostData = <TData = unknown, TResponse = unknown>(endpoint: string) => {
+export const usePostData = <TData = unknown, TResponse = unknown>(
+  endpoint: string,
+) => {
   return useMutation<TResponse, Error, TData>({
     mutationFn: async (data: TData) => {
       const { data: responseData } = await axiosInstance.post(endpoint, data);
@@ -83,3 +91,54 @@ export const useDeleteVendor = () => {
   });
 };
 
+// Get all companies
+export const useGetCompanies = () => {
+  return useQuery<CompaniesResponse, Error>({
+    queryKey: ['companies'],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get('/company');
+      return data;
+    },
+  });
+};
+
+// Get single company by ID
+export const useGetCompany = (companyId: string) => {
+  return useQuery<CompanyResponse, Error>({
+    queryKey: ['company', companyId],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get(`/company/${companyId}`);
+      return data;
+    },
+    enabled: !!companyId, // Only run query if companyId exists
+  });
+};
+
+// Verify a company
+export const useVerifyCompany = () => {
+  return useMutation<VerificationResponse, Error, string>({
+    mutationFn: async (companyId: string) => {
+      const { data } = await axiosInstance.patch(
+        `/company/company-verify/${companyId}`,
+      );
+      return data;
+    },
+  });
+};
+
+// Unverify a company
+export const useUnverifyCompany = () => {
+  return useMutation<
+    VerificationResponse, 
+    Error, 
+    { companyId: string; payload: UnverifyCompanyPayload }
+  >({
+    mutationFn: async ({ companyId, payload }) => {
+      const { data } = await axiosInstance.patch(
+        `/company/company-un-verify/${companyId}`,
+        payload
+      );
+      return data;
+    },
+  });
+};

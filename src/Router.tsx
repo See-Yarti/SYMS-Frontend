@@ -1,4 +1,6 @@
-import { createBrowserRouter } from 'react-router-dom';
+// src/Router.tsx:
+
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import ErrorPage from './error-page';
 import SideBar from './components/SideBar';
 import Login from './pages/auth/login/Login';
@@ -9,7 +11,10 @@ import Register from './pages/auth/register/Register';
 import OperatorRegister from './pages/operators/register/Register';
 import Operators from './pages/operators/Operators';
 import Products from './pages/products/Products';
-
+import CompaniesList from '@/components/Company/CompanyList';
+import CompanyDetail from '@/components/Company/CompanyDetails';
+import Companies from './pages/company/Companies';
+import CompanyFormWrapper from './components/Company/CompanyFormWrapper';
 
 const router = createBrowserRouter([
   {
@@ -40,6 +45,28 @@ const router = createBrowserRouter([
             path: 'operatorsregister',
             element: <OperatorRegister />,
           },
+          {
+            path: 'companies',
+            element: <Companies />,
+            children: [
+              {
+                index: true,
+                element: <Navigate to="list" replace />,
+              },
+              {
+                path: 'list',
+                element: <CompaniesList />,
+              },
+              {
+                path: 'new',
+                element: <CompanyFormWrapper />,
+              },
+              {
+                path: ':companyId',
+                element: <CompanyDetail />,
+              },
+            ],
+          }
         ],
       },
     ],
