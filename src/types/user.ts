@@ -1,20 +1,47 @@
+import { OperatorRole } from "./auth";
+
 export type Genders = 'male' | 'female' | 'other';
-export type Roles = 'controller' | 'od' | 'md' | 'c' | 'cm' | 'cwu' | 'admin' | 'operator';
 
 export type User = {
-  email: string;
-  role: Roles;
   id: string;
   name: string;
+  email: string;
+  role: 'admin' | 'operator'; // More specific type
+  avatar: string | null;
   isFirstLogin: boolean;
-  avatarUrl: string | null;
+  // Optional fields that might come from API
+  phoneNumber?: string;
+  gender?: Genders;
+  lastActivityAt?: string;
+  lastLoginAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  companyId?: string;
+  operatorRole?: string;
 };
 
 export type LoginUserInitialData = {
-  user: User;
-  exp: number;
-  unReadNotifications: number;
-  readNotifications: number;
   _aT: string;
   _rT: string;
+  user: User;
+  otherInfo?: OtherInfo | null;
+  // Optional fields that might come from API
+  company?: Company | null;
+  exp?: number;
+  unReadNotifications?: number;
+  readNotifications?: number;
 };
+
+export interface Company {
+  id: string;
+  name: string;
+  // Add other company fields as needed
+}
+
+export interface OtherInfo {
+  isHeadOperator?: boolean;
+  operatorRole?: OperatorRole;
+  operatorId: string;
+  companyId: string;
+  userId: string;
+}

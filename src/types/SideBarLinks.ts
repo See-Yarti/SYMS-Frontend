@@ -7,8 +7,10 @@ import {
   NotebookTabs,
   PanelLeftDashed,
   UsersRound,
-  Package
+  Package,
+  PanelRightDashed,
 } from 'lucide-react';
+import { OperatorRole, UserRole } from './auth';
 
 export type SideBarItem = {
   type: 'separation' | 'routed' | 'dropdown';
@@ -20,7 +22,7 @@ export type SideBarItem = {
   position?: 'bottom' | 'top';
   items?: SideBarItem[];
   badge?: string | number;
-  roles?: ('admin' | 'operator')[];
+  roles?: (UserRole | OperatorRole)[];
 };
 
 export type SideBarRoutedItem = SideBarItem & {
@@ -48,7 +50,15 @@ export const sideBarLinks: SideBarItem[] = [
     url: '/',
     slug: '/',
     icon: PanelLeftDashed,
-    roles: ['admin', 'operator']
+    roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
+  },
+  {
+    title: 'Addresses',
+    type: 'routed',
+    url: '/addresses',
+    slug: '/addresses',
+    icon: PanelRightDashed,
+    roles: ['operator',  'adminOperator', 'managerOperator', 'salesOperator'],
   },
   {
     title: 'Companies',
@@ -56,7 +66,7 @@ export const sideBarLinks: SideBarItem[] = [
     url: '/companies',
     slug: 'companies',
     icon: UsersRound,
-    roles: ['admin']
+    roles: ['admin'],
   },
   {
     title: 'Operators',
@@ -64,22 +74,23 @@ export const sideBarLinks: SideBarItem[] = [
     url: '/operators',
     slug: 'operators',
     icon: UsersRound,
-    roles: ['admin']
+    roles: ['admin', 'adminOperator'],
   },
   {
-    title: 'Cars',
+    title: 'Products',
     type: 'routed',
     url: '/products',
     slug: 'products',
     icon: Package,
-    roles: ['admin', 'operator']
+    roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
   },
   {
     title: 'Orders',
     type: 'dropdown',
     slug: 'orders',
     icon: NotebookTabs,
-    roles: ['admin', 'operator'],
+    roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
+
     items: [
       {
         title: 'All Orders',
@@ -87,6 +98,7 @@ export const sideBarLinks: SideBarItem[] = [
         url: '/orders/all-orders',
         type: 'routed',
         icon: Layers2,
+        roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
       },
       {
         title: 'Pending Orders',
@@ -94,6 +106,7 @@ export const sideBarLinks: SideBarItem[] = [
         url: '/orders/pending-orders',
         type: 'routed',
         icon: Layers3,
+        roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
       },
       {
         title: 'Completed Orders',
@@ -101,6 +114,7 @@ export const sideBarLinks: SideBarItem[] = [
         url: '/orders/completed-orders',
         type: 'routed',
         icon: Layers3,
+        roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
       },
       {
         title: 'Returns & Refunds',
@@ -108,13 +122,14 @@ export const sideBarLinks: SideBarItem[] = [
         url: '/orders/returns-refunds',
         type: 'routed',
         icon: Layers2,
+        roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
       },
     ],
   },
   {
     type: 'separation',
     title: 'Management',
-    roles: ['admin']
+    roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
   },
   {
     title: 'User Management',
@@ -129,6 +144,7 @@ export const sideBarLinks: SideBarItem[] = [
         url: '/user-management/all-users',
         type: 'routed',
         icon: Layers2,
+        roles: ['admin'],
       },
       {
         title: 'Roles & Permissions',
@@ -136,6 +152,7 @@ export const sideBarLinks: SideBarItem[] = [
         url: '/user-management/roles-permissions',
         type: 'routed',
         icon: Layers3,
+        roles: ['admin'],
       },
       {
         title: 'Access Logs',
@@ -143,6 +160,32 @@ export const sideBarLinks: SideBarItem[] = [
         url: '/user-management/access-logs',
         type: 'routed',
         icon: Box,
+        roles: ['admin'],
+      },
+    ],
+  },
+  {
+    title: 'Operator Management',
+    type: 'dropdown',
+    slug: 'operator-management',
+    icon: UsersRound,
+    roles: ['operator'],
+    items: [
+      {
+        title: 'Operator Dashboard',
+        slug: 'operator-dashboard',
+        url: '/operator-management/dashboard',
+        type: 'routed',
+        icon: Layers2,
+        roles: ['operator'],
+      },
+      {
+        title: 'Performance Metrics',
+        slug: 'performance-metrics',
+        url: '/operator-management/metrics',
+        type: 'routed',
+        icon: Layers3,
+        roles: ['operator'],
       },
     ],
   },
@@ -156,7 +199,7 @@ export const sideBarLinks: SideBarItem[] = [
     url: '/settings',
     slug: 'settings',
     icon: Box,
-    roles: ['admin', 'operator']
+    roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
   },
   {
     title: 'Help Center',
@@ -164,6 +207,6 @@ export const sideBarLinks: SideBarItem[] = [
     url: '/help',
     slug: 'help',
     icon: NotebookTabs,
-    roles: ['admin', 'operator']
+    roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
   },
 ];

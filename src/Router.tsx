@@ -8,13 +8,18 @@ import PublicRoute from './PublicRoute';
 import Home from './pages/Home';
 import ProtectedRoute from './ProtectedRoute';
 import Register from './pages/auth/register/Register';
-import OperatorRegister from './pages/operators/register/Register';
 import Operators from './pages/operators/Operators';
+import Profile from './pages/profile/Profile';
 import Products from './pages/products/Products';
 import CompaniesList from '@/components/Company/CompanyList';
 import CompanyDetail from '@/components/Company/CompanyDetails';
 import Companies from './pages/company/Companies';
+import Addresses from './pages/addresses/Addresses';
 import CompanyFormWrapper from './components/Company/CompanyFormWrapper';
+import OperatorRegister from './pages/operators/OperatorRegister';
+import OperatorProfile from './pages/operators/OperatorProfile';
+
+const companyId = 'e23fd334-c3ac-4860-9e98-d57e4650c06e';
 
 const router = createBrowserRouter([
   {
@@ -30,20 +35,32 @@ const router = createBrowserRouter([
             element: <Home />,
           },
           {
+            path: 'addresses',
+            element: <Addresses  companyId={companyId}/>,
+          },
+          {
             path: 'dashboard',
             element: <Home />,
+          },
+          {
+            path: 'profile',
+            element: <Profile />,
           },
           {
             path: 'operators',
             element: <Operators />,
           },
           {
-            path: 'products',
-            element: <Products />,
+            path: '/operators/register',
+            element: <OperatorRegister />,
           },
           {
-            path: 'operatorsregister',
-            element: <OperatorRegister />,
+            path: '/operators/:operatorId',
+            element: <OperatorProfile />,
+          },
+          {
+            path: 'products',
+            element: <Products />,
           },
           {
             path: 'companies',

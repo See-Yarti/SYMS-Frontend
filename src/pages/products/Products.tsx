@@ -3,8 +3,6 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Table,
-  TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
@@ -20,10 +18,9 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { useFetchData, usePostData } from '@/hooks/useApi';
-import { Plus, Eye, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useAppSelector } from '@/store';
 
 type Address = {
@@ -64,7 +61,7 @@ const ProductsTable: React.FC = () => {
   const [isVinLoading, setIsVinLoading] = useState(false);
   const user = useAppSelector((state) => state.auth.user);
   const role = user?.role;
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedProduct] = useState<Product | null>(null);
   const [confirmationName, setConfirmationName] = useState('');
   const [newProduct, setNewProduct] = useState<Omit<Product, 'id'>>({
     vin: '',
@@ -92,7 +89,6 @@ const ProductsTable: React.FC = () => {
 
   // Fetch products
   const {
-    data: productsData,
     isLoading: isProductsLoading,
     error: productsError,
     refetch: refetchProducts,
@@ -101,7 +97,6 @@ const ProductsTable: React.FC = () => {
     'products'
   );
 
-  const productList = productsData?.data || [];
 
   // Mutation for adding new product
   const { mutate: addProduct } = usePostData<any, Omit<Product, 'id'>>('/product/create');
@@ -127,12 +122,12 @@ const ProductsTable: React.FC = () => {
 
       const data = await response.json();
       setVinData(data);
-      
+
       // Split class into category and subcategory
-      const [categoryName, subCategoryName] = data.class ? 
-        data.class.split('/').map((item: string) => item.trim()) : 
+      const [categoryName, subCategoryName] = data.class ?
+        data.class.split('/').map((item: string) => item.trim()) :
         ['', ''];
-      
+
       // Auto-fill product fields from VIN data
       setNewProduct(prev => ({
         ...prev,
@@ -144,7 +139,7 @@ const ProductsTable: React.FC = () => {
         categoryName,
         subCategoryName,
       }));
-      
+
       toast.success('VIN data fetched successfully');
     } catch (error) {
       console.error('VIN lookup error:', error);
@@ -158,7 +153,7 @@ const ProductsTable: React.FC = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target as HTMLInputElement;
     const checked = type === 'checkbox' ? (e.target as HTMLInputElement).checked : undefined;
-    
+
     setNewProduct(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -168,7 +163,7 @@ const ProductsTable: React.FC = () => {
   // Handle address field changes
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>, field: keyof Address) => {
     const { value } = e.target;
-    
+
     setNewProduct(prev => ({
       ...prev,
       addresses: [
@@ -183,7 +178,7 @@ const ProductsTable: React.FC = () => {
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!newProduct.vin || newProduct.vin.length !== 17) {
       toast.error('Please enter a valid VIN');
       return;
@@ -226,10 +221,6 @@ const ProductsTable: React.FC = () => {
     });
   };
 
-  const handleDeleteOpen = (product: Product) => {
-    setSelectedProduct(product);
-    setOpenDeleteDialog(true);
-  };
 
   const handleDeleteClose = () => {
     setOpenDeleteDialog(false);
@@ -261,7 +252,7 @@ const ProductsTable: React.FC = () => {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-      <h1 className="text-2xl font-bold tracking-tight">All Products</h1>
+        <h1 className="text-2xl font-bold tracking-tight">All Products</h1>
         <div className="flex gap-2">
           <Input
             placeholder="Search products..."
@@ -269,7 +260,7 @@ const ProductsTable: React.FC = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-sm"
           />
-          
+
           {/* Only show Add Product button for operators */}
           {role === 'operator' && (
             <Dialog open={openAddDialog} onOpenChange={setOpenAddDialog}>
@@ -279,214 +270,214 @@ const ProductsTable: React.FC = () => {
                   Add Product
                 </Button>
               </DialogTrigger>
-            <DialogContent className="sm:max-w-[625px] max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Add New Product</DialogTitle>
-                <DialogDescription>
-                  Fill in the product details. The VIN field will auto-fill some information.
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="vin">VIN Number</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="vin"
-                        name="vin"
-                        value={vin}
-                        onChange={(e) => setVin(e.target.value)}
-                        placeholder="Enter 17-character VIN"
-                        maxLength={17}
-                      />
-                      <Button
-                        type="button"
-                        onClick={handleVinLookup}
-                        disabled={isVinLoading || vin.length !== 17}
-                      >
-                        {isVinLoading ? 'Loading...' : 'Lookup'}
-                      </Button>
-                    </div>
-                  </div>
-                  {vinData && (
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">VIN Details</p>
-                      <div className="text-sm text-muted-foreground">
-                        {vinData.manufacturer} {vinData.model} ({vinData.year})
+              <DialogContent className="sm:max-w-[625px] max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Add New Product</DialogTitle>
+                  <DialogDescription>
+                    Fill in the product details. The VIN field will auto-fill some information.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="vin">VIN Number</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="vin"
+                          name="vin"
+                          value={vin}
+                          onChange={(e) => setVin(e.target.value)}
+                          placeholder="Enter 17-character VIN"
+                          maxLength={17}
+                        />
+                        <Button
+                          type="button"
+                          onClick={handleVinLookup}
+                          disabled={isVinLoading || vin.length !== 17}
+                        >
+                          {isVinLoading ? 'Loading...' : 'Lookup'}
+                        </Button>
                       </div>
                     </div>
-                  )}
-                </div>
+                    {vinData && (
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">VIN Details</p>
+                        <div className="text-sm text-muted-foreground">
+                          {vinData.manufacturer} {vinData.model} ({vinData.year})
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Title</Label>
-                    <Input
-                      id="title"
-                      name="title"
-                      value={newProduct.title}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="categoryName">Category</Label>
-                    <Input
-                      id="categoryName"
-                      name="categoryName"
-                      value={newProduct.categoryName}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="subCategoryName">Subcategory</Label>
-                    <Input
-                      id="subCategoryName"
-                      name="subCategoryName"
-                      value={newProduct.subCategoryName}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="dailyPrice">Daily Price</Label>
-                    <Input
-                      id="dailyPrice"
-                      name="dailyPrice"
-                      type="number"
-                      value={newProduct.dailyPrice}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="weeklyPrice">Weekly Price</Label>
-                    <Input
-                      id="weeklyPrice"
-                      name="weeklyPrice"
-                      type="number"
-                      value={newProduct.weeklyPrice}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="monthlyPrice">Monthly Price</Label>
-                    <Input
-                      id="monthlyPrice"
-                      name="monthlyPrice"
-                      type="number"
-                      value={newProduct.monthlyPrice}
-                      onChange={handleInputChange}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Input
-                    id="description"
-                    name="description"
-                    value={newProduct.description}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div className="space-y-4">
-                  <Label>Address</Label>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="street">Street</Label>
+                      <Label htmlFor="title">Title</Label>
                       <Input
-                        id="street"
-                        value={newProduct.addresses[0].street}
-                        onChange={(e) => handleAddressChange(e, 'street')}
+                        id="title"
+                        name="title"
+                        value={newProduct.title}
+                        onChange={handleInputChange}
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="city">City</Label>
+                      <Label htmlFor="categoryName">Category</Label>
                       <Input
-                        id="city"
-                        value={newProduct.addresses[0].city}
-                        onChange={(e) => handleAddressChange(e, 'city')}
+                        id="categoryName"
+                        name="categoryName"
+                        value={newProduct.categoryName}
+                        onChange={handleInputChange}
                         required
                       />
                     </div>
                   </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="state">State</Label>
+                      <Label htmlFor="subCategoryName">Subcategory</Label>
                       <Input
-                        id="state"
-                        value={newProduct.addresses[0].state}
-                        onChange={(e) => handleAddressChange(e, 'state')}
+                        id="subCategoryName"
+                        name="subCategoryName"
+                        value={newProduct.subCategoryName}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="dailyPrice">Daily Price</Label>
+                      <Input
+                        id="dailyPrice"
+                        name="dailyPrice"
+                        type="number"
+                        value={newProduct.dailyPrice}
+                        onChange={handleInputChange}
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="country">Country</Label>
+                      <Label htmlFor="weeklyPrice">Weekly Price</Label>
                       <Input
-                        id="country"
-                        value={newProduct.addresses[0].country}
-                        onChange={(e) => handleAddressChange(e, 'country')}
+                        id="weeklyPrice"
+                        name="weeklyPrice"
+                        type="number"
+                        value={newProduct.weeklyPrice}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="monthlyPrice">Monthly Price</Label>
+                      <Input
+                        id="monthlyPrice"
+                        name="monthlyPrice"
+                        type="number"
+                        value={newProduct.monthlyPrice}
+                        onChange={handleInputChange}
                         required
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="zipCode">Zip Code</Label>
-                      <Input
-                        id="zipCode"
-                        value={newProduct.addresses[0].zipCode}
-                        onChange={(e) => handleAddressChange(e, 'zipCode')}
-                        required
-                      />
+
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Input
+                      id="description"
+                      name="description"
+                      value={newProduct.description}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <Label>Address</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="street">Street</Label>
+                        <Input
+                          id="street"
+                          value={newProduct.addresses[0].street}
+                          onChange={(e) => handleAddressChange(e, 'street')}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="city">City</Label>
+                        <Input
+                          id="city"
+                          value={newProduct.addresses[0].city}
+                          onChange={(e) => handleAddressChange(e, 'city')}
+                          required
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="additionalInfo">Additional Info</Label>
-                      <Input
-                        id="additionalInfo"
-                        value={newProduct.addresses[0].additionalInfo || ''}
-                        onChange={(e) => handleAddressChange(e, 'additionalInfo')}
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="state">State</Label>
+                        <Input
+                          id="state"
+                          value={newProduct.addresses[0].state}
+                          onChange={(e) => handleAddressChange(e, 'state')}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="country">Country</Label>
+                        <Input
+                          id="country"
+                          value={newProduct.addresses[0].country}
+                          onChange={(e) => handleAddressChange(e, 'country')}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="zipCode">Zip Code</Label>
+                        <Input
+                          id="zipCode"
+                          value={newProduct.addresses[0].zipCode}
+                          onChange={(e) => handleAddressChange(e, 'zipCode')}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="additionalInfo">Additional Info</Label>
+                        <Input
+                          id="additionalInfo"
+                          value={newProduct.addresses[0].additionalInfo || ''}
+                          onChange={(e) => handleAddressChange(e, 'additionalInfo')}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex items-center space-x-2">
-                  <input
-                    id="isAvailable"
-                    name="isAvailable"
-                    type="checkbox"
-                    checked={newProduct.isAvailable}
-                    onChange={handleInputChange}
-                    className="h-4 w-4"
-                  />
-                  <Label htmlFor="isAvailable">Available for rent</Label>
-                </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      id="isAvailable"
+                      name="isAvailable"
+                      type="checkbox"
+                      checked={newProduct.isAvailable}
+                      onChange={handleInputChange}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor="isAvailable">Available for rent</Label>
+                  </div>
 
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setOpenAddDialog(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit">Add Product</Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setOpenAddDialog(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button type="submit">Add Product</Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
           )}
         </div>
       </div>
@@ -504,68 +495,7 @@ const ProductsTable: React.FC = () => {
               <TableHead className="w-[200px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {productList.length > 0 ? (
-              productList.map((product: Product) => (
-                <TableRow key={product.id}>
-                  <TableCell className="font-medium">{product.vin}</TableCell>
-                  <TableCell>{product.title}</TableCell>
-                  <TableCell>{product.categoryName}</TableCell>
-                  <TableCell>
-                    {new Intl.NumberFormat('en-US', {
-                      style: 'currency',
-                      currency: 'USD',
-                    }).format(product.dailyPrice)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={product.isAvailable}
-                        onCheckedChange={() => {
-                          setSelectedProduct(product);
-                          // TODO: Implement status change functionality
-                        }}
-                      />
-                      <span className="text-sm">
-                        {product.isAvailable ? 'Available' : 'Unavailable'}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedProduct(product);
-                          setOpenDetail(true);
-                        }}
-                        className="gap-2"
-                      >
-                        <Eye className="h-4 w-4" />
-                        View
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 text-destructive border-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDeleteOpen(product)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Delete
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
-                  No products found
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
+
         </Table>
       </div>
 

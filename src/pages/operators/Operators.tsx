@@ -19,61 +19,48 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
-import { useFetchData, usePostData, useDeleteVendor } from '@/hooks/useApi';
+import { useGetAllOperators, useDeleteOperator, Operator } from '@/hooks/useApi';
 import { useNavigate } from 'react-router-dom';
-import { Eye, Trash2, Plus } from 'lucide-react';
+import { Eye, Trash2, Plus, Pencil } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
+import { useAppSelector } from '@/store';
 
-type User = {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  avatarUrl: string;
-  phoneNumber: string;
-  gender: string;
-};
-
-type Operator = {
-  id: string;
-  user?: User;
-  companyName: string;
-  companyAddress: string;
-  operatorState: string;
-  isOperatorVerified: boolean;
-  designation?: string;
-  taxRefNumber?: string;
-  tradeLicense?: string;
-  isDummyPassword?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
-const OperatorTable: React.FC = () => {
+const OperatorsPage: React.FC = () => {
   const navigate = useNavigate();
   const [openDetail, setOpenDetail] = useState(false);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
-  const [openPasswordDialog, setOpenPasswordDialog] = useState(false);
   const [selectedOperator, setSelectedOperator] = useState<Operator | null>(null);
   const [confirmationName, setConfirmationName] = useState('');
-  const [password, setPassword] = useState('');
+
+  const { user } = useAppSelector((state) => state.auth);
 
   const {
-    data: operatorsData,
+    data: allOperators,
     isLoading: isOperatorsLoading,
     error: operatorsError,
-    refetch: refetchOperators
-  } = useFetchData('/operator', 'operators');
+    refetch: refetchOperators,
+  } = useGetAllOperators();
 
-  const { mutate: verifyOperator } = usePostData<{ operatorId: string; newPassword: string }>('/operator/verify');
-  const { mutate: deleteOperator } = useDeleteVendor();
+  const { mutate: deleteOperator } = useDeleteOperator();
 
-  const operatorList = operatorsData?.data || [];
+  const isAdmin = user?.role === 'admin';
+
+  // Filter operators based on role
+  const operators = isAdmin
+    ? allOperators
+    : allOperators?.filter(op => ['adminOperator', 'managerOperator', 'salesOperator'].includes(op.operatorRole));
 
   const handleRegisterClick = () => {
-    navigate('/operatorsregister');
+    navigate('/operators/register');
   };
 
   const handleDeleteOpen = (operator: Operator) => {
@@ -86,76 +73,97 @@ const OperatorTable: React.FC = () => {
     setConfirmationName('');
   };
 
-  const handleStatusChange = (operator: Operator) => {
-    setSelectedOperator(operator);
-    setOpenPasswordDialog(true);
-  };
-
-  const handlePasswordSubmit = async () => {
+  const handleDelete = () => {
     if (!selectedOperator) return;
 
-    if (typeof selectedOperator.id !== 'string' || selectedOperator.id.trim() === '') {
-      toast.error('Invalid operator ID');
-      return;
-    }
-    if (typeof password !== 'string' || password.length < 6) {
-      toast.error('Password must be at least 6 characters long');
-      return;
-    }
-
-    verifyOperator(
-      { operatorId: selectedOperator.id, newPassword: password },
-      {
-        onSuccess: () => {
-          toast.success('Operator verified successfully');
-          refetchOperators();
-          setOpenPasswordDialog(false);
-          setPassword('');
-        },
-        onError: () => {
-          toast.error('Failed to verify Operator');
-        },
-      }
-    );
-  };
-
-  const handleDelete = async () => {
-    if (!selectedOperator) return;
-
-    if (confirmationName === selectedOperator.user?.name) {
+    if (confirmationName === selectedOperator.user.name) {
       deleteOperator(selectedOperator.id, {
         onSuccess: () => {
-          toast.success('Operator was deleted');
+          toast.success('Operator deleted successfully');
           refetchOperators();
           setOpenDeleteDialog(false);
           setConfirmationName('');
         },
         onError: (error) => {
           console.error('Delete error:', error);
-          toast.error('Failed to delete Operator');
+          toast.error('Failed to delete operator');
         },
       });
     } else {
       toast.error("The name doesn't match. Operator was not deleted.");
     }
   };
+  const getRoleBadge = (role: string) => {
+    const roleMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
+      adminOperator: { label: 'Admin', variant: 'default' },
+      managerOperator: { label: 'Manager', variant: 'secondary' },
+      salesOperator: { label: 'Sales', variant: 'outline' },
+    };
+
+    const roleInfo = roleMap[role] || { label: role, variant: 'outline' };
+    return <Badge variant={roleInfo.variant}>{roleInfo.label}</Badge>;
+  };
 
   if (isOperatorsLoading) {
-    return <div className="p-4">Loading operators...</div>;
+    return (
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-[250px]" />
+          {!isAdmin && <Skeleton className="h-10 w-[200px]" />}
+        </div>
+        <div className="rounded-lg border bg-card shadow-sm">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {[...Array(6)].map((_, i) => (
+                  <TableHead key={i}>
+                    <Skeleton className="h-4 w-[100px]" />
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[...Array(5)].map((_, i) => (
+                <TableRow key={i}>
+                  {[...Array(6)].map((_, j) => (
+                    <TableCell key={j}>
+                      <Skeleton className="h-4 w-[80%]" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
   }
 
   if (operatorsError) {
-    return <div className="p-4 text-destructive">Error loading operators</div>;
+    return (
+      <div className="p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold tracking-tight">Operators Management</h1>
+        </div>
+        <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-destructive">
+          Error loading operators. Please try again later.
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Operators Management</h1>
-        <Button onClick={handleRegisterClick} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Register New Operator
-        </Button>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {isAdmin ? 'All Operators' : 'Company Operators'}
+        </h1>
+        {!isAdmin && (
+          <Button onClick={handleRegisterClick} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Register New Operator
+          </Button>
+        )}
       </div>
 
       <div className="rounded-lg border bg-card shadow-sm">
@@ -164,66 +172,123 @@ const OperatorTable: React.FC = () => {
             <TableRow>
               <TableHead className="w-[80px]">Avatar</TableHead>
               <TableHead>Name</TableHead>
-              <TableHead>Company</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead className="w-[120px]">Status</TableHead>
-              <TableHead className="w-[200px]">Actions</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Last Activity</TableHead>
+              {!isAdmin && <TableHead className="w-[150px]">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {operatorList && operatorList.length > 0 ? (
-              operatorList.map((operator: Operator) => (
-                <TableRow key={operator.id}>
+            {operators && operators.length > 0 ? (
+              operators.map((operator) => (
+                <TableRow key={operator.id} className="hover:bg-muted/50">
                   <TableCell>
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={operator.user?.avatarUrl || `https://ui-avatars.com/api/?name=${operator.user?.name || 'O'}`} />
-                      <AvatarFallback>{operator.user?.name?.charAt(0) || 'O'}</AvatarFallback>
+                      <AvatarImage
+                        src={operator.user.avatar || undefined}
+                        alt={operator.user.name}
+                      />
+                      <AvatarFallback>
+                        {operator.user.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
                     </Avatar>
                   </TableCell>
-                  <TableCell className="font-medium">{operator.user?.name || 'N/A'}</TableCell>
-                  <TableCell>{operator.companyName}</TableCell>
-                  <TableCell className="text-muted-foreground">{operator.user?.email || 'N/A'}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
-                      <Switch
-                        checked={operator.isOperatorVerified}
-                        onCheckedChange={() => handleStatusChange(operator)}
-                        disabled={operator.isOperatorVerified}
-                      />
-                      <span className="text-sm">
-                        {operator.isOperatorVerified ? 'Verified' : 'Pending'}
-                      </span>
+                      {operator.user.name}
+                      {operator.user.isFirstLogin && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>First login not completed</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                     </div>
                   </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {operator.user.email}
+                  </TableCell>
+                  <TableCell>{getRoleBadge(operator.operatorRole)}</TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedOperator(operator);
-                          setOpenDetail(true);
-                        }}
-                        className="gap-2"
-                      >
-                        <Eye className="h-4 w-4" />
-                        View
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 text-destructive border-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDeleteOpen(operator)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {new Date(operator.user.lastActivityAt).toLocaleString()}
                   </TableCell>
+                  {!isAdmin && (
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedOperator(operator);
+                                  setOpenDetail(true);
+                                }}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>View details</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-destructive border-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => handleDeleteOpen(operator)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Delete operator</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  navigate(`/operators/${operator.id}`);
+                                }}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>View details</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={isAdmin ? 5 : 6} className="h-24 text-center">
                   No operators found
                 </TableCell>
               </TableRow>
@@ -242,81 +307,88 @@ const OperatorTable: React.FC = () => {
             <div className="space-y-6">
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16">
-                  <AvatarImage src={selectedOperator.user?.avatarUrl || `https://ui-avatars.com/api/?name=${selectedOperator.user?.name || 'O'}`} />
-                  <AvatarFallback>{selectedOperator.user?.name?.charAt(0) || 'O'}</AvatarFallback>
+                  <AvatarImage
+                    src={selectedOperator.user.avatar || undefined}
+                    alt={selectedOperator.user.name}
+                  />
+                  <AvatarFallback>
+                    {selectedOperator.user.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="text-lg font-medium">{selectedOperator.user?.name || 'N/A'}</h3>
-                  <p className="text-sm text-muted-foreground">{selectedOperator.designation || 'N/A'}</p>
+                  <h3 className="text-lg font-medium">{selectedOperator.user.name}</h3>
+                  <div className="flex items-center gap-2">
+                    {getRoleBadge(selectedOperator.operatorRole)}
+                    {selectedOperator.user.isFirstLogin && (
+                      <Badge variant="outline" className="text-yellow-600">
+                        Pending First Login
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
 
               <div className="grid gap-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className='font-bold'>Company Name</Label>
-                    <p>{selectedOperator.companyName}</p>
+                  <div className="space-y-1">
+                    <Label className="font-bold">Email</Label>
+                    <p>{selectedOperator.user.email}</p>
                   </div>
-                  <div>
-                    <Label className='font-bold'>Email</Label>
-                    <p>{selectedOperator.user?.email || 'N/A'}</p>
+                  <div className="space-y-1">
+                    <Label className="font-bold">Phone Number</Label>
+                    <p>{selectedOperator.user.phoneNumber || 'Not provided'}</p>
                   </div>
-                </div>
-
-                <div>
-                  <Label className='font-bold'>Company Address</Label>
-                  <p>{selectedOperator.companyAddress || 'N/A'}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className='font-bold'>Emirate</Label>
-                    <p>{selectedOperator.operatorState || 'N/A'}</p>
+                  <div className="space-y-1">
+                    <Label className="font-bold">Gender</Label>
+                    <p className="capitalize">
+                      {selectedOperator.user.gender || 'Not specified'}
+                    </p>
                   </div>
-                  <div>
-                    <Label className='font-bold'>Status</Label>
-                    <p>{selectedOperator.isOperatorVerified ? 'Verified' : 'Pending Verification'}</p>
+                  <div className="space-y-1">
+                    <Label className="font-bold">Status</Label>
+                    <p>
+                      {selectedOperator.user.isFirstLogin
+                        ? 'Pending First Login'
+                        : 'Active'}
+                    </p>
                   </div>
                 </div>
-
-                {selectedOperator.taxRefNumber && (
-                  <div>
-                    <Label className='font-bold'>Tax Reference : </Label>
-                    <a
-                      href={selectedOperator.taxRefNumber}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary underline hover:text-primary/80"
-                    >
-                      View Tax Reference
-                    </a>
-                  </div>
-                )}
-
-                {selectedOperator.tradeLicense && (
-                  <div>
-                    <Label className='font-bold'>Trade License : </Label>
-                    <a
-                      href={selectedOperator.tradeLicense}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary underline hover:text-primary/80"
-                    >
-                      View Trade License
-                    </a>
-                  </div>
-                )}
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className='font-bold'>Created At</Label>
-                    <p>{selectedOperator.createdAt ? new Date(selectedOperator.createdAt).toLocaleString() : 'N/A'}</p>
+                  <div className="space-y-1">
+                    <Label className="font-bold">Last Login</Label>
+                    <p>{new Date(selectedOperator.user.lastLoginAt).toLocaleString()}</p>
                   </div>
-                  <div>
-                    <Label className='font-bold'>Updated At</Label>
-                    <p>{selectedOperator.updatedAt ? new Date(selectedOperator.updatedAt).toLocaleString() : 'N/A'}</p>
+                  <div className="space-y-1">
+                    <Label className="font-bold">Last Activity</Label>
+                    <p>
+                      {new Date(selectedOperator.user.lastActivityAt).toLocaleString()}
+                    </p>
                   </div>
                 </div>
+
+                {selectedOperator.company && (
+                  <div className="pt-4 border-t">
+                    <h4 className="font-medium mb-2">Company Information</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <Label className="font-bold">Company Name</Label>
+                        <p>{selectedOperator.company.name}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="font-bold">Status</Label>
+                        <Badge
+                          variant={selectedOperator.company.isVerified ? 'default' : 'outline'}
+                        >
+                          {selectedOperator.company.isVerified ? 'Verified' : 'Unverified'}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -329,7 +401,9 @@ const OperatorTable: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogDescription>
-              This action cannot be undone. Please type <span className="font-semibold">"{selectedOperator?.user?.name || ''}"</span> to confirm.
+              This action cannot be undone. Please type{' '}
+              <span className="font-semibold">"{selectedOperator?.user.name || ''}"</span>{' '}
+              to confirm.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -342,6 +416,7 @@ const OperatorTable: React.FC = () => {
                 value={confirmationName}
                 onChange={(e) => setConfirmationName(e.target.value)}
                 className="col-span-3"
+                placeholder="Type the operator's name"
               />
             </div>
           </div>
@@ -349,43 +424,12 @@ const OperatorTable: React.FC = () => {
             <Button variant="outline" onClick={handleDeleteClose}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDelete}>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={confirmationName !== selectedOperator?.user.name}
+            >
               Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Password Dialog */}
-      <Dialog open={openPasswordDialog} onOpenChange={setOpenPasswordDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Set Verification Password</DialogTitle>
-            <DialogDescription>
-              Set a password for {selectedOperator?.user?.name || 'this operator'} to verify their account.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="password" className="text-right">
-                Password
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="col-span-3"
-                placeholder="Enter at least 6 characters"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenPasswordDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handlePasswordSubmit}>
-              Verify Operator
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -394,4 +438,4 @@ const OperatorTable: React.FC = () => {
   );
 };
 
-export default OperatorTable;
+export default OperatorsPage;

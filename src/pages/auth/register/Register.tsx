@@ -1,14 +1,12 @@
 // src/pages/operators/register/Register.tsx
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Stepper } from '@/components/ui/stepper';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import RegisterForm from './Register-Form';
 
 const Register = () => {
   const [currentStep, setCurrentStep] = useState(1);
-  const steps = ['Operator Details', 'Company Information', 'Documents & Verification'];
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 px-4 py-8 bg-white">
@@ -34,18 +32,9 @@ const Register = () => {
         </div>
       </div>
 
-      <Stepper
-        steps={steps}
-        currentStep={currentStep}
-        className="mb-8 max-w-3xl mx-auto"
-      />
+    
 
       <Card className="shadow-xl border-0 bg-gradient-to-br from-white to-gray-50/50">
-        <CardHeader>
-          <h2 className="text-xl font-semibold text-primary">
-            {steps[currentStep - 1]}
-          </h2>
-        </CardHeader>
         <CardContent>
           <RegisterForm
             currentStep={currentStep}
