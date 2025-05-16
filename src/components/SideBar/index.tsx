@@ -1,6 +1,6 @@
 // src/components/SideBar/index.tsx:
 
-import { Outlet } from 'react-router-dom';
+import { Link, Outlet } from 'react-router-dom';
 import ThemeSelect from '../Select/Theme-Select';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '../ui/sidebar';
 import { AppSidebar } from './app-sidebar';
@@ -14,6 +14,19 @@ const SideBar = () => {
   const { pathname } = useLocation();
   let firstIndex = pathname.split('/')[1] || 'dashboard';
   firstIndex = firstIndex.charAt(0).toUpperCase() + firstIndex.slice(1);
+
+  const toggleFullScreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.log(`Error attempting to enable full-screen mode: ${err.message}`);
+      });
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  };
+
   return (
     <div>
       <SidebarProvider>
@@ -31,17 +44,21 @@ const SideBar = () => {
                 variant="ghost"
                 size="icon"
                 className="h-4 w-4 relative inline-flex"
+                onClick={toggleFullScreen}
               >
                 <Maximize />
-                <span className="sr-only">Full Screen Mode</span>
+                <span className="sr-only">Toggle Full Screen Mode</span>
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-4 w-4 relative inline-flex"
+                asChild
               >
-                <Settings />
-                <span className="sr-only">Settings</span>
+                <Link to="/settings">
+                  <Settings />
+                  <span className="sr-only">Settings</span>
+                </Link>
               </Button>
               <ThemeSelect />
             </div>
@@ -53,6 +70,4 @@ const SideBar = () => {
       </SidebarProvider>
     </div>
   );
-};
-
-export default SideBar;
+};export default SideBar;

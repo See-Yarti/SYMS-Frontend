@@ -1,6 +1,6 @@
 // src/hooks/useApi.ts
 import { axiosInstance } from '@/lib/API';
-import { useQuery, useMutation, useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useInfiniteQuery, QueryClient } from '@tanstack/react-query';
 import {
   CompaniesResponse,
   CompanyResponse,
@@ -18,17 +18,25 @@ const defaultQueryOptions = {
   refetchOnReconnect: false,
 };
 
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: defaultQueryOptions,
+  },
+});
+
 export const useFetchData = <T = unknown>(
   endpoint: string,
-  queryKey: string,
+  queryKey: string | string[],
+  options?: any
 ) => {
   return useQuery<T>({
     ...defaultQueryOptions,
-    queryKey: [queryKey],
+    queryKey: Array.isArray(queryKey) ? queryKey : [queryKey],
     queryFn: async () => {
       const { data } = await axiosInstance.get(endpoint);
-      return data;
+      return data.data;
     },
+    ...options,
   });
 };
 
@@ -52,30 +60,36 @@ export const useFetchInfiniteData = <T = unknown>({
     queryKey: [queryKey, extraParams],
     initialPageParam: 1,
     queryFn: async ({ pageParam = 1 }) => {
-      const { data } = await axiosInstance.get<T[]>(endpoint, {
+      const { data } = await axiosInstance.get<{ data: T[] }>(endpoint, {
         params: { page: pageParam, limit, ...extraParams },
       });
-      return data;
-    },
-    getNextPageParam: (lastPage, allPages) => {
-      // Check if lastPage is an array and has items
-      if (!Array.isArray(lastPage) || lastPage.length < limit) {
-        return undefined;
-      }
-      return allPages.length + 1;
-    },
-  });
+      return data.data;
+    },    getNextPageParam: (lastPage, allPages) => {
+      if (!Array.isArray(lastPage)) return undefined;
+      return lastPage.length === limit ? allPages.length + 1 : undefined;
+    },  });
 };
 
 export const usePostData = <TData = unknown, TResponse = unknown>(
   endpoint: string,
+  options?: any
 ) => {
   return useMutation<TResponse, Error, TData>({
     mutationFn: async (data: TData) => {
-      const { data: responseData } = await axiosInstance.post(endpoint, data);
-      return responseData;
+      const { data: responseData } = await axiosInstance.patch(endpoint, data);
+      return responseData.data;
     },
-    retry: false,
+    ...options,
+  });
+};
+
+export const useDeleteData = (options?: any) => {
+  return useMutation({
+    mutationFn: async (endpoint: string) => {
+      const { data } = await axiosInstance.delete(endpoint);
+      return data.data;
+    },
+    ...options,
   });
 };
 
@@ -87,11 +101,12 @@ export const useUploadFile = <TResponse = unknown>(endpoint: string) => {
           'Content-Type': 'multipart/form-data',
         },
       });
-      return data;
+      return data.data;
     },
     retry: false,
   });
 };
+
 
 export const useDeleteVendor = () => {
   return useMutation({
@@ -361,5 +376,4 @@ export const useUpdateOperatorPassword = () => {
     }
   });
 };
-
 

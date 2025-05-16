@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 import { useFilteredMenu } from '@/hooks/useFilteredMenu';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { email, name, role } = useAppSelector(
+  const { name, role } = useAppSelector(
     (state) => state.auth.user,
   ) as User;
   const [selectedPath, setSelectedPath] = React.useState<number[]>([]);
@@ -110,7 +110,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </ScrollArea>
         </SidebarContent>
         <SidebarFooter className="border-t border-sidebar-border p-2">
-          <NavUser user={{ name, email, avatar: '' }} />
+          <NavUser />
         </SidebarFooter>
       </Sidebar>
     </TooltipProvider>

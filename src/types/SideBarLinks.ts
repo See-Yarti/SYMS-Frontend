@@ -74,7 +74,7 @@ export const sideBarLinks: SideBarItem[] = [
     url: '/operators',
     slug: 'operators',
     icon: UsersRound,
-    roles: ['admin', 'adminOperator'],
+    roles: ['admin', 'operator'],
   },
   {
     title: 'Products',
@@ -82,7 +82,9 @@ export const sideBarLinks: SideBarItem[] = [
     url: '/products',
     slug: 'products',
     icon: Package,
-    roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
+    // roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
+    roles: ['managerOperator'],
+
   },
   {
     title: 'Orders',
@@ -199,14 +201,6 @@ export const sideBarLinks: SideBarItem[] = [
     url: '/settings',
     slug: 'settings',
     icon: Box,
-    roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
-  },
-  {
-    title: 'Help Center',
-    type: 'routed',
-    url: '/help',
-    slug: 'help',
-    icon: NotebookTabs,
     roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
   },
 ];

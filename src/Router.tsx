@@ -17,9 +17,10 @@ import Companies from './pages/company/Companies';
 import Addresses from './pages/addresses/Addresses';
 import CompanyFormWrapper from './components/Company/CompanyFormWrapper';
 import OperatorRegister from './pages/operators/OperatorRegister';
-import OperatorProfile from './pages/operators/OperatorProfile';
-
-const companyId = 'e23fd334-c3ac-4860-9e98-d57e4650c06e';
+import ProfileUpdate from './pages/settings/profile-update';
+import SettingsSidebar from './pages/settings/Sidebar';
+import Appearance from './pages/settings/Appearance';
+import PasswordChanges from './pages/settings/password-changes';
 
 const router = createBrowserRouter([
   {
@@ -36,7 +37,7 @@ const router = createBrowserRouter([
           },
           {
             path: 'addresses',
-            element: <Addresses  companyId={companyId}/>,
+            element: <Addresses />,
           },
           {
             path: 'dashboard',
@@ -55,12 +56,26 @@ const router = createBrowserRouter([
             element: <OperatorRegister />,
           },
           {
-            path: '/operators/:operatorId',
-            element: <OperatorProfile />,
-          },
-          {
             path: 'products',
             element: <Products />,
+          },
+          {
+            path: '/settings',
+            element: <SettingsSidebar />,
+            children: [
+              {
+                path: '',
+                element: <Appearance />,
+              },
+              {
+                path: 'profile-update',
+                element: <ProfileUpdate />,
+              },
+              {
+                path: 'password-changes',
+                element: <PasswordChanges />,
+              },
+            ],
           },
           {
             path: 'companies',

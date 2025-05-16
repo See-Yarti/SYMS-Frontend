@@ -4,7 +4,6 @@ import { configureStore } from '@reduxjs/toolkit';
 import storage from 'redux-persist/lib/storage'; // defaults to localStorage for web
 import { combineReducers } from 'redux';
 import { persistStore, persistReducer } from 'redux-persist';
-import counterReducer from './features/counter.slice';
 import authReducer from './features/auth.slice';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 
@@ -16,7 +15,6 @@ const persistConfig = {
 };
 
 const rootReducer = combineReducers({
-  counter: counterReducer,
   auth: authReducer,
 });
 

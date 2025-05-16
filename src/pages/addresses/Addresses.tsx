@@ -1,25 +1,40 @@
 // src/pages/addresses/Addresses.tsx
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { axiosInstance } from '@/lib/API';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Country, State, City } from 'country-state-city';
+import { useAppSelector } from '@/store';
+import { selectCompanyId } from '@/store/features/auth.slice';
+import { useFetchData, usePostData, useDeleteData } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { z } from 'zod';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Trash2, Edit, Plus, Loader2, MapPin } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { useForm } from 'react-hook-form';
 
-// Types
-type Address = {
+const formSchema = z.object({
+  addressLabel: z.string().min(1, 'Address label is required'),
+  street: z.string().min(1, 'Street is required'),
+  apartment: z.string().min(1, 'Apartment/suite is required'),
+  city: z.string().min(1, 'City is required'),
+  state: z.string().min(1, 'State is required'),
+  country: z.string().min(1, 'Country is required'),
+  zipCode: z.string().optional(),
+  postalCode: z.string().min(1, 'Postal code is required'),
+  additionalInfo: z.string().optional(),
+});
+
+type AddressFormValues = z.infer<typeof formSchema>;
+
+interface Address {
   id: string;
   addressLabel: string;
   street: string;
@@ -34,117 +49,21 @@ type Address = {
   additionalInfo: string;
   createdAt: string;
   updatedAt: string;
-};
+}
 
-type AddressesResponse = {
-  success: boolean;
-  data: {
-    addresses: Address[];
-  };
-};
+const Addresses = () => {
+  const companyId = useAppSelector(selectCompanyId);
+  const navigate = useNavigate();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-type SingleAddressResponse = {
-  success: boolean;
-  data: {
-    address: Address;
-  };
-};
-
-// Form validation schema
-const addressSchema = z.object({
-  addressLabel: z.string().min(1, 'Label is required'),
-  street: z.string().min(1, 'Street is required'),
-  apartment: z.string().optional(),
-  city: z.string().min(1, 'City is required'),
-  state: z.string().min(1, 'State is required'),
-  country: z.string().min(1, 'Country is required'),
-  zipCode: z.string().min(1, 'Zip code is required'),
-  postalCode: z.string().optional(),
-  lat: z.string().optional(),
-  lng: z.string().optional(),
-  additionalInfo: z.string().optional(),
-});
-
-type AddressFormValues = z.infer<typeof addressSchema>;
-
-const AddressesTable: React.FC<{ companyId: string }> = ({ companyId }) => {
-  const queryClient = useQueryClient();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [addressToDelete, setAddressToDelete] = useState<string>('');
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState('');
+  const [selectedState, setSelectedState] = useState('');
 
-  // Fetch all addresses
-  const { data: addressesData, isLoading } = useQuery<AddressesResponse>({
-    queryKey: ['addresses', companyId],
-    queryFn: async () => {
-      const { data } = await axiosInstance.get(`/address/get-all-addresses/${companyId}`);
-      return data;
-    },
-  });
-
-  // Fetch single address (used when editing)
-  const { data: singleAddress } = useQuery<SingleAddressResponse>({
-    queryKey: ['address', editingAddress?.id],
-    queryFn: async () => {
-      if (!editingAddress) throw new Error('No address ID');
-      const { data } = await axiosInstance.get(`/address/get-address/${editingAddress.id}`);
-      return data;
-    },
-    enabled: !!editingAddress?.id,
-  });
-
-  // Add/Edit address mutation
-  const { mutate: saveAddress, isPending: isSaving } = useMutation({
-    mutationFn: async (formData: AddressFormValues) => {
-      const endpoint = editingAddress
-        ? `/address/add-new-company-address/${companyId}`
-        : `/address/add-new-company-address/${companyId}`;
-
-      const method = editingAddress ? 'PATCH' : 'POST';
-
-      const { data } = await axiosInstance({
-        method,
-        url: endpoint,
-        data: formData,
-      });
-      return data;
-    },
-    onSuccess: () => {
-      toast.success(editingAddress ? 'Address updated successfully' : 'Address added successfully');
-      queryClient.invalidateQueries({ queryKey: ['addresses', companyId] });
-      setIsDialogOpen(false);
-      setEditingAddress(null);
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to save address');
-    },
-  });
-
-  // Delete address mutation
-  const { mutate: deleteAddress, isPending: isDeleting } = useMutation({
-    mutationFn: async (addressId: string) => {
-      await axiosInstance.delete(`/address/delete-address/${addressId}`);
-      return addressId;
-    },
-    onSuccess: (deletedId) => {
-      toast.success('Address deleted successfully');
-      queryClient.setQueryData(['addresses', companyId], (old: AddressesResponse | undefined) => {
-        if (!old) return old;
-        return {
-          ...old,
-          data: {
-            addresses: old.data.addresses.filter(addr => addr.id !== deletedId),
-          },
-        };
-      });
-    },
-    onError: (error) => {
-      toast.error(error.message || 'Failed to delete address');
-    },
-  });
-
-  // Form setup
   const form = useForm<AddressFormValues>({
-    resolver: zodResolver(addressSchema),
+    resolver: zodResolver(formSchema),
     defaultValues: {
       addressLabel: '',
       street: '',
@@ -154,295 +73,427 @@ const AddressesTable: React.FC<{ companyId: string }> = ({ companyId }) => {
       country: '',
       zipCode: '',
       postalCode: '',
-      lat: '',
-      lng: '',
       additionalInfo: '',
     },
   });
 
-  // Set form values when editing
-  React.useEffect(() => {
-    if (singleAddress?.data?.address) {
-      form.reset(singleAddress.data.address);
+  // Fetch addresses
+  const {
+    data: addressesData,
+    isLoading: isLoadingAddresses,
+    refetch: refetchAddresses
+  } = useFetchData<{
+    addresses: Address[];
+  }>(`/address/get-all-addresses/${companyId ?? ''}`, ['addresses', companyId ?? '']);
+
+  // Add/update address mutation
+  const { mutate: addUpdateAddress, isPending: isSubmitting } = usePostData<
+    AddressFormValues,
+    { message: string }
+  >(`/address/add-new-company-address/${companyId}`, {
+    onSuccess: () => {
+      toast.success(editingAddress ? 'Address updated successfully' : 'Address added successfully');
+      refetchAddresses();
+      handleCloseModal();
+    },
+    onError: (error: { message: any; }) => {
+      toast.error(error.message || 'Failed to save address');
     }
-  }, [singleAddress, form]);
+  });
+
+  // Delete address mutation
+  const { mutate: deleteAddress } = useDeleteData({
+    onSuccess: () => {
+      toast.success('Address deleted successfully');
+      refetchAddresses();
+      setIsDeleteDialogOpen(false);
+    },
+    onError: (error: { message: any; }) => {
+      toast.error(error.message || 'Failed to delete address');
+    }
+  });
+
+  useEffect(() => {
+    if (!companyId) {
+      navigate('/login');
+    }
+  }, [companyId, navigate]);
+
+ const handleOpenModal = () => {
+  setEditingAddress(null);            
+  form.reset({                        
+    addressLabel: '',
+    street: '',
+    apartment: '',
+    city: '',
+    state: '',
+    country: '',
+    zipCode: '',
+    postalCode: '',
+    additionalInfo: '',
+  });
+  setSelectedCountry('');
+  setSelectedState('');
+  setIsModalOpen(true);
+};
+
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingAddress(null);
+    form.reset();
+    setSelectedCountry('');
+    setSelectedState('');
+  };
 
   const handleEdit = (address: Address) => {
     setEditingAddress(address);
-    setIsDialogOpen(true);
+    setSelectedCountry(address.country);
+    setSelectedState(address.state);
+    form.reset({
+      ...address,
+    });
+    setIsModalOpen(true);
   };
 
-  const handleAddNew = () => {
-    setEditingAddress(null);
-    form.reset();
-    setIsDialogOpen(true);
+  const handleDeleteClick = (addressId: string) => {
+    setAddressToDelete(addressId);
+    setIsDeleteDialogOpen(true);
   };
 
-  const onSubmit = (data: AddressFormValues) => {
-    saveAddress(data);
+  const handleConfirmDelete = () => {
+    if (!addressToDelete) return;
+    deleteAddress(`/address/delete-address/${addressToDelete}` as any);
   };
 
-  const addresses = addressesData?.data?.addresses || [];
+  const onSubmit = (values: AddressFormValues) => {
+    addUpdateAddress(values);
+  };
+
+  const countryData = Country.getAllCountries().map((country) => ({
+    label: country.name,
+    value: country.isoCode,
+  }));
+
+  const stateData = selectedCountry
+    ? State.getStatesOfCountry(selectedCountry).map((state) => ({
+      label: state.name,
+      value: state.isoCode,
+    }))
+    : [];
+
+  const cityData = selectedState
+    ? City.getCitiesOfState(selectedCountry, selectedState).map((city) => ({
+      label: city.name,
+      value: city.name,
+    }))
+    : [];
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Company Addresses</h2>
-        <Button onClick={handleAddNew}>
-          <Plus className="mr-2 h-4 w-4" />
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Company Addresses</h1>
+        <Button onClick={handleOpenModal}>
           Add New Address
         </Button>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center items-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      ) : addresses.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No addresses found</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {addresses.map((address) => (
-            <Card key={address.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5 text-primary" />
-                      {address.addressLabel}
-                    </CardTitle>
-                    <CardDescription className="mt-2">
-                      {address.street}
-                      {address.apartment && `, ${address.apartment}`}
-                    </CardDescription>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(address)}
-                      disabled={isDeleting}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => deleteAddress(address.id)}
-                      disabled={isDeleting}
-                      className="h-8 w-8 p-0"
-                    >
-                      {isDeleting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-1 text-sm">
-                  <p>
-                    <span className="font-medium">City:</span> {address.city}
-                  </p>
-                  <p>
-                    <span className="font-medium">State:</span> {address.state}
-                  </p>
-                  <p>
-                    <span className="font-medium">Country:</span> {address.country}
-                  </p>
-                  <p>
-                    <span className="font-medium">Zip Code:</span> {address.zipCode}
-                  </p>
-                  {address.postalCode && (
-                    <p>
-                      <span className="font-medium">Postal Code:</span> {address.postalCode}
-                    </p>
-                  )}
-                  {address.additionalInfo && (
-                    <p className="mt-2">
-                      <span className="font-medium">Additional Info:</span> {address.additionalInfo}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-              {(address.lat || address.lng) && (
-                <CardFooter className="text-xs text-muted-foreground">
-                  Coordinates: {address.lat}, {address.lng}
-                </CardFooter>
-              )}
-            </Card>
-          ))}
-        </div>
-      )}
+      <Card>
+        <CardHeader>
+          <CardTitle>Address List</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoadingAddresses ? (
+            <div className="flex justify-center items-center h-32">
+              <p>Loading addresses...</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Label</TableHead>
+                  <TableHead>Address</TableHead>
+                  <TableHead>Additional Info</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {addressesData?.addresses?.length ? (
+                  addressesData.addresses.map((address) => (
+                    <TableRow key={address.id}>
+                      <TableCell>
+                        <Badge variant="outline">{address.addressLabel}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <p>{address.street}, {address.apartment}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {address.city}, {address.state}, {address.country}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Postal: {address.postalCode}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate">
+                        {address.additionalInfo}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(address)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteClick(address.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center">
+                      No addresses found
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Add/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[800px]">
           <DialogHeader>
             <DialogTitle>
               {editingAddress ? 'Edit Address' : 'Add New Address'}
             </DialogTitle>
           </DialogHeader>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="addressLabel">Address Label*</Label>
-                <Input
-                  id="addressLabel"
-                  placeholder="e.g., Head Office"
-                  {...form.register('addressLabel')}
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="addressLabel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address Label</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. Head Office, Branch Office" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-                {form.formState.errors.addressLabel && (
-                  <p className="text-sm text-red-500">
-                    {form.formState.errors.addressLabel.message}
-                  </p>
+
+                <FormField
+                  control={form.control}
+                  name="street"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Street</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Street address" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="apartment"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Apartment/Suite</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Apartment, suite, unit, etc." {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="country"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Country</FormLabel>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setSelectedCountry(value);
+                          form.setValue('state', '');
+                          form.setValue('city', '');
+                          setSelectedState('');
+                        }}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select country" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {countryData.map((country) => (
+                            <SelectItem key={country.value} value={country.value}>
+                              {country.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="state"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>State/Province</FormLabel>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setSelectedState(value);
+                          form.setValue('city', '');
+                        }}
+                        value={field.value}
+                        disabled={!selectedCountry}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select state/province" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {stateData.map((state) => (
+                            <SelectItem key={state.value} value={state.value}>
+                              {state.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        disabled={!selectedState}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select city" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {cityData.map((city) => (
+                            <SelectItem key={city.value} value={city.value}>
+                              {city.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="postalCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Postal Code</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Postal code" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="zipCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Zip Code (optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Zip code" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+              </div>
+
+              <FormField
+                control={form.control}
+                name="additionalInfo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Additional Information</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Any additional information or landmarks"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="street">Street*</Label>
-                <Input
-                  id="street"
-                  placeholder="e.g., Sheikh Zayed Road"
-                  {...form.register('street')}
-                />
-                {form.formState.errors.street && (
-                  <p className="text-sm text-red-500">
-                    {form.formState.errors.street.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="apartment">Apartment/Suite</Label>
-                <Input
-                  id="apartment"
-                  placeholder="e.g., Office 502"
-                  {...form.register('apartment')}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="city">City*</Label>
-                <Input
-                  id="city"
-                  placeholder="e.g., Dubai"
-                  {...form.register('city')}
-                />
-                {form.formState.errors.city && (
-                  <p className="text-sm text-red-500">
-                    {form.formState.errors.city.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="state">State*</Label>
-                <Input
-                  id="state"
-                  placeholder="e.g., Dubai"
-                  {...form.register('state')}
-                />
-                {form.formState.errors.state && (
-                  <p className="text-sm text-red-500">
-                    {form.formState.errors.state.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="country">Country*</Label>
-                <Input
-                  id="country"
-                  placeholder="e.g., UAE"
-                  {...form.register('country')}
-                />
-                {form.formState.errors.country && (
-                  <p className="text-sm text-red-500">
-                    {form.formState.errors.country.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="zipCode">Zip Code*</Label>
-                <Input
-                  id="zipCode"
-                  placeholder="e.g., 00000"
-                  {...form.register('zipCode')}
-                />
-                {form.formState.errors.zipCode && (
-                  <p className="text-sm text-red-500">
-                    {form.formState.errors.zipCode.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="postalCode">Postal Code</Label>
-                <Input
-                  id="postalCode"
-                  placeholder="e.g., 12345"
-                  {...form.register('postalCode')}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="lat">Latitude</Label>
-                <Input
-                  id="lat"
-                  placeholder="e.g., 25.2048"
-                  {...form.register('lat')}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="lng">Longitude</Label>
-                <Input
-                  id="lng"
-                  placeholder="e.g., 55.2708"
-                  {...form.register('lng')}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="additionalInfo">Additional Information</Label>
-              <Input
-                id="additionalInfo"
-                placeholder="Any special instructions"
-                {...form.register('additionalInfo')}
               />
-            </div>
 
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button
-                variant="outline"
-                type="button"
-                onClick={() => setIsDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSaving}>
-                {isSaving ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : editingAddress ? (
-                  'Update Address'
-                ) : (
-                  'Add Address'
-                )}
-              </Button>
-            </div>
-          </form>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={handleCloseModal}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Saving...' : editingAddress ? 'Update Address' : 'Add Address'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the address.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
-};
 
-export default AddressesTable;
+}; export default Addresses;

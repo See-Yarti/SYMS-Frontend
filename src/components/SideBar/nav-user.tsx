@@ -7,7 +7,7 @@ import {
   UserPen,
 } from 'lucide-react';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,18 +25,10 @@ import {
 } from '@/components/ui/sidebar';
 import { Link, useNavigate } from 'react-router-dom';
 import React from 'react';
-import { useAppDispatch } from '@/store';
+import { useAppDispatch, useAppSelector } from '@/store';
 import { logoutUser } from '@/store/features/auth.slice';
 
-export function NavUser({
-  user,
-}: {
-  user: {
-    name: string;
-    email: string;
-    avatar: string;
-  };
-}) {
+export function NavUser() {
   const { isMobile } = useSidebar();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -50,6 +42,13 @@ export function NavUser({
     }
   };
 
+  const { user } = useAppSelector((state) => state.auth);
+
+  if (!user) {
+    return <div>Loading user data...</div>;
+  }
+
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -59,9 +58,17 @@ export function NavUser({
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+              <Avatar>
+                {user.avatar ? (
+                  <img
+                    src={user.avatar || "images/logo.svg"}
+                    alt={user.name}
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-semibold">
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">{user.name}</span>
@@ -78,9 +85,17 @@ export function NavUser({
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                <Avatar>
+                  {user.avatar ? (
+                    <img
+                      src={user.avatar || "images/logo.svg"}
+                      alt={user.name}
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-semibold">
+                      {user.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">{user.name}</span>

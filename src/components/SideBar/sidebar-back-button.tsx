@@ -2,7 +2,6 @@
 import React from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
-import { SideBarItem } from '@/types/SideBarLinks';
 
 interface SidebarBackButtonProps {
   selectedPath: number[];

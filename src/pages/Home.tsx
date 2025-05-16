@@ -23,7 +23,7 @@ const Home = () => {
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
 
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="border rounded-lg shadow p-6">
         <div className="flex items-center gap-4 mb-6">
           {user.avatar ? (
             <img
@@ -32,15 +32,15 @@ const Home = () => {
               className="w-16 h-16 rounded-full"
             />
           ) : (
-            <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-xl font-semibold">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-semibold">
               {user.name.charAt(0).toUpperCase()}
             </div>
           )}
 
           <div>
             <h2 className="text-xl font-semibold">{user.name}</h2>
-            <p className="text-gray-600">Email : {user.email}</p>
-            <p className="text-gray-600">ID : {user.id}</p>
+            <p className="">Email : {user.email}</p>
+            <p className="">ID : {user.id}</p>
 
             <span className="inline-block mt-1 px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
               {formattedRole}

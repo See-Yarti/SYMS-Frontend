@@ -23,7 +23,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { useGetAllOperators, useDeleteOperator, Operator } from '@/hooks/useApi';
 import { useNavigate } from 'react-router-dom';
-import { Eye, Trash2, Plus, Pencil } from 'lucide-react';
+import { Eye, Trash2, Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Tooltip,
@@ -258,26 +258,6 @@ const OperatorsPage: React.FC = () => {
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>Delete operator</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  navigate(`/operators/${operator.id}`);
-                                }}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>View details</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
