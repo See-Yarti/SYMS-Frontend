@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { useAppSelector } from '@/store';
+import { useDebounce } from 'use-debounce';
 
 const OperatorsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -41,6 +42,9 @@ const OperatorsPage: React.FC = () => {
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [selectedOperator, setSelectedOperator] = useState<Operator | null>(null);
   const [confirmationName, setConfirmationName] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRole, setSelectedRole] = useState<string>('');
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
 
   const { user } = useAppSelector((state) => state.auth);
 
@@ -49,11 +53,18 @@ const OperatorsPage: React.FC = () => {
     isLoading: isOperatorsLoading,
     error: operatorsError,
     refetch: refetchOperators,
-  } = useGetAllOperators();
+  } = useGetAllOperators(debouncedSearchTerm, selectedRole);
 
   const { mutate: deleteOperator } = useDeleteOperator();
 
   const isAdmin = user?.role === 'admin';
+
+  const roleOptions = [
+    { value: '', label: 'All Roles' },
+    { value: 'adminOperator', label: 'User' },
+    { value: 'managerOperator', label: 'Manager' },
+    { value: 'salesOperator', label: 'Sales' },
+  ];
 
   // Filter operators based on role
   const operators = isAdmin
@@ -166,6 +177,45 @@ const OperatorsPage: React.FC = () => {
           </Button>
         )}
       </div>
+
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Input
+            placeholder="Search operators..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-8"
+          />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-4 w-4 absolute left-3 top-3 text-muted-foreground"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+        </div>
+        {!isAdmin && (
+          <select
+            value={selectedRole}
+            onChange={(e) => setSelectedRole(e.target.value)}
+            className="border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            {roleOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+
 
       <div className="rounded-lg border bg-card shadow-sm">
         <Table>

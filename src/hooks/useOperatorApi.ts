@@ -20,19 +20,24 @@ export const queryClient = new QueryClient({
 });
 
 // Operator API hooks
-export const useGetAllOperators = () => {
+export const useGetAllOperators = (search?: string, operatorRole?: string) => {
   const { user, companyId } = useAppSelector(state => state.auth);
   const isAdmin = user?.role === 'admin';
 
   return useQuery<Operator[]>({
     ...defaultQueryOptions,
-    enabled: Boolean(isAdmin || companyId),               // only run when we know who you are
-    queryKey: ['operators', isAdmin ? 'all' : companyId], // distinct cache for admin vs. company
+    enabled: Boolean(isAdmin || companyId),
+    queryKey: ['operators', isAdmin ? 'all' : companyId, search, operatorRole],
     queryFn: async () => {
       const endpoint = isAdmin
         ? '/operator/get-all'
-        : `/operator/get-all/${companyId}`;                // always a real UUID now
-      const { data } = await axiosInstance.get(endpoint);
+        : `/operator/get-all/${companyId}`;
+      
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (operatorRole) params.append('operatorRole', operatorRole);
+
+      const { data } = await axiosInstance.get(`${endpoint}?${params.toString()}`);
       return data.data.data.operators;
     },
   });
@@ -44,30 +49,36 @@ export const useDeleteOperator = () => {
     mutationFn: async (operatorId: string) => {
       await axiosInstance.delete(`/operator/${companyId}/${operatorId}`);
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['operators'] });
+    },
   });
 };
 
 
+
 export const useAddOperator = () => {
   const companyId = useAppSelector(selectCompanyId);
-  console.log("this is company ID" , companyId);
-  
+
   return useMutation<Operator, Error, AddOperatorPayload>({
     mutationFn: async (payload) => {
-      if (!companyId) {
-        throw new Error('Company ID is required to add an operator');
-      }
+      if (!companyId) throw new Error('Company ID is required to add an operator');
       const { data } = await axiosInstance.patch(
         `/operator/add-new-operator/${companyId}`,
         payload
       );
       return data.data.data.operator;
     },
+    onSuccess: () => {
+      // Invalidate operator list query so it refetches the updated data
+      queryClient.invalidateQueries({ queryKey: ['operators'] });
+    },
     onError: (err) => {
       console.error('AddOperator failed:', err.message);
     }
   });
 };
+
 
 
 export const useUpdateOperator = () => {
@@ -80,19 +91,20 @@ export const useUpdateOperator = () => {
       const formData = new FormData();
       if (payload.name) formData.append('name', payload.name);
       if (payload.avatar) formData.append('avatar', payload.avatar);
-      if (payload.phoneNumber)
-        formData.append('phoneNumber', payload.phoneNumber);
+      if (payload.phoneNumber) formData.append('phoneNumber', payload.phoneNumber);
       if (payload.gender) formData.append('gender', payload.gender);
 
       const { data } = await axiosInstance.patch(`/operator/update`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
       return data.data.data.operator;
     },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['operators'] });
+    }
   });
 };
+
 
 
 // Update operator password --> Profile Page

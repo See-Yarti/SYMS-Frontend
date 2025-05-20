@@ -1,7 +1,12 @@
 import { axiosInstance } from '@/lib/API';
 import { useMutation } from '@tanstack/react-query';
+import { queryClient } from './useApi'; // Import your central queryClient
 
-export const useUploadFile = <TResponse = unknown>(endpoint: string) => {
+// --- File Upload with Auto-Refresh ---
+export const useUploadFile = <TResponse = unknown>(
+  endpoint: string,
+  invalidateKey?: string | string[]
+) => {
   return useMutation<TResponse, Error, FormData>({
     mutationFn: async (formData: FormData) => {
       const { data } = await axiosInstance.post(endpoint, formData, {
@@ -11,11 +16,13 @@ export const useUploadFile = <TResponse = unknown>(endpoint: string) => {
       });
       return data.data;
     },
-    retry: false,
+    onSuccess: () => {
+      if (invalidateKey) queryClient.invalidateQueries({ queryKey: Array.isArray(invalidateKey) ? invalidateKey : [invalidateKey] });
+    },    retry: false,
   });
 };
 
-// OTP Verification APIs
+// --- OTP Verification APIs ---
 export const useSendOtp = () => {
   return useMutation<{ success: boolean }, Error, { email: string }>({
     mutationFn: async ({ email }) => {

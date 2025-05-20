@@ -1,13 +1,13 @@
 import { axiosInstance } from '@/lib/API';
-import { useQuery, useMutation, QueryClient} from '@tanstack/react-query';
+import { useQuery, useMutation, QueryClient } from '@tanstack/react-query';
 import {
-    CompaniesResponse,
+  CompaniesResponse,
   CompanyResponse,
   UnverifyCompanyPayload,
   VerificationResponse,
 } from '@/types/company';
 
-// Shared query options
+// Shared query optionse
 const defaultQueryOptions = {
   retry: false,
   staleTime: 60 * 1000, // 1 minute
@@ -21,6 +21,7 @@ export const queryClient = new QueryClient({
   },
 });
 
+// After a verify/unverify, always refresh companies & company details in cache!
 export const useVerifyCompany = () => {
   return useMutation<VerificationResponse, Error, string>({
     mutationFn: async (companyId: string) => {
@@ -29,10 +30,14 @@ export const useVerifyCompany = () => {
       );
       return data;
     },
+    onSuccess: (_data, companyId) => {
+      // Invalidate companies list and this specific company’s details
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      queryClient.invalidateQueries({ queryKey: ['company', companyId] });
+    },
     retry: false,
   });
 };
-
 
 export const useUnverifyCompany = () => {
   return useMutation<
@@ -47,10 +52,16 @@ export const useUnverifyCompany = () => {
       );
       return data;
     },
+    onSuccess: (_data, variables) => {
+      // Same here: update both the companies list and the specific company in the UI
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      queryClient.invalidateQueries({
+        queryKey: ['company', variables.companyId],
+      });
+    },
     retry: false,
   });
 };
-
 
 export const useGetCompany = (companyId: string) => {
   return useQuery<CompanyResponse, Error>({
@@ -63,7 +74,6 @@ export const useGetCompany = (companyId: string) => {
     enabled: !!companyId,
   });
 };
-
 
 export const useGetCompanies = () => {
   return useQuery<CompaniesResponse, Error>({
