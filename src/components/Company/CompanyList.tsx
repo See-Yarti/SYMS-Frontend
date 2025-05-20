@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { useGetCompanies } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
-import { useVerifyCompany, useUnverifyCompany } from '@/hooks/useApi';
+import { useVerifyCompany, useUnverifyCompany, useGetCompanies } from '@/hooks/useCompanyApi';
 import { toast } from 'sonner';
 import {
     Dialog,

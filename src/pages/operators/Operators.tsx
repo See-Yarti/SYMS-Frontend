@@ -21,7 +21,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
-import { useGetAllOperators, useDeleteOperator, Operator } from '@/hooks/useApi';
+import { useGetAllOperators, useDeleteOperator } from '@/hooks/useOperatorApi';
+import { Operator } from '@/types/company';
 import { useNavigate } from 'react-router-dom';
 import { Eye, Trash2, Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -95,7 +96,7 @@ const OperatorsPage: React.FC = () => {
   };
   const getRoleBadge = (role: string) => {
     const roleMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
-      adminOperator: { label: 'Admin', variant: 'default' },
+      adminOperator: { label: 'User', variant: 'default' },
       managerOperator: { label: 'Manager', variant: 'secondary' },
       salesOperator: { label: 'Sales', variant: 'outline' },
     };
@@ -173,7 +174,6 @@ const OperatorsPage: React.FC = () => {
               <TableHead className="w-[80px]">Avatar</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
               <TableHead>Last Activity</TableHead>
               {!isAdmin && <TableHead className="w-[150px]">Actions</TableHead>}
             </TableRow>

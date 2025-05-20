@@ -9,7 +9,8 @@ import { z } from 'zod';
 import {
   User, Building2, FileText, Mail, MapPin, Phone,
   Info, ArrowRight, Check, Plus, Trash2, Lock, Search,
-  ShieldCheck, FileDigit, FileSignature, Calendar as CalendarIcon
+  ShieldCheck, FileDigit, FileSignature, Calendar as CalendarIcon,
+  MailCheck
 } from 'lucide-react';
 import { Icons } from '@/components/icons';
 import { toast } from 'sonner';
@@ -25,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useUploadFile } from '@/hooks/useApi';
+import { useSendOtp, useUploadFile, useVerifyOtp } from '@/hooks/useRegisterOperatorApi';
 import {
   Card,
   CardHeader,
@@ -100,6 +101,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ currentStep, setCurrentStep
   const [, setCities] = useState<string[]>(['']);
   const [uploadProgress, setUploadProgress] = useState(0);
   const countryList: CountryType[] = Country.getAllCountries();
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [otpEmail, setOtpEmail] = useState('');
 
   const [stateList, setStateList] = useState<StateType[]>([]);
   const [cityList, setCityList] = useState<CityType[]>([]);
@@ -130,6 +135,53 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ currentStep, setCurrentStep
 
   const selectedCountry = watch('companyAddress.country');
   const selectedState = watch('companyAddress.state');
+  const operatorEmail = watch('operatorEmail');
+
+  // Send OTP to email
+  const sendOtp = async () => {
+    if (!operatorEmail) {
+      toast.error('Please enter your email first');
+      return;
+    }
+
+    sendOtpMutation(
+      { email: operatorEmail },
+      {
+        onSuccess: (response) => {
+          if (response.success) {
+            setOtpSent(true);
+            setOtpEmail(operatorEmail);
+            toast.success('OTP sent to your email');
+          } else {
+            toast.error('Failed to send OTP');
+          }
+        },
+      }
+    );
+  };
+
+  // Verify OTP
+  const verifyOtp = async () => {
+    if (!otp || !otpEmail) {
+      toast.error('Please enter OTP');
+      return;
+    }
+
+    verifyOtpMutation(
+      { email: otpEmail, otp },
+      {
+        onSuccess: (response) => {
+          if (response.success) {
+            setOtpVerified(true);
+            toast.success('Email verified successfully');
+          } else {
+            toast.error('Invalid OTP');
+          }
+        },
+      }
+    );
+  };
+
 
   // Initialize Google Maps Autocomplete
   useEffect(() => {
@@ -348,6 +400,12 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ currentStep, setCurrentStep
     let isValid = false;
 
     if (currentStep === 1) {
+      // Before proceeding to next step, verify email if not already verified
+      if (!otpVerified) {
+        toast.warning('Please verify your email first');
+        return;
+      }
+
       isValid = await trigger(['operatorName', 'operatorEmail', 'password', 'phoneNumber']);
     } else if (currentStep === 2) {
       isValid = await trigger([
@@ -369,6 +427,9 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ currentStep, setCurrentStep
       });
     }
   };
+
+  const { mutate: sendOtpMutation } = useSendOtp();
+  const { mutate: verifyOtpMutation } = useVerifyOtp();
 
   const prevStep = () => {
     setCurrentStep(currentStep - 1);
@@ -471,7 +532,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ currentStep, setCurrentStep
                         id="operatorEmail"
                         type="email"
                         placeholder="admin1122@gmail.com"
-                        disabled={isPending}
+                        disabled={isPending || otpVerified}
                         {...register('operatorEmail')}
                         className="pl-10"
                       />
@@ -480,6 +541,59 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ currentStep, setCurrentStep
                       <p className="text-sm text-destructive">{errors.operatorEmail.message}</p>
                     )}
                   </div>
+
+                  {/* OTP Verification */}
+                  {otpSent && !otpVerified && (
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="otp" className="flex items-center gap-1">
+                        <MailCheck className="h-4 w-4" />
+                        Enter OTP
+                        <span className="text-destructive">*</span>
+                      </Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="otp"
+                          type="text"
+                          placeholder="Enter 6-digit OTP"
+                          value={otp}
+                          onChange={(e) => setOtp(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          onClick={verifyOtp}
+                          disabled={isPending}
+                        >
+                          Verify OTP
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Send OTP Button */}
+                  {!otpSent && (
+                    <div className="md:col-span-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={sendOtp}
+                        disabled={isPending || !operatorEmail || otpVerified}
+                        className="w-full"
+                      >
+                        {otpVerified ? (
+                          <>
+                            <Check className="mr-2 h-4 w-4" />
+                            Email Verified
+                          </>
+                        ) : (
+                          <>
+                            <Mail className="mr-2 h-4 w-4" />
+                            Send Verification OTP
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
 
                   {/* Password */}
                   <div className="space-y-2">

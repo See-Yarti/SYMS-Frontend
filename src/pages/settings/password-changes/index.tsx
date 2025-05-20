@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useAppSelector } from '@/store';
-import { useUpdateOperatorPassword } from '@/hooks/useApi';
+import { useUpdateOperatorPassword } from '@/hooks/useOperatorApi';
 import { ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AxiosError } from 'axios';

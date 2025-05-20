@@ -2,7 +2,7 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useUpdateOperator } from '@/hooks/useApi';
+import { useUpdateOperator } from '@/hooks/useOperatorApi';
 import { useAppSelector } from '@/store';
 import { useEffect } from 'react';
 import { toast } from 'sonner';

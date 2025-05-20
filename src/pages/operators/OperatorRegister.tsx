@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { useAddOperator } from '@/hooks/useApi';
+import { useAddOperator } from '@/hooks/useOperatorApi';
 import {
   Select,
   SelectContent,

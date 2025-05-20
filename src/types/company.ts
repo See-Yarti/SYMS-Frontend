@@ -24,6 +24,7 @@ export interface Company {
 }
 
 export interface Operator {
+  company: any;
   id: string;
   user: {
     id: string;
@@ -93,3 +94,20 @@ export interface VerificationResponse {
   }>;
   timestamp: string;
 }
+
+
+export type AddOperatorPayload = {
+  operatorName: string;
+  operatorEmail: string;
+  password: string;
+  phoneNumber: string;
+  operatorRole: string;
+};
+
+
+export type UpdateOperatorPayload = {
+  name?: string;
+  avatar?: File;
+  phoneNumber?: string;
+  gender?: string;
+};

@@ -9,7 +9,7 @@ import Home from './pages/Home';
 import ProtectedRoute from './ProtectedRoute';
 import Register from './pages/auth/register/Register';
 import Operators from './pages/operators/Operators';
-import Profile from './pages/profile/Profile';
+import Profile from './pages/settings/profile-update';
 import Products from './pages/products/Products';
 import CompaniesList from '@/components/Company/CompanyList';
 import CompanyDetail from '@/components/Company/CompanyDetails';

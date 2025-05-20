@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { useGetCompany } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
-import { useVerifyCompany, useUnverifyCompany } from '@/hooks/useApi';
 import { toast } from 'sonner';
 import {
     Dialog,
@@ -18,6 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useGetCompany, useUnverifyCompany, useVerifyCompany } from '@/hooks/useCompanyApi';
 
 const CompanyDetail = () => {
     const { companyId } = useParams<{ companyId: string }>();
