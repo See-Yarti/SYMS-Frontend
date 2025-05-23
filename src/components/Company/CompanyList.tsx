@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useVerifyCompany, useUnverifyCompany, useGetCompanies } from '@/hooks/useCompanyApi';
 import { toast } from 'sonner';
@@ -14,13 +14,37 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronsUpDown, ChevronUp, ChevronDown, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Eye } from 'lucide-react';
 
+const statusOptions = [
+    { value: '', label: 'All Status' },
+    { value: 'true', label: 'Verified' },
+    { value: 'false', label: 'Not Verified' },
+];
 
 const CompaniesList = () => {
-    const { data, isLoading, error, refetch } = useGetCompanies();
+    const [search, setSearch] = useState('');
+    const [isVerified, setIsVerified] = useState<string>('');
+    const [sortBy, setSortBy] = useState('createdAt');
+    const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
+    const [page, setPage] = useState(1);
+    const [limit] = useState(10);
+
+    const {
+        data,
+        isLoading,
+        error,
+        refetch,
+    } = useGetCompanies({
+        search,
+        isVerified: isVerified === '' ? undefined : isVerified === 'true',
+        sortBy,
+        sortOrder,
+        page,
+        limit,
+    });
+
     const verifyCompany = useVerifyCompany();
     const unverifyCompany = useUnverifyCompany();
 
@@ -28,178 +52,181 @@ const CompaniesList = () => {
     const [unverifiedReason, setUnverifiedReason] = useState('');
     const [unverifiedReasonDescription, setUnverifiedReasonDescription] = useState('');
 
-    const handleVerify = (companyId: string) => {
-        verifyCompany.mutate(companyId, {
-            onSuccess: () => {
-                toast.success('Company verified successfully');
-                refetch();
-            },
-            onError: (error) => {
-                toast.error('Failed to verify company', {
-                    description: error.message,
-                });
-            },
-        });
+    // Table sorting logic
+    const handleSort = (field: string) => {
+        if (sortBy === field) {
+            setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+        } else {
+            setSortBy(field);
+            setSortOrder('ASC');
+        }
+        setPage(1);
     };
 
-    const handleUnverify = (companyId: string) => {
-        setSelectedCompanyId(companyId);
-    };
-
-    const handleUnverifySubmit = () => {
-        if (!selectedCompanyId) return;
-
-        unverifyCompany.mutate(
-            {
-                companyId: selectedCompanyId,
-                payload: {
-                    unverifiedReason,
-                    unverifiedReasonDescription,
-                },
-            },
-            {
-                onSuccess: () => {
-                    toast.success('Company unverified successfully');
-                    setSelectedCompanyId(null);
-                    setUnverifiedReason('');
-                    setUnverifiedReasonDescription('');
-                    refetch();
-                },
-                onError: (error) => {
-                    toast.error('Failed to unverify company', {
-                        description: error.message,
-                    });
-                },
-            }
-        );
-    };
-
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="rounded-lg border border-destructive p-4 text-destructive">
-                <p>Error loading companies:</p>
-                <p className="font-medium">{error.message}</p>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-2"
-                    onClick={() => refetch()}
-                >
-                    Retry
-                </Button>
-            </div>
-        );
-    }
+    const companies = data?.data.companies || [];
+    const total = data?.data.companies.length || companies.length;
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-end items-center">
+        <div className="max-w-7xl mx-auto p-6 space-y-8">
+            {/* Top Filters */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
+                <div className="flex flex-wrap gap-2 items-end">
+                    <Input
+                        placeholder="Search companies..."
+                        value={search}
+                        onChange={e => { setSearch(e.target.value); setPage(1); }}
+                        className="w-48"
+                    />
+                    <div>
+                        <Label htmlFor="status" className="sr-only">Status</Label>
+                        <select
+                            id="status"
+                            value={isVerified}
+                            onChange={e => { setIsVerified(e.target.value); setPage(1); }}
+                            className="border rounded-md px-3 py-2 text-sm min-w-[120px]"
+                        >
+                            {statusOptions.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
                 <div className="text-sm text-muted-foreground">
-                    {data?.data.companies.length} companies found
+                    {total} companies found
                 </div>
             </div>
 
-            {data?.data.companies.length === 0 ? (
-                <div className="border rounded-lg p-8 text-center">
-                    <p className="text-muted-foreground">No companies found</p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {data?.data.companies.map((company) => (
-                        <div
-                            key={company.id}
-                            className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full"
-                        >
-                            <div className="flex-1">
-                                <div className="flex justify-between items-start">
-                                    <h2 className="text-lg font-semibold">{company.name}</h2>
-                                    <Badge
-                                        variant={company.isVerified ? 'default' : 'secondary'}
-                                        className="ml-2"
-                                    >
-                                        {company.isVerified ? 'Verified' : 'Not Verified'}
-                                    </Badge>
-                                </div>
-
-                                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                    {company.description}
-                                </p>
-
-                                {company.citiesOfOperation?.length > 0 && (
-                                    <div className="mt-3">
-                                        <p className="text-xs text-muted-foreground">Operating in:</p>
-                                        <div className="flex flex-wrap gap-1 mt-1">
-                                            {company.citiesOfOperation.map((city) => (
-                                                <span
-                                                    key={city}
-                                                    className="text-xs bg-muted px-2 py-1 rounded"
-                                                >
+            {/* Table / Loading / Error */}
+            <div className="bg-card rounded-xl border shadow-sm overflow-x-auto">
+                {isLoading ? (
+                    <div className="flex items-center justify-center h-56">
+                        <Loader2 className="h-8 w-8 animate-spin" />
+                    </div>
+                ) : error ? (
+                    <div className="p-8 flex flex-col items-center">
+                        <p className="text-destructive font-medium mb-2">Error loading companies:</p>
+                        <p className="text-sm text-destructive">{error.message}</p>
+                        <Button variant="outline" size="sm" className="mt-4" onClick={() => refetch()}>
+                            Retry
+                        </Button>
+                    </div>
+                ) : companies.length === 0 ? (
+                    <div className="p-12 text-center text-muted-foreground">
+                        No companies found
+                    </div>
+                ) : (
+                    <table className="min-w-full text-sm">
+                        <thead>
+                            <tr className="bg-muted/50">
+                                <th className="px-4 py-3 text-left font-semibold">Name</th>
+                                <th
+                                    className="px-4 py-3 text-left cursor-pointer select-none"
+                                    onClick={() => handleSort('isVerified')}
+                                >
+                                    Status{' '}
+                                    {sortBy === 'isVerified'
+                                        ? sortOrder === 'ASC'
+                                            ? <ChevronUp className="inline w-4 h-4" />
+                                            : <ChevronDown className="inline w-4 h-4" />
+                                        : <ChevronsUpDown className="inline w-4 h-4 text-muted-foreground" />}
+                                </th>
+                                <th className="px-4 py-3 text-left">Cities</th>
+                                <th className="px-4 py-3 text-left">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {companies.map(company => (
+                                <tr
+                                    key={company.id}
+                                    className="border-b hover:bg-muted/40 transition"
+                                >
+                                    <td className="px-4 py-3 font-medium whitespace-nowrap">{company.name}</td>
+                                    <td className="px-4 py-3">
+                                        <Badge variant={company.isVerified ? 'default' : 'secondary'}>
+                                            {company.isVerified ? 'Verified' : 'Not Verified'}
+                                        </Badge>
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap">
+                                        <div className="flex flex-wrap gap-1">
+                                            {company.citiesOfOperation?.map(city => (
+                                                <span key={city} className="bg-muted px-2 py-1 rounded text-xs">
                                                     {city}
                                                 </span>
                                             ))}
                                         </div>
-                                    </div>
-                                )}
-                            </div>
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap">
+                                        <div className="flex gap-2">
+                                            <Button asChild variant="outline" size="sm">
+                                                <Link to={`/companies/${company.id}`}>
+                                                    <Eye className="mr-2 h-4 w-4" />
+                                                    View
+                                                </Link>
+                                            </Button>
+                                            {company.isVerified ? (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setSelectedCompanyId(company.id)}
+                                                    disabled={unverifyCompany.isPending}
+                                                >
+                                                    {unverifyCompany.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                    Unverify
+                                                </Button>
+                                            ) : (
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        verifyCompany.mutate(company.id, {
+                                                            onSuccess: () => {
+                                                                toast.success('Company verified successfully');
+                                                                refetch();
+                                                            },
+                                                            onError: (error) => {
+                                                                toast.error('Failed to verify company', { description: error.message });
+                                                            }
+                                                        })
+                                                    }
+                                                    disabled={verifyCompany.isPending}
+                                                >
+                                                    {verifyCompany.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                    Verify
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </div>
 
-                            <div className="mt-4 flex gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    asChild
-                                    className="flex-1"
-                                >
-                                    <Link to={`/companies/${company.id}`}>
-                                        <Eye className="mr-2 h-4 w-4" />
-                                        View Details
-                                    </Link>
-                                </Button>
-
-                                {company.isVerified ? (
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleUnverify(company.id)}
-                                        disabled={unverifyCompany.isPending}
-                                        className="flex-1"
-                                    >
-                                        {unverifyCompany.isPending && (
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        )}
-                                        Unverify
-                                    </Button>
-                                ) : (
-                                    <Button
-                                        size="sm"
-                                        onClick={() => handleVerify(company.id)}
-                                        disabled={verifyCompany.isPending}
-                                        className="flex-1"
-                                    >
-                                        {verifyCompany.isPending && (
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        )}
-                                        Verify
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-                    ))}
+            {/* Pagination Controls */}
+            {total > limit && (
+                <div className="flex justify-between items-center mt-6">
+                    <Button
+                        onClick={() => setPage(page - 1)}
+                        disabled={page === 1}
+                        variant="outline"
+                    >
+                        Prev
+                    </Button>
+                    <span className="text-sm">
+                        Page {page} of {Math.ceil(total / limit)}
+                    </span>
+                    <Button
+                        onClick={() => setPage(page + 1)}
+                        disabled={page >= Math.ceil(total / limit)}
+                        variant="outline"
+                    >
+                        Next
+                    </Button>
                 </div>
             )}
 
             {/* Unverify Dialog */}
-            <Dialog
-                open={!!selectedCompanyId}
-                onOpenChange={(open) => !open && setSelectedCompanyId(null)}
-            >
+            <Dialog open={!!selectedCompanyId} onOpenChange={(open) => !open && setSelectedCompanyId(null)}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Unverify Company</DialogTitle>
@@ -207,7 +234,6 @@ const CompaniesList = () => {
                             Please provide a reason for unverifying this company.
                         </DialogDescription>
                     </DialogHeader>
-
                     <div className="space-y-4">
                         <div>
                             <Label htmlFor="unverifiedReason">Reason *</Label>
@@ -218,11 +244,7 @@ const CompaniesList = () => {
                                 placeholder="e.g., Document Expired, Missing Information"
                                 className="mt-1"
                             />
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Short description of why you're unverifying this company
-                            </p>
                         </div>
-
                         <div>
                             <Label htmlFor="unverifiedReasonDescription">Details *</Label>
                             <Textarea
@@ -233,12 +255,8 @@ const CompaniesList = () => {
                                 className="mt-1"
                                 rows={4}
                             />
-                            <p className="text-xs text-muted-foreground mt-1">
-                                This will be visible to the company
-                            </p>
                         </div>
                     </div>
-
                     <DialogFooter>
                         <Button
                             variant="outline"
@@ -251,7 +269,23 @@ const CompaniesList = () => {
                             Cancel
                         </Button>
                         <Button
-                            onClick={handleUnverifySubmit}
+                            onClick={() => {
+                                unverifyCompany.mutate(
+                                    { companyId: selectedCompanyId!, payload: { unverifiedReason, unverifiedReasonDescription } },
+                                    {
+                                        onSuccess: () => {
+                                            toast.success('Company unverified successfully');
+                                            setSelectedCompanyId(null);
+                                            setUnverifiedReason('');
+                                            setUnverifiedReasonDescription('');
+                                            refetch();
+                                        },
+                                        onError: (error) => {
+                                            toast.error('Failed to unverify company', { description: error.message });
+                                        },
+                                    }
+                                );
+                            }}
                             disabled={
                                 unverifyCompany.isPending ||
                                 !unverifiedReason ||

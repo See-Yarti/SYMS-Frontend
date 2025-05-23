@@ -1,4 +1,5 @@
 // src/pages/operators/Operators.tsx
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,6 +36,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { useAppSelector } from '@/store';
 import { useDebounce } from 'use-debounce';
+import { ChevronsUpDown, ArrowUpAZ, ArrowDownAZ } from 'lucide-react';
+
 
 const OperatorsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -44,20 +47,31 @@ const OperatorsPage: React.FC = () => {
   const [confirmationName, setConfirmationName] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('');
+  const [sortBy, setSortBy] = useState<string>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
+  const [limit] = useState<number>(10);
+  const [page, setPage] = useState<number>(1);
   const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
 
   const { user } = useAppSelector((state) => state.auth);
+  const isAdmin = user?.role === 'admin';
 
+  // Our ONLY operator query!
   const {
-    data: allOperators,
-    isLoading: isOperatorsLoading,
-    error: operatorsError,
-    refetch: refetchOperators,
-  } = useGetAllOperators(debouncedSearchTerm, selectedRole);
+    data,
+    isLoading,
+    error,
+    refetch,
+  } = useGetAllOperators({
+    search: debouncedSearchTerm,
+    operatorRole: selectedRole,
+    sortBy,
+    sortOrder,
+    limit,
+    page,
+  });
 
   const { mutate: deleteOperator } = useDeleteOperator();
-
-  const isAdmin = user?.role === 'admin';
 
   const roleOptions = [
     { value: '', label: 'All Roles' },
@@ -66,10 +80,9 @@ const OperatorsPage: React.FC = () => {
     { value: 'salesOperator', label: 'Sales' },
   ];
 
-  // Filter operators based on role
-  const operators = isAdmin
-    ? allOperators
-    : allOperators?.filter(op => ['adminOperator', 'managerOperator', 'salesOperator'].includes(op.operatorRole));
+  // Safe fallback for no data
+  const operators = data?.operators || [];
+  const total = data?.total || 0;
 
   const handleRegisterClick = () => {
     navigate('/operators/register');
@@ -92,11 +105,11 @@ const OperatorsPage: React.FC = () => {
       deleteOperator(selectedOperator.id, {
         onSuccess: () => {
           toast.success('Operator deleted successfully');
-          refetchOperators();
+          refetch();
           setOpenDeleteDialog(false);
           setConfirmationName('');
         },
-        onError: (error) => {
+        onError: (error: any) => {
           console.error('Delete error:', error);
           toast.error('Failed to delete operator');
         },
@@ -105,6 +118,7 @@ const OperatorsPage: React.FC = () => {
       toast.error("The name doesn't match. Operator was not deleted.");
     }
   };
+
   const getRoleBadge = (role: string) => {
     const roleMap: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
       adminOperator: { label: 'User', variant: 'default' },
@@ -116,12 +130,12 @@ const OperatorsPage: React.FC = () => {
     return <Badge variant={roleInfo.variant}>{roleInfo.label}</Badge>;
   };
 
-  if (isOperatorsLoading) {
+  if (isLoading) {
     return (
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
           <Skeleton className="h-8 w-[250px]" />
-          {!isAdmin && <Skeleton className="h-10 w-[200px]" />}
+          <Skeleton className="h-10 w-[200px]" />
         </div>
         <div className="rounded-lg border bg-card shadow-sm">
           <Table>
@@ -151,7 +165,7 @@ const OperatorsPage: React.FC = () => {
     );
   }
 
-  if (operatorsError) {
+  if (error) {
     return (
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between">
@@ -216,16 +230,33 @@ const OperatorsPage: React.FC = () => {
         )}
       </div>
 
-
       <div className="rounded-lg border bg-card shadow-sm">
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow>
               <TableHead className="w-[80px]">Avatar</TableHead>
-              <TableHead>Name</TableHead>
+              <TableHead
+                className="cursor-pointer select-none flex items-center gap-2"
+                onClick={() => {
+                  setSortBy('name');
+                  setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
+                }}
+              >
+                Name
+                {sortBy === 'name' ? (
+                  sortOrder === 'ASC' ? (
+                    <ArrowUpAZ className="inline-block w-4 h-4" />
+                  ) : (
+                    <ArrowDownAZ className="inline-block w-4 h-4" />
+                  )
+                ) : (
+                  <ChevronsUpDown className="inline-block w-4 h-4 text-muted-foreground" />
+                )}
+              </TableHead>
+
               <TableHead>Email</TableHead>
-              <TableHead>Last Activity</TableHead>
-              {!isAdmin && <TableHead className="w-[150px]">Actions</TableHead>}
+              <TableHead>Role</TableHead>
+              <TableHead className="w-[150px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -268,63 +299,77 @@ const OperatorsPage: React.FC = () => {
                   </TableCell>
                   <TableCell>{getRoleBadge(operator.operatorRole)}</TableCell>
                   <TableCell>
-                    {new Date(operator.user.lastActivityAt).toLocaleString()}
+                    <div className="flex gap-2">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedOperator(operator);
+                                setOpenDetail(true);
+                              }}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>View details</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-destructive border-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => handleDeleteOpen(operator)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Delete operator</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </TableCell>
-                  {!isAdmin && (
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedOperator(operator);
-                                  setOpenDetail(true);
-                                }}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>View details</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 w-8 p-0 text-destructive border-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => handleDeleteOpen(operator)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Delete operator</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                    </TableCell>
-                  )}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={isAdmin ? 5 : 6} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   No operators found
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
+      </div>
+      {/* Pagination Controls */}
+      <div className="flex items-center gap-4 mt-4">
+        <Button
+          onClick={() => setPage(page - 1)}
+          disabled={page === 1}
+          variant="outline"
+        >
+          Prev
+        </Button>
+        <span>
+          Page {page} of {Math.ceil(total / limit)}
+        </span>
+        <Button
+          onClick={() => setPage(page + 1)}
+          disabled={page >= Math.ceil(total / limit)}
+          variant="outline"
+        >
+          Next
+        </Button>
       </div>
 
       {/* Operator Detail Dialog */}

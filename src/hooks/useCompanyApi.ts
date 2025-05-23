@@ -1,5 +1,10 @@
 import { axiosInstance } from '@/lib/API';
-import { useQuery, useMutation, QueryClient } from '@tanstack/react-query';
+import {
+  useQuery,
+  useMutation,
+  QueryClient,
+  keepPreviousData,
+} from '@tanstack/react-query';
 import {
   CompaniesResponse,
   CompanyResponse,
@@ -20,6 +25,16 @@ export const queryClient = new QueryClient({
     queries: defaultQueryOptions,
   },
 });
+
+// ADVANCED QUERY HOOK
+export type CompanyQueryParams = {
+  search?: string;
+  isVerified?: boolean;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC';
+  page?: number;
+  limit?: number;
+};
 
 // After a verify/unverify, always refresh companies & company details in cache!
 export const useVerifyCompany = () => {
@@ -75,13 +90,29 @@ export const useGetCompany = (companyId: string) => {
   });
 };
 
-export const useGetCompanies = () => {
+export const useGetCompanies = ({
+  search,
+  isVerified,
+  sortBy = 'createdAt',
+  sortOrder = 'DESC',
+  page = 1,
+  limit = 10,
+}: CompanyQueryParams) => {
   return useQuery<CompaniesResponse, Error>({
-    ...defaultQueryOptions,
-    queryKey: ['companies'],
+    queryKey: ['companies', search, isVerified, sortBy, sortOrder, page, limit],
     queryFn: async () => {
-      const { data } = await axiosInstance.get('/company');
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (typeof isVerified === 'boolean')
+        params.append('isVerified', String(isVerified));
+      if (sortBy) params.append('sortBy', sortBy);
+      if (sortOrder) params.append('sortOrder', sortOrder);
+      if (page) params.append('page', String(page));
+      if (limit) params.append('limit', String(limit));
+      const { data } = await axiosInstance.get(`/company?${params.toString()}`);
       return data;
     },
+    placeholderData: keepPreviousData,
+    ...defaultQueryOptions,
   });
 };
