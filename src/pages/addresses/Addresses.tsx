@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Country, State, City } from 'country-state-city';
 import { useAppSelector } from '@/store';
 import { selectCompanyId } from '@/store/features/auth.slice';
-import { useFetchData, usePostData, useDeleteData } from '@/hooks/useApi';
+import { useFetchData, usePostData, useDeleteData, usePatchData } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
@@ -30,12 +30,14 @@ const formSchema = z.object({
   zipCode: z.string().optional(),
   postalCode: z.string().min(1, 'Postal code is required'),
   additionalInfo: z.string().optional(),
+  isMain: z.boolean().default(false),
 });
 
 type AddressFormValues = z.infer<typeof formSchema>;
 
 interface Address {
   id: string;
+  isMain: boolean;
   addressLabel: string;
   street: string;
   apartment: string;
@@ -44,8 +46,6 @@ interface Address {
   country: string;
   zipCode: string;
   postalCode: string;
-  lat: string;
-  lng: string;
   additionalInfo: string;
   createdAt: string;
   updatedAt: string;
@@ -56,7 +56,6 @@ const Addresses = () => {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-
   const [addressToDelete, setAddressToDelete] = useState<string>('');
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
   const [selectedCountry, setSelectedCountry] = useState('');
@@ -74,6 +73,7 @@ const Addresses = () => {
       zipCode: '',
       postalCode: '',
       additionalInfo: '',
+      isMain: false,
     },
   });
 
@@ -82,33 +82,54 @@ const Addresses = () => {
     data: addressesData,
     isLoading: isLoadingAddresses,
     refetch: refetchAddresses
-  } = useFetchData<{
-    addresses: Address[];
-  }>(`/address/get-all-addresses/${companyId ?? ''}`, ['addresses', companyId ?? '']);
+  } = useFetchData<{ addresses: Address[] }>(
+    `/address/get-all-addresses/${companyId ?? ''}`,
+    ['addresses', companyId ?? '']
+  );
 
-  // Add/update address mutation
-  const { mutate: addUpdateAddress, isPending: isSubmitting } = usePostData<
+  // Add address (POST)
+  const { mutate: addAddress, isPending: isSubmitting } = usePostData<
     AddressFormValues,
     { message: string }
   >(`/address/add-new-company-address/${companyId}`, {
     onSuccess: () => {
-      toast.success(editingAddress ? 'Address updated successfully' : 'Address added successfully');
+      toast.success('Address added successfully');
       refetchAddresses();
       handleCloseModal();
     },
-    onError: (error: { message: any; }) => {
+    onError: (error: { message: any }) => {
       toast.error(error.message || 'Failed to save address');
     }
   });
 
-  // Delete address mutation
+  // Edit address (PATCH)
+  const { mutate: editAddress, isPending: isEditing } = usePatchData<
+    AddressFormValues,
+    { message: string }
+  >(
+    editingAddress
+      ? `/address/update-company-address/${companyId}/${editingAddress.id}`
+      : '',
+    {
+      onSuccess: () => {
+        toast.success('Address updated successfully');
+        refetchAddresses();
+        handleCloseModal();
+      },
+      onError: (error: { message: any }) => {
+        toast.error(error.message || 'Failed to update address');
+      }
+    }
+  );
+
+  // Delete address
   const { mutate: deleteAddress } = useDeleteData({
     onSuccess: () => {
       toast.success('Address deleted successfully');
       refetchAddresses();
       setIsDeleteDialogOpen(false);
     },
-    onError: (error: { message: any; }) => {
+    onError: (error: { message: any }) => {
       toast.error(error.message || 'Failed to delete address');
     }
   });
@@ -119,24 +140,24 @@ const Addresses = () => {
     }
   }, [companyId, navigate]);
 
- const handleOpenModal = () => {
-  setEditingAddress(null);            
-  form.reset({                        
-    addressLabel: '',
-    street: '',
-    apartment: '',
-    city: '',
-    state: '',
-    country: '',
-    zipCode: '',
-    postalCode: '',
-    additionalInfo: '',
-  });
-  setSelectedCountry('');
-  setSelectedState('');
-  setIsModalOpen(true);
-};
-
+  const handleOpenModal = () => {
+    setEditingAddress(null);
+    form.reset({
+      addressLabel: '',
+      street: '',
+      apartment: '',
+      city: '',
+      state: '',
+      country: '',
+      zipCode: '',
+      postalCode: '',
+      additionalInfo: '',
+      isMain: false,
+    });
+    setSelectedCountry('');
+    setSelectedState('');
+    setIsModalOpen(true);
+  };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
@@ -152,6 +173,7 @@ const Addresses = () => {
     setSelectedState(address.state);
     form.reset({
       ...address,
+      isMain: address.isMain ?? false,
     });
     setIsModalOpen(true);
   };
@@ -166,8 +188,13 @@ const Addresses = () => {
     deleteAddress(`/address/delete-address/${addressToDelete}` as any);
   };
 
+  // ADD or EDIT submit handler
   const onSubmit = (values: AddressFormValues) => {
-    addUpdateAddress(values);
+    if (editingAddress) {
+      editAddress(values);
+    } else {
+      addAddress(values);
+    }
   };
 
   const countryData = Country.getAllCountries().map((country) => ({
@@ -193,9 +220,7 @@ const Addresses = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Company Addresses</h1>
-        <Button onClick={handleOpenModal}>
-          Add New Address
-        </Button>
+        <Button onClick={handleOpenModal}>Add New Address</Button>
       </div>
 
       <Card>
@@ -222,11 +247,23 @@ const Addresses = () => {
                   addressesData.addresses.map((address) => (
                     <TableRow key={address.id}>
                       <TableCell>
-                        <Badge variant="outline">{address.addressLabel}</Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={address.isMain ? "default" : "outline"}>
+                            {address.addressLabel}
+                          </Badge>
+                          {address.isMain && (
+                            <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
+                              Main
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <p>{address.street}, {address.apartment}</p>
+                          <p>
+                            {address.street}
+                            {address.apartment ? `, ${address.apartment}` : ''}
+                          </p>
                           <p className="text-sm text-muted-foreground">
                             {address.city}, {address.state}, {address.country}
                           </p>
@@ -294,7 +331,6 @@ const Addresses = () => {
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
                   name="street"
@@ -308,7 +344,6 @@ const Addresses = () => {
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
                   name="apartment"
@@ -322,7 +357,6 @@ const Addresses = () => {
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
                   name="country"
@@ -356,7 +390,6 @@ const Addresses = () => {
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
                   name="state"
@@ -389,7 +422,6 @@ const Addresses = () => {
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
                   name="city"
@@ -418,7 +450,6 @@ const Addresses = () => {
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
                   name="postalCode"
@@ -432,7 +463,6 @@ const Addresses = () => {
                     </FormItem>
                   )}
                 />
-
                 <FormField
                   control={form.control}
                   name="zipCode"
@@ -446,9 +476,7 @@ const Addresses = () => {
                     </FormItem>
                   )}
                 />
-
               </div>
-
               <FormField
                 control={form.control}
                 name="additionalInfo"
@@ -465,13 +493,36 @@ const Addresses = () => {
                   </FormItem>
                 )}
               />
-
+              <FormField
+                control={form.control}
+                name="isMain"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={field.value}
+                          onChange={e => field.onChange(e.target.checked)}
+                          className="accent-primary h-5 w-5"
+                        />
+                        <span>Set as Main Address</span>
+                      </label>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={handleCloseModal}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? 'Saving...' : editingAddress ? 'Update Address' : 'Add Address'}
+                <Button type="submit" disabled={isSubmitting || isEditing}>
+                  {isSubmitting || isEditing
+                    ? 'Saving...'
+                    : editingAddress
+                    ? 'Update Address'
+                    : 'Add Address'}
                 </Button>
               </DialogFooter>
             </form>
@@ -495,5 +546,6 @@ const Addresses = () => {
       </AlertDialog>
     </div>
   );
+};
 
-}; export default Addresses;
+export default Addresses;

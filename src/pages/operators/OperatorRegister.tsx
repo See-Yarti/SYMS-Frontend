@@ -44,7 +44,7 @@ const OperatorRegister: React.FC = () => {
     password: '',
     confirmPassword: '',
     phoneNumber: '',
-    operatorRole: 'managerOperator' as 'adminOperator' | 'managerOperator' | 'salesOperator',
+    operatorRole: 'managerOperator' as 'adminOperator' | 'managerOperator' | 'salesOperator' | 'accountantOperator',
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -59,7 +59,7 @@ const OperatorRegister: React.FC = () => {
     }
   };
 
-  const handleRoleChange = (value: 'adminOperator' | 'managerOperator' | 'salesOperator') => {
+  const handleRoleChange = (value: 'adminOperator' | 'managerOperator' | 'salesOperator' | 'accountantOperator') => {
     setFormData(prev => ({ ...prev, operatorRole: value }));
   };
 
@@ -187,6 +187,7 @@ const OperatorRegister: React.FC = () => {
               <SelectContent>
                 <SelectItem value="managerOperator">Manager</SelectItem>
                 <SelectItem value="salesOperator">Sales</SelectItem>
+                <SelectItem value='accountantOperator'>Accountant</SelectItem>
               </SelectContent>
             </Select>
           </div>

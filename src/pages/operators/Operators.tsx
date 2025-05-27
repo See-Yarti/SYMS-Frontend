@@ -78,6 +78,7 @@ const OperatorsPage: React.FC = () => {
     { value: 'adminOperator', label: 'User' },
     { value: 'managerOperator', label: 'Manager' },
     { value: 'salesOperator', label: 'Sales' },
+    { value: 'accountantOperator', label: 'Accountant' },
   ];
 
   // Safe fallback for no data
@@ -124,6 +125,7 @@ const OperatorsPage: React.FC = () => {
       adminOperator: { label: 'User', variant: 'default' },
       managerOperator: { label: 'Manager', variant: 'secondary' },
       salesOperator: { label: 'Sales', variant: 'outline' },
+      accountantOperator: { label: 'Accountant', variant: 'outline' },
     };
 
     const roleInfo = roleMap[role] || { label: role, variant: 'outline' };

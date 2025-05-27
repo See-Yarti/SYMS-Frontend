@@ -1,6 +1,11 @@
 // src/hooks/useApi.ts
 import { axiosInstance } from '@/lib/API';
-import { useQuery, useMutation, useInfiniteQuery, QueryClient } from '@tanstack/react-query';
+import {
+  useQuery,
+  useMutation,
+  useInfiniteQuery,
+  QueryClient,
+} from '@tanstack/react-query';
 
 // Shared query options
 const defaultQueryOptions = {
@@ -19,7 +24,7 @@ export const queryClient = new QueryClient({
 export const useFetchData = <T = unknown>(
   endpoint: string,
   queryKey: string | string[],
-  options?: any
+  options?: any,
 ) => {
   return useQuery<T>({
     ...defaultQueryOptions,
@@ -56,15 +61,17 @@ export const useFetchInfiniteData = <T = unknown>({
         params: { page: pageParam, limit, ...extraParams },
       });
       return data.data;
-    },    getNextPageParam: (lastPage, allPages) => {
+    },
+    getNextPageParam: (lastPage, allPages) => {
       if (!Array.isArray(lastPage)) return undefined;
       return lastPage.length === limit ? allPages.length + 1 : undefined;
-    },  });
+    },
+  });
 };
 
 export const usePostData = <TData = unknown, TResponse = unknown>(
   endpoint: string,
-  options?: any
+  options?: any,
 ) => {
   return useMutation<TResponse, Error, TData>({
     mutationFn: async (data: TData) => {
@@ -74,6 +81,20 @@ export const usePostData = <TData = unknown, TResponse = unknown>(
     ...options,
   });
 };
+
+export const usePatchData = <TData = unknown, TResponse = unknown>(
+  endpoint: string,
+  options?: any,
+) => {
+  return useMutation<TResponse, Error, TData>({
+    mutationFn: async (data: TData) => {
+      const { data: responseData } = await axiosInstance.patch(endpoint, data);
+      return responseData.data;
+    },
+    ...options,
+  });
+};
+
 
 export const useDeleteData = (options?: any) => {
   return useMutation({
@@ -98,9 +119,3 @@ export const useUploadFile = <TResponse = unknown>(endpoint: string) => {
     retry: false,
   });
 };
-
-
-
-
-
-

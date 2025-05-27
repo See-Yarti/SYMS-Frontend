@@ -19,6 +19,7 @@ export type UserRole = 'admin' | 'operator';
 export type OperatorRole =
   | 'adminOperator'
   | 'managerOperator'
+  | 'accountantOperator'
   | 'salesOperator';
 
 export type CombinedRoles = UserRole | OperatorRole;
