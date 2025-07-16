@@ -21,6 +21,9 @@ import ProfileUpdate from './pages/settings/profile-update';
 import SettingsSidebar from './pages/settings/Sidebar';
 import Appearance from './pages/settings/Appearance';
 import PasswordChanges from './pages/settings/password-changes';
+import CarClass from './pages/carclass/CarClass';
+import CarClassList from './pages/carclass/CarClassList';
+import Rate from './pages/rate/rate';
 
 const router = createBrowserRouter([
   {
@@ -98,6 +101,18 @@ const router = createBrowserRouter([
                 element: <CompanyDetail />,
               },
             ],
+          },
+          {
+            path: 'carclasses',
+            element: <CarClass />,
+            children: [
+              { index: true, element: <Navigate to="list" replace /> },
+              { path: 'list', element: <CarClassList /> },
+            ],
+          },
+          {
+             path: 'rate',
+              element: <Rate />,
           }
         ],
       },

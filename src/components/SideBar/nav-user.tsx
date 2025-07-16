@@ -33,14 +33,18 @@ export function NavUser() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  const handleLogout = async () => {
-    try {
-      await dispatch(logoutUser()).unwrap();
-      navigate('/auth/login');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
-  };
+const handleLogout = async () => {
+  try {
+    localStorage.removeItem('persist:root'); // 💣 Remove persist
+    localStorage.removeItem('theme'); // 💣 Remove persist
+    await dispatch(logoutUser()).unwrap();
+    navigate('/auth/login');
+  } catch (error) {
+    console.error('Logout failed:', error);
+  }
+};
+
+
 
   const { user } = useAppSelector((state) => state.auth);
 

@@ -88,3 +88,25 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+.pac-container {
+    z-index: 10000 !important;
+    font-family: inherit;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.pac-item {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+}
+
+.pac-item:hover {
+    background-color: #f3f4f6;
+}
+
+.pac-item-query {
+    font-size: 0.875rem;
+    color: #1f2937;
+}

@@ -50,7 +50,29 @@ export const sideBarLinks: SideBarItem[] = [
     url: '/',
     slug: '/',
     icon: PanelLeftDashed,
-    roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
+    roles: [
+      'admin',
+      'operator',
+      'adminOperator',
+      'managerOperator',
+      'salesOperator',
+    ],
+  },
+  {
+    title: 'CarClasses',
+    type: 'routed',
+    url: '/carclasses',
+    slug: '/carclasses',
+    icon: PanelRightDashed,
+    roles: ['admin'],
+  },
+  {
+    title: 'Rate',
+    type: 'routed',
+    url: '/rate',
+    slug: '/rate',
+    icon: PanelRightDashed,
+    roles: ['operator', 'adminOperator', 'managerOperator', 'salesOperator'],
   },
   {
     title: 'Addresses',
@@ -58,7 +80,7 @@ export const sideBarLinks: SideBarItem[] = [
     url: '/addresses',
     slug: '/addresses',
     icon: PanelRightDashed,
-    roles: ['operator',  'adminOperator', 'managerOperator', 'salesOperator'],
+    roles: ['operator', 'adminOperator', 'managerOperator', 'salesOperator'],
   },
   {
     title: 'Companies',
@@ -84,14 +106,19 @@ export const sideBarLinks: SideBarItem[] = [
     icon: Package,
     // roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
     roles: ['managerOperator'],
-
   },
   {
     title: 'Orders',
     type: 'dropdown',
     slug: 'orders',
     icon: NotebookTabs,
-    roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
+    roles: [
+      'admin',
+      'operator',
+      'adminOperator',
+      'managerOperator',
+      'salesOperator',
+    ],
 
     items: [
       {
@@ -100,7 +127,13 @@ export const sideBarLinks: SideBarItem[] = [
         url: '/orders/all-orders',
         type: 'routed',
         icon: Layers2,
-        roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
+        roles: [
+          'admin',
+          'operator',
+          'adminOperator',
+          'managerOperator',
+          'salesOperator',
+        ],
       },
       {
         title: 'Pending Orders',
@@ -108,7 +141,13 @@ export const sideBarLinks: SideBarItem[] = [
         url: '/orders/pending-orders',
         type: 'routed',
         icon: Layers3,
-        roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
+        roles: [
+          'admin',
+          'operator',
+          'adminOperator',
+          'managerOperator',
+          'salesOperator',
+        ],
       },
       {
         title: 'Completed Orders',
@@ -116,7 +155,13 @@ export const sideBarLinks: SideBarItem[] = [
         url: '/orders/completed-orders',
         type: 'routed',
         icon: Layers3,
-        roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
+        roles: [
+          'admin',
+          'operator',
+          'adminOperator',
+          'managerOperator',
+          'salesOperator',
+        ],
       },
       {
         title: 'Returns & Refunds',
@@ -124,14 +169,26 @@ export const sideBarLinks: SideBarItem[] = [
         url: '/orders/returns-refunds',
         type: 'routed',
         icon: Layers2,
-        roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
+        roles: [
+          'admin',
+          'operator',
+          'adminOperator',
+          'managerOperator',
+          'salesOperator',
+        ],
       },
     ],
   },
   {
     type: 'separation',
     title: 'Management',
-    roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
+    roles: [
+      'admin',
+      'operator',
+      'adminOperator',
+      'managerOperator',
+      'salesOperator',
+    ],
   },
   {
     title: 'User Management',
@@ -201,6 +258,12 @@ export const sideBarLinks: SideBarItem[] = [
     url: '/settings',
     slug: 'settings',
     icon: Box,
-    roles: ['admin', 'operator',  'adminOperator', 'managerOperator', 'salesOperator'],
+    roles: [
+      'admin',
+      'operator',
+      'adminOperator',
+      'managerOperator',
+      'salesOperator',
+    ],
   },
 ];

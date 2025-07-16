@@ -3,7 +3,6 @@
 import LoginForm from './Login-Form';
 import { Label } from '@/components/ui/label';
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import BlurFade from '@/components/ui/blur-fade';
 import { useTheme } from 'next-themes';
@@ -52,12 +51,12 @@ const Login = () => {
                     </Label>
                   </div>
                   <LoginForm />
-                  <div className="flex items-center justify-center w-full my-5">
+                  {/* <div className="flex items-center justify-center w-full my-5">
                     <div className="flex-1 h-px bg-gray-200" />
                     <span className="px-4 text-gray-500">or</span>
                     <div className="flex-1 h-px bg-gray-200" />
-                  </div>
-                  <div className="mt-6">
+                  </div> */}
+                  {/* <div className="mt-6">
                     <p className="text-start text-sm text-gray-500">
                       Don't have an account?{' '}
                       <Link
@@ -67,7 +66,7 @@ const Login = () => {
                         Register now
                       </Link>
                     </p>
-                  </div>
+                  </div> */}
                 </div>
               </BlurFade>
             </div>

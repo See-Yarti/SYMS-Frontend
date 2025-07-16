@@ -97,7 +97,7 @@ export const usePatchData = <TData = unknown, TResponse = unknown>(
 
 
 export const useDeleteData = (options?: any) => {
-  return useMutation({
+  return useMutation<any, Error, string>({
     mutationFn: async (endpoint: string) => {
       const { data } = await axiosInstance.delete(endpoint);
       return data.data;
@@ -105,6 +105,7 @@ export const useDeleteData = (options?: any) => {
     ...options,
   });
 };
+
 
 export const useUploadFile = <TResponse = unknown>(endpoint: string) => {
   return useMutation<TResponse, Error, FormData>({
@@ -117,5 +118,19 @@ export const useUploadFile = <TResponse = unknown>(endpoint: string) => {
       return data.data;
     },
     retry: false,
+  });
+};
+
+
+export const usePutData = <TData = unknown, TResponse = unknown>(
+  endpoint: string,
+  options?: any,
+) => {
+  return useMutation<TResponse, Error, TData>({
+    mutationFn: async (data: TData) => {
+      const { data: responseData } = await axiosInstance.put(endpoint, data);
+      return responseData.data;
+    },
+    ...options,
   });
 };
