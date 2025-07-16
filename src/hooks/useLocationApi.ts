@@ -33,6 +33,19 @@ export const useGetLocations = (companyId: string) => {
   });
 };
 
+export const useGetActiveLocations = (companyId: string) => {
+  return useQuery({
+    queryKey: ['locations', companyId],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get(`/operator/locations/${companyId}/active-locations`);
+      return data;
+    },
+    enabled: !!companyId,
+    ...defaultQueryOptions,
+  });
+};
+
+
 export const useCreateLocation = () => {
   return useMutation({
     mutationFn: async ({ companyId, payload }: { companyId: string; payload: any }) => {
@@ -67,7 +80,7 @@ export const useUpdateLocation = () => {
 export const useToggleLocation = () => {
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data } = await axiosInstance.put(`/operator/locations/disable/${id}`);
+      const { data } = await axiosInstance.put(`/operator/locations/toggle-active-status/${id}`);
       return data;
     },
     onSuccess: (_, id) => {

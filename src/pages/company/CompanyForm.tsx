@@ -240,7 +240,7 @@ const RegisterForm: React.FC = () => {
 
     // ***** ADD THIS RIGHT HERE *****
     useEffect(() => {
-        const googleMapsApiKey = 'AIzaSyArcZmUlh5K8iNrlcPKlu53mis0MPe5hfI';
+        const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
 
         if (window.google && window.google.maps && window.google.maps.places) {
             setGoogleMapsLoaded(true);

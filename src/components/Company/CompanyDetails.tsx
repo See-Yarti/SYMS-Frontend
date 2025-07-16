@@ -942,7 +942,7 @@ const CompanyDetail = () => {
                     <DialogHeader className="sticky top-0 bg-background">
                         <DialogTitle>Add New Location</DialogTitle>
                         <DialogDescription>
-                            Fill in the details for the new location
+                            Note: Firstly Select the country , then fill Address field, so it show options and then it auto fill all the fields 
                         </DialogDescription>
                     </DialogHeader>
 

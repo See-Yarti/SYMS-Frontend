@@ -1,4 +1,5 @@
 // src/components/SideBar/sidebar-menu-items.tsx
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronRight, ChevronDown } from 'lucide-react';
@@ -13,12 +14,14 @@ interface SidebarMenuItemsProps {
   currentMenu: SideBarItem[];
   selectedPath: number[];
   setSelectedPath: React.Dispatch<React.SetStateAction<number[]>>;
+  onRateDropdownOpen?: () => void;
 }
 
 export function SidebarMenuItems({
   currentMenu,
   selectedPath,
   setSelectedPath,
+  onRateDropdownOpen,
 }: SidebarMenuItemsProps) {
   const location = useLocation();
 
@@ -31,7 +34,7 @@ export function SidebarMenuItems({
 
         if (item.type === 'routed') {
           return (
-            <SidebarRoutedItem 
+            <SidebarRoutedItem
               key={`${item.title}-${index}`}
               item={item}
               isActive={location.pathname === item.url}
@@ -39,18 +42,28 @@ export function SidebarMenuItems({
           );
         }
 
-        return (
-          <SidebarDropdownItem
-            key={`${item.title}-${index}`}
-            item={item}
-            index={index}
-            selectedPath={selectedPath}
-            setSelectedPath={setSelectedPath}
-            isActive={item.items?.some(subItem => 
-              subItem.type === 'routed' && location.pathname === subItem.url
-            )}
-          />
-        );
+        if (item.type === 'dropdown') {
+          return (
+            <SidebarDropdownItem
+              key={`${item.title}-${index}`}
+              item={item}
+              index={index}
+              selectedPath={selectedPath}
+              setSelectedPath={setSelectedPath}
+              isActive={
+                !!item.items?.some(
+                  subItem =>
+                    subItem.type === 'routed' &&
+                    location.pathname === subItem.url
+                )
+              }
+              // Only Rate gets refetch!
+              onDropdownOpen={item.slug === 'rate' ? onRateDropdownOpen : undefined}
+            />
+          );
+        }
+
+        return null;
       })}
     </>
   );
@@ -76,21 +89,31 @@ function SidebarSeparationItem({ item }: { item: SideBarItem }) {
   );
 }
 
-function SidebarRoutedItem({ item, isActive }: { item: SideBarItem, isActive?: boolean }) {
+function SidebarRoutedItem({
+  item,
+  isActive,
+}: {
+  item: SideBarItem;
+  isActive?: boolean;
+}) {
   return (
     <SidebarMenuSubItem className="px-1">
-      <SidebarMenuButton 
-        tooltip={item.title} 
+      <SidebarMenuButton
+        tooltip={item.title}
         className={cn(
-          "text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-          isActive && "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+          'text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+          isActive && 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
         )}
       >
         <Link to={item.url || '#'} className="flex w-full items-center gap-2">
-          {item.icon && <item.icon className={cn(
-            "w-4 h-4",
-            isActive ? "text-primary" : "text-muted-foreground"
-          )} />}
+          {item.icon && typeof item.icon === 'function' && (
+            <item.icon
+              className={cn(
+                'w-4 h-4',
+                isActive ? 'text-primary' : 'text-muted-foreground'
+              )}
+            />
+          )}
           <span>{item.title}</span>
           {item.badge && (
             <Badge variant="secondary" className="ml-auto">
@@ -108,36 +131,46 @@ function SidebarDropdownItem({
   index,
   selectedPath,
   setSelectedPath,
-  isActive
+  isActive,
+  onDropdownOpen,
 }: {
   item: SideBarItem;
   index: number;
   selectedPath: number[];
   setSelectedPath: React.Dispatch<React.SetStateAction<number[]>>;
   isActive?: boolean;
+  onDropdownOpen?: () => void;
 }) {
   const isOpen = selectedPath.includes(index);
+
+  function handleDropdownClick() {
+    // Only refetch if provided (only Rate gets this prop)
+    if (onDropdownOpen) onDropdownOpen();
+    setSelectedPath(
+      isOpen
+        ? selectedPath.filter(i => i !== index)
+        : [...selectedPath, index]
+    );
+  }
 
   return (
     <SidebarMenuSubItem className="px-1">
       <SidebarMenuButton
         tooltip={item.title}
-        onClick={() =>
-          setSelectedPath(
-            isOpen
-              ? selectedPath.filter((i) => i !== index)
-              : [...selectedPath, index],
-          )
-        }
+        onClick={handleDropdownClick}
         className={cn(
-          "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-          isActive && "text-sidebar-accent-foreground font-medium"
+          'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+          isActive && 'text-sidebar-accent-foreground font-medium'
         )}
       >
-        {item.icon && <item.icon className={cn(
-          "w-4 h-4",
-          isActive ? "text-primary" : "text-muted-foreground"
-        )} />}
+        {item.icon && typeof item.icon === 'function' && (
+          <item.icon
+            className={cn(
+              'w-4 h-4',
+              isActive ? 'text-primary' : 'text-muted-foreground'
+            )}
+          />
+        )}
         <span>{item.title}</span>
         {item.badge && (
           <Badge variant="secondary" className="ml-auto">
