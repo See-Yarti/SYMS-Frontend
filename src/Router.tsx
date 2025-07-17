@@ -23,7 +23,11 @@ import Appearance from './pages/settings/Appearance';
 import PasswordChanges from './pages/settings/password-changes';
 import CarClass from './pages/carclass/CarClass';
 import CarClassList from './pages/carclass/CarClassList';
-import Rate from './pages/rate/rate';
+import Rate from './pages/rate/Rate';
+import RatesPage from './pages/rate/RatesPage';
+import RatePlannerPage from './pages/rate/RatePlanner';
+import BlackoutPage from './pages/rate/BlackoutPage';
+import CarClassesPage from './pages/rate/CarClassesPage';
 
 const router = createBrowserRouter([
   {
@@ -111,8 +115,14 @@ const router = createBrowserRouter([
             ],
           },
           {
-             path: 'rate',
-              element: <Rate />,
+            path: 'rate',
+            element: <Rate />,
+            children: [
+              { path: ':locationId', element: <RatesPage /> },
+              { path: ':locationId/planner', element: <RatePlannerPage /> },
+              { path: ':locationId/blackouts', element: <BlackoutPage /> },
+              { path: ':locationId/car-classes', element: <CarClassesPage /> },
+            ],
           }
         ],
       },
