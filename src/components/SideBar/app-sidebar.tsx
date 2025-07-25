@@ -21,15 +21,23 @@ import { useHotkeys } from 'react-hotkeys-hook';
 import { cn } from '@/lib/utils';
 import { useFilteredMenu } from '@/hooks/useFilteredMenu';
 import { useGetActiveLocations } from '@/hooks/useLocationApi';
+import { useGetUserByEmail } from '@/hooks/useOperatorApi'; // <-- This is the key line
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // Auth info
-  const { user, otherInfo } = useAppSelector((state) => state.auth);
-  const name = user?.name || '';
+  const { user: authUser, otherInfo } = useAppSelector((state) => state.auth);
+  const email = authUser?.email || '';
   const companyId = otherInfo?.companyId || '';
-  console.log("ubaids -> ", companyId);
 
-  // Get active locations for Rate menu (get refetch too!)
+  // Fetch user from API, not just redux
+  const {
+    data: userData,
+    isLoading: userLoading,
+    isError: userError  } = useGetUserByEmail(email);
+
+  const user = userData?.data?.user;
+
+  // Get active locations for Rate menu
   const {
     data: locationData,
     isLoading: locationsLoading,
@@ -128,17 +136,36 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     nextItem?.focus();
   }
 
-  // Portal role for display
-  const displayPortalRole = React.useMemo(() => {
-    const rawRole =
-      user?.role === 'operator' && otherInfo?.operatorRole
-        ? otherInfo.operatorRole
-        : user?.role || '';
+  // ----------- USER/ROLE LOGIC (Redux + API) -------------
+  let sidebarName = '';
+  let sidebarRoleRaw = '';
 
-    return rawRole
-      .replace(/([A-Z])/g, ' $1')
-      .replace(/^./, (str: string) => str.toUpperCase());
-  }, [user, otherInfo]);
+  if (userLoading) {
+    sidebarName = 'Loading...';
+    sidebarRoleRaw = '';
+  } else if (userError) {
+    sidebarName = 'Error';
+    sidebarRoleRaw = '';
+  } else if (user) {
+    sidebarName = user.name;
+    sidebarRoleRaw =
+      user.role === 'operator' && otherInfo?.operatorRole
+        ? otherInfo.operatorRole
+        : user.role;
+  } else {
+    sidebarName = authUser?.name || '';
+    sidebarRoleRaw = authUser?.role || '';
+  }
+
+  // Format role: camelCase -> "Camel Case"
+  const sidebarRole = sidebarRoleRaw
+    ? sidebarRoleRaw
+        .split(/(?=[A-Z])/)
+        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ')
+    : '';
+
+  // -------------------------------------------------------
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -160,9 +187,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">
-                  {displayPortalRole} Portal
+                  {sidebarRole ? `${sidebarRole} Portal` : ''}
                 </span>
-                <span className="truncate text-xs text-muted-foreground">{name}</span>
+                <span className="truncate text-xs text-muted-foreground">{sidebarName}</span>
               </div>
               <Sparkles className="size-4 text-yellow-400" />
             </SidebarMenuItem>

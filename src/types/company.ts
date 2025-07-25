@@ -111,3 +111,14 @@ export type UpdateOperatorPayload = {
   phoneNumber?: string;
   gender?: string;
 };
+
+export interface OperatorProfileFlat {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string | null;
+  phoneNumber: string;
+  gender: string;
+  operatorRole: string;
+  company: Company;
+}

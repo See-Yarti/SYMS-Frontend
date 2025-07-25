@@ -1,5 +1,5 @@
 // src/components/SideBar/sidebar-menu-items.tsx
-
+import { getSidebarIcon } from '@/utils/sidebarIcons';
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronRight, ChevronDown } from 'lucide-react';
@@ -89,6 +89,8 @@ function SidebarSeparationItem({ item }: { item: SideBarItem }) {
   );
 }
 
+
+
 function SidebarRoutedItem({
   item,
   isActive,
@@ -96,6 +98,8 @@ function SidebarRoutedItem({
   item: SideBarItem;
   isActive?: boolean;
 }) {
+  const Icon = getSidebarIcon(item.title);
+
   return (
     <SidebarMenuSubItem className="px-1">
       <SidebarMenuButton
@@ -106,14 +110,12 @@ function SidebarRoutedItem({
         )}
       >
         <Link to={item.url || '#'} className="flex w-full items-center gap-2">
-          {item.icon && typeof item.icon === 'function' && (
-            <item.icon
-              className={cn(
-                'w-4 h-4',
-                isActive ? 'text-primary' : 'text-muted-foreground'
-              )}
-            />
-          )}
+          <Icon
+            className={cn(
+              'w-4 h-4',
+              isActive ? 'text-primary' : 'text-muted-foreground'
+            )}
+          />
           <span>{item.title}</span>
           {item.badge && (
             <Badge variant="secondary" className="ml-auto">
@@ -125,6 +127,7 @@ function SidebarRoutedItem({
     </SidebarMenuSubItem>
   );
 }
+
 
 function SidebarDropdownItem({
   item,
@@ -142,9 +145,9 @@ function SidebarDropdownItem({
   onDropdownOpen?: () => void;
 }) {
   const isOpen = selectedPath.includes(index);
+  const Icon = getSidebarIcon(item.title);
 
   function handleDropdownClick() {
-    // Only refetch if provided (only Rate gets this prop)
     if (onDropdownOpen) onDropdownOpen();
     setSelectedPath(
       isOpen
@@ -163,14 +166,10 @@ function SidebarDropdownItem({
           isActive && 'text-sidebar-accent-foreground font-medium'
         )}
       >
-        {item.icon && typeof item.icon === 'function' && (
-          <item.icon
-            className={cn(
-              'w-4 h-4',
-              isActive ? 'text-primary' : 'text-muted-foreground'
-            )}
-          />
-        )}
+        <Icon className={cn(
+          'w-4 h-4',
+          isActive ? 'text-primary' : 'text-muted-foreground'
+        )} />
         <span>{item.title}</span>
         {item.badge && (
           <Badge variant="secondary" className="ml-auto">

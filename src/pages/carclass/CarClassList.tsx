@@ -1,4 +1,3 @@
-// src/pages/carclass/CarClassList.tsx
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,20 +12,13 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { v4 as uuidv4 } from 'uuid';
+import { useFetchData, usePostData } from '@/hooks/useApi';
+import { axiosInstance } from '@/lib/API';
 
-// Mock data initialization
-const initialMockData = [
-  { id: uuidv4(), slug: 'mcar-1', enabled: true, carClassCode: 'MCAR' },
-  { id: uuidv4(), slug: 'ecar-1', enabled: true, carClassCode: 'ECAR' },
-  { id: uuidv4(), slug: 'ccar-1', enabled: false, carClassCode: 'CCAR' }
-];
-
-// ACRISS code options
 const VEHICLE_SIZES = [
   { code: 'M', name: 'Mini' },
   { code: 'E', name: 'Economy' },
@@ -38,7 +30,6 @@ const VEHICLE_SIZES = [
   { code: 'L', name: 'Luxury' },
   { code: 'X', name: 'Special' },
 ];
-
 const BODY_TYPES = [
   { code: 'C', name: 'Sedan/Hatchback' },
   { code: 'R', name: 'SUV' },
@@ -48,14 +39,12 @@ const BODY_TYPES = [
   { code: 'P', name: 'Pickup Truck' },
   { code: 'E', name: 'Electric' },
 ];
-
 const TRANSMISSION_TYPES = [
   { code: 'A', name: 'Automatic' },
   { code: 'M', name: 'Manual' },
   { code: 'B', name: 'AWD/Auto' },
   { code: 'D', name: '4WD/Manual' },
 ];
-
 const FUEL_TYPES = [
   { code: 'R', name: 'Petrol+AC' },
   { code: 'N', name: 'Petrol' },
@@ -65,88 +54,133 @@ const FUEL_TYPES = [
   { code: 'L', name: 'CNG/LPG' },
 ];
 
-// Schema validation
 const carClassSchema = z.object({
-  enabled: z.boolean().default(true),
-  carClassCode: z.string().length(4, 'ACRISS code must be 4 characters'),
   size: z.string().min(1, 'Required'),
   body: z.string().min(1, 'Required'),
   transmission: z.string().min(1, 'Required'),
   fuel: z.string().min(1, 'Required'),
+  description: z.string().max(255).optional(),
 });
-
 type CarClassFormValues = z.infer<typeof carClassSchema>;
 
+interface CarClassAPIType {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const DEBOUNCE_MS = 700; // 0.7s debounce for toggling
+
 const CarClassList = () => {
-  const [mockData, setMockData] = useState(initialMockData);
-  const [isLoading, setIsLoading] = useState(false);
-  const [deleteSlug, setDeleteSlug] = useState<string | null>(null);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [isToggling, setIsToggling] = useState<string | null>(null);
+  const [toggleLock, setToggleLock] = useState<{ [slug: string]: boolean }>({});
+  const debounceTimers = useRef<{ [slug: string]: NodeJS.Timeout }>({});
 
   const {
     handleSubmit: addHandleSubmit,
     reset: addReset,
     setValue: addSetValue,
     watch: addWatch,
+    register,
     formState: { errors: addErrors, isValid: addValid, isSubmitting: addSubmitting },
   } = useForm<CarClassFormValues>({
     resolver: zodResolver(carClassSchema),
     mode: 'onChange',
     defaultValues: {
-      enabled: true,
-      carClassCode: '',
       size: '',
       body: '',
       transmission: '',
       fuel: '',
+      description: '',
     },
   });
 
-  // Update full ACRISS code when components change
   const size = addWatch('size');
   const body = addWatch('body');
   const transmission = addWatch('transmission');
   const fuel = addWatch('fuel');
+  const acrissCode = `${size || '_'}${body || '_'}${transmission || '_'}${fuel || '_'}`;
 
-  useEffect(() => {
-    const code = `${size}${body}${transmission}${fuel}`;
-    addSetValue('carClassCode', code, { shouldValidate: true });
-  }, [size, body, transmission, fuel, addSetValue]);
+  // *** SHOW TOAST FOR 429s ON FETCH/GET ***
+  const { data: carClasses = [], isLoading, refetch } = useFetchData<CarClassAPIType[]>(
+    'car-class',
+    ['car-classes'],
+    {
+      staleTime: 0,
+      onError: (err: any) => {
+        if (err?.response?.status === 429) {
+          toast.error('You are sending requests too quickly. Please wait and try again.');
+        } else {
+          toast.error('Failed to load car classes.');
+        }
+        console.error('Fetch car classes error:', err);
+      }
+    }
+  );
 
-  const onAddSubmit = (data: CarClassFormValues) => {
-    setIsLoading(true);
-    setTimeout(() => {
-      const newCarClass = {
-        id: uuidv4(),
-        slug: `${data.carClassCode.toLowerCase()}-${Math.floor(Math.random() * 100)}`,
-        enabled: data.enabled,
-        carClassCode: data.carClassCode,
-      };
-      setMockData([...mockData, newCarClass]);
-      toast.success('Car class created!');
-      setAddModalOpen(false);
-      addReset();
-      setIsLoading(false);
-    }, 500);
+  // --- Add / Create Car Class ---
+  const { mutateAsync: createCarClass, isPending: isCreating } = usePostData<any, any>(
+    'car-class',
+    {
+      onSuccess: async () => {
+        toast.success('Car class created!');
+        setAddModalOpen(false);
+        addReset();
+        await refetch();
+      },
+      onError: (error: any) => {
+        console.error('Add error', error);
+        if (error?.response?.status === 429) {
+          toast.error('You are sending requests too quickly. Please slow down and try again.');
+        } else {
+          toast.error('Failed to create car class');
+        }
+      },
+    }
+  );
+
+  const onAddSubmit = async (data: CarClassFormValues) => {
+    const postBody = {
+      name: `${data.size}${data.body}${data.transmission}${data.fuel}`,
+      description: data.description || `${data.size} ${data.body} ${data.transmission} ${data.fuel}`,
+    };
+    await createCarClass(postBody);
   };
 
-  const handleDelete = () => {
-    if (!deleteSlug) return;
-    setIsLoading(true);
-    setTimeout(() => {
-      setMockData(mockData.filter(item => item.slug !== deleteSlug));
-      toast.success('Car class deleted!');
-      setDeleteSlug(null);
-      setIsLoading(false);
-    }, 500);
-  };
+  // --- Toggle Status (with 429 error handling and lockout) ---
+  const handleToggleStatus = (slug: string, currentActive: boolean) => {
+    if (toggleLock[slug]) {
+      toast.warning('You are toggling too quickly. Please wait a moment.');
+      return;
+    }
+    setIsToggling(slug);
 
-  const handleToggleStatus = (id: string, checked: boolean) => {
-    const updatedData = mockData.map(item =>
-      item.id === id ? { ...item, enabled: checked } : item
-    );
-    setMockData(updatedData);
-    toast.success(`Car class ${checked ? 'enabled' : 'disabled'}`);
+    if (debounceTimers.current[slug]) {
+      clearTimeout(debounceTimers.current[slug]);
+    }
+    debounceTimers.current[slug] = setTimeout(async () => {
+      try {
+        await axiosInstance.put(`car-class/active/slug/${slug}`);
+        toast.success(`Car class ${!currentActive ? 'enabled' : 'disabled'}`);
+        await refetch();
+      } catch (err: any) {
+        console.error('Toggle error', err);
+        if (err?.response?.status === 429) {
+          toast.error('You are sending requests too quickly. Please slow down and try again.');
+          setToggleLock((prev) => ({ ...prev, [slug]: true }));
+          setTimeout(() => setToggleLock((prev) => ({ ...prev, [slug]: false })), 2500);
+        } else {
+          toast.error('Failed to update status');
+        }
+      } finally {
+        setIsToggling(null);
+      }
+    }, DEBOUNCE_MS);
   };
 
   return (
@@ -162,52 +196,55 @@ const CarClassList = () => {
           + Add Car Class
         </Button>
       </div>
-
       <div className="overflow-x-auto rounded-lg border">
         <table className="min-w-full divide-y">
           <thead className="bg-muted/50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">ACRISS Code</th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Description</th>
               <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
-            {mockData.map((row) => (
-              <tr key={row.id} className="hover:bg-muted/50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <Switch
-                      checked={row.enabled}
-                      onCheckedChange={(checked) => handleToggleStatus(row.id, checked)}
-                      className="mr-2"
-                    />
-                    <span className={row.enabled ? 'text-green-600' : 'text-gray-500'}>
-                      {row.enabled ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <Badge variant="outline" className="font-mono mr-2">
-                      {row.carClassCode}
-                    </Badge>
-                  </div>
-                </td>
-                <td className="px-4 py-2 text-right">
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => setDeleteSlug(row.slug)}
-                  >
-                    Delete
-                  </Button>
-                </td>
-              </tr>
-            ))}
-            {!mockData.length && !isLoading && (
+            {isLoading ? (
               <tr>
-                <td colSpan={3} className="px-6 py-4 text-center text-muted-foreground">
+                <td colSpan={4} className="px-6 py-4 text-center text-muted-foreground">Loading...</td>
+              </tr>
+            ) : carClasses.length > 0 ? (
+              carClasses.map((row) => (
+                <tr key={row.id} className="hover:bg-muted/50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <Switch
+                        checked={row.isActive}
+                        onCheckedChange={() => handleToggleStatus(row.slug, row.isActive)}
+                        disabled={isToggling === row.slug || !!toggleLock[row.slug]}
+                        className="mr-2"
+                      />
+                      <span className={row.isActive ? 'text-green-600' : 'text-gray-500'}>
+                        {row.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <Badge variant="outline" className="font-mono mr-2">
+                        {row.name}
+                      </Badge>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-xs">{row.description}</span>
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    {/* No delete button as API does not support */}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={4} className="px-6 py-4 text-center text-muted-foreground">
                   No car classes found
                 </td>
               </tr>
@@ -216,29 +253,7 @@ const CarClassList = () => {
         </table>
       </div>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={!!deleteSlug} onOpenChange={open => !open && setDeleteSlug(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p>Are you sure you want to delete this car class? This action cannot be undone.</p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteSlug(null)}>Cancel</Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={isLoading}
-            >
-              {isLoading ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add New Car Class Dialog */}
+      {/* --- Add Car Class Dialog --- */}
       <Dialog open={addModalOpen} onOpenChange={open => { setAddModalOpen(open); if (!open) addReset(); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -249,76 +264,73 @@ const CarClassList = () => {
               <div className="space-y-2">
                 <Label htmlFor="size">Size</Label>
                 <Select
-                  value={addWatch('size')}
-                  onValueChange={(val) => addSetValue('size', val)}
+                  value={size}
+                  onValueChange={(val) => addSetValue('size', val, { shouldValidate: true })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
-                    {VEHICLE_SIZES.map((size) => (
-                      <SelectItem key={size.code} value={size.code}>
-                        {size.code} - {size.name}
+                    {VEHICLE_SIZES.map((opt) => (
+                      <SelectItem key={opt.code} value={opt.code}>
+                        {opt.code} - {opt.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 {addErrors.size && <p className="text-xs text-red-500">{addErrors.size.message}</p>}
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="body">Body</Label>
                 <Select
-                  value={addWatch('body')}
-                  onValueChange={(val) => addSetValue('body', val)}
+                  value={body}
+                  onValueChange={(val) => addSetValue('body', val, { shouldValidate: true })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
-                    {BODY_TYPES.map((body) => (
-                      <SelectItem key={body.code} value={body.code}>
-                        {body.code} - {body.name}
+                    {BODY_TYPES.map((opt) => (
+                      <SelectItem key={opt.code} value={opt.code}>
+                        {opt.code} - {opt.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 {addErrors.body && <p className="text-xs text-red-500">{addErrors.body.message}</p>}
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="transmission">Trans</Label>
                 <Select
-                  value={addWatch('transmission')}
-                  onValueChange={(val) => addSetValue('transmission', val)}
+                  value={transmission}
+                  onValueChange={(val) => addSetValue('transmission', val, { shouldValidate: true })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
-                    {TRANSMISSION_TYPES.map((trans) => (
-                      <SelectItem key={trans.code} value={trans.code}>
-                        {trans.code} - {trans.name}
+                    {TRANSMISSION_TYPES.map((opt) => (
+                      <SelectItem key={opt.code} value={opt.code}>
+                        {opt.code} - {opt.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 {addErrors.transmission && <p className="text-xs text-red-500">{addErrors.transmission.message}</p>}
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="fuel">Fuel</Label>
                 <Select
-                  value={addWatch('fuel')}
-                  onValueChange={(val) => addSetValue('fuel', val)}
+                  value={fuel}
+                  onValueChange={(val) => addSetValue('fuel', val, { shouldValidate: true })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
-                    {FUEL_TYPES.map((fuel) => (
-                      <SelectItem key={fuel.code} value={fuel.code}>
-                        {fuel.code} - {fuel.name}
+                    {FUEL_TYPES.map((opt) => (
+                      <SelectItem key={opt.code} value={opt.code}>
+                        {opt.code} - {opt.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -326,19 +338,25 @@ const CarClassList = () => {
                 {addErrors.fuel && <p className="text-xs text-red-500">{addErrors.fuel.message}</p>}
               </div>
             </div>
-
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <input
+                id="description"
+                type="text"
+                placeholder="Describe this class (optional)"
+                {...register('description')}
+                className="input border rounded w-full px-3 py-2 mt-1 text-sm"
+              />
+              {addErrors.description && <p className="text-xs text-red-500">{addErrors.description.message}</p>}
+            </div>
             <div className="bg-muted/50 p-3 rounded-lg">
               <div className="flex items-center justify-between">
                 <Label>ACRISS Code:</Label>
                 <Badge variant="secondary" className="font-mono text-lg">
-                  {addWatch('carClassCode') || '____'}
+                  {acrissCode}
                 </Badge>
               </div>
-              {addErrors.carClassCode && (
-                <p className="text-xs text-red-500 mt-1">{addErrors.carClassCode.message}</p>
-              )}
             </div>
-
             <DialogFooter>
               <Button
                 type="button"
@@ -350,9 +368,9 @@ const CarClassList = () => {
               </Button>
               <Button
                 type="submit"
-                disabled={!addValid || addSubmitting}
+                disabled={!addValid || addSubmitting || isCreating}
               >
-                {addSubmitting ? 'Creating...' : 'Create Car Class'}
+                {addSubmitting || isCreating ? 'Creating...' : 'Create Car Class'}
               </Button>
             </DialogFooter>
           </form>

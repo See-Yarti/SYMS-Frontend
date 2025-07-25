@@ -7,27 +7,24 @@ import {
   QueryClient,
 } from '@tanstack/react-query';
 
-// Shared query options
-const defaultQueryOptions = {
-  retry: false,
-  staleTime: 60 * 1000, // 1 minute
-  refetchOnWindowFocus: false,
-  refetchOnReconnect: false,
-};
-
 export const queryClient = new QueryClient({
   defaultOptions: {
-    queries: defaultQueryOptions,
+    queries: {
+      staleTime: 0,              // Always refetch after invalidation
+      retry: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
   },
 });
 
+// Fetch data (simple GET)
 export const useFetchData = <T = unknown>(
   endpoint: string,
   queryKey: string | string[],
   options?: any,
 ) => {
   return useQuery<T>({
-    ...defaultQueryOptions,
     queryKey: Array.isArray(queryKey) ? queryKey : [queryKey],
     queryFn: async () => {
       const { data } = await axiosInstance.get(endpoint);
@@ -37,6 +34,7 @@ export const useFetchData = <T = unknown>(
   });
 };
 
+// Infinite GET (pagination)
 interface InfiniteQueryOptions {
   queryKey: string;
   endpoint: string;
@@ -53,7 +51,6 @@ export const useFetchInfiniteData = <T = unknown>({
   extraParams = {},
 }: InfiniteQueryOptions) => {
   return useInfiniteQuery<T[]>({
-    ...defaultQueryOptions,
     queryKey: [queryKey, extraParams],
     initialPageParam: 1,
     queryFn: async ({ pageParam = 1 }) => {
@@ -69,6 +66,7 @@ export const useFetchInfiniteData = <T = unknown>({
   });
 };
 
+// POST
 export const usePostData = <TData = unknown, TResponse = unknown>(
   endpoint: string,
   options?: any,
@@ -82,6 +80,7 @@ export const usePostData = <TData = unknown, TResponse = unknown>(
   });
 };
 
+// PATCH
 export const usePatchData = <TData = unknown, TResponse = unknown>(
   endpoint: string,
   options?: any,
@@ -95,10 +94,23 @@ export const usePatchData = <TData = unknown, TResponse = unknown>(
   });
 };
 
+// PUT (supports dynamic endpoint for toggling, etc.)
+export const usePutData = <TData = unknown, TResponse = unknown>(
+  options?: any,
+) => {
+  return useMutation<TResponse, Error, { endpoint: string; data?: TData }>({
+    mutationFn: async ({ endpoint, data }) => {
+      const { data: responseData } = await axiosInstance.put(endpoint, data);
+      return responseData.data;
+    },
+    ...options,
+  });
+};
 
+// DELETE (supports dynamic endpoint)
 export const useDeleteData = (options?: any) => {
-  return useMutation<any, Error, string>({
-    mutationFn: async (endpoint: string) => {
+  return useMutation<any, Error, { endpoint: string }>({
+    mutationFn: async ({ endpoint }) => {
       const { data } = await axiosInstance.delete(endpoint);
       return data.data;
     },
@@ -106,7 +118,7 @@ export const useDeleteData = (options?: any) => {
   });
 };
 
-
+// File Upload (POST)
 export const useUploadFile = <TResponse = unknown>(endpoint: string) => {
   return useMutation<TResponse, Error, FormData>({
     mutationFn: async (formData: FormData) => {
@@ -118,19 +130,5 @@ export const useUploadFile = <TResponse = unknown>(endpoint: string) => {
       return data.data;
     },
     retry: false,
-  });
-};
-
-
-export const usePutData = <TData = unknown, TResponse = unknown>(
-  endpoint: string,
-  options?: any,
-) => {
-  return useMutation<TResponse, Error, TData>({
-    mutationFn: async (data: TData) => {
-      const { data: responseData } = await axiosInstance.put(endpoint, data);
-      return responseData.data;
-    },
-    ...options,
   });
 };

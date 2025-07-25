@@ -1,3 +1,5 @@
+// src/hooks/useOperatorApi.ts
+
 import { axiosInstance } from '@/lib/API';
 import {
   useQuery,
@@ -40,6 +42,26 @@ type OperatorApiResponse = {
   operators: Operator[];
   total: number;
 };
+
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  avatar: string | null;
+  phoneNumber: string;
+  gender: string;
+};
+
+type GetUserResponse = {
+  success: boolean;
+  data: {
+    user: User;
+    param: string;
+  };
+  timestamp: string;
+};
+
 
 // Operator API hooks
 export const useGetAllOperators = ({
@@ -169,5 +191,19 @@ export const useUpdateOperatorPassword = () => {
     onError: (err) => {
       console.error('Password update failed:', err.message);
     },
+  });
+};
+
+export const useGetUserByEmail = (email: string) => {
+  return useQuery<GetUserResponse>({
+    queryKey: ['user', email],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get(`/users/${email}`);
+      return data;
+    },
+    enabled: !!email,
+    retry: false,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 };

@@ -14,13 +14,12 @@ const Profile = () => {
   const navigate = useNavigate();
   const { user } = useAppSelector(state => state.auth);
 
-  // State for password change
+  // Password change state
   const [passwordData, setPasswordData] = useState({
     previousPassword: '',
     newPassword: '',
-    confirmPassword: ''
+    confirmPassword: '',
   });
-
   const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
 
   const { mutate: updatePassword, isPending: isUpdatingPassword } = useUpdateOperatorPassword();
@@ -35,36 +34,26 @@ const Profile = () => {
 
   const validatePasswordForm = () => {
     const errors: Record<string, string> = {};
-
-    if (!passwordData.previousPassword) {
-      errors.previousPassword = 'Current password is required';
-    }
-
+    if (!passwordData.previousPassword) errors.previousPassword = 'Current password is required';
     if (!passwordData.newPassword) {
       errors.newPassword = 'New password is required';
     } else if (passwordData.newPassword.length < 8) {
       errors.newPassword = 'Password must be at least 8 characters';
     }
-
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       errors.confirmPassword = 'Passwords do not match';
     }
-
     setPasswordErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validatePasswordForm()) {
-      return;
-    }
-
+    if (!validatePasswordForm()) return;
     updatePassword(
       {
         previousPassword: passwordData.previousPassword,
-        newPassword: passwordData.newPassword
+        newPassword: passwordData.newPassword,
       },
       {
         onSuccess: () => {
@@ -72,7 +61,7 @@ const Profile = () => {
           setPasswordData({
             previousPassword: '',
             newPassword: '',
-            confirmPassword: ''
+            confirmPassword: '',
           });
         },
         onError: (error: unknown) => {
@@ -80,7 +69,6 @@ const Profile = () => {
             message?: string;
             errors?: Array<{ field: string; constraints: string[] }>;
           }>;
-
           if (backendError.response?.data?.errors) {
             const errorMap: Record<string, string> = {};
             backendError.response.data.errors.forEach((err) => {
@@ -88,7 +76,6 @@ const Profile = () => {
             });
             setPasswordErrors(errorMap);
           }
-
           toast.error(
             backendError.response?.data?.message || 'Failed to update password'
           );
@@ -97,81 +84,99 @@ const Profile = () => {
     );
   };
 
-  if (!user) {
-    return <div>Loading user data...</div>;
-  }
+  if (!user) return <div className="flex justify-center py-16 text-muted-foreground">Loading user data...</div>;
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="flex items-center gap-4 mb-6">
+    <div className="max-w-2xl mx-auto py-10 px-4">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-8">
         <Button
           variant="outline"
           size="icon"
           onClick={() => navigate(-1)}
-          className="h-8 w-8"
+          className="h-9 w-9"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-5 w-5" />
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight">
-          {user.name}'s Profile
-        </h1>
+        <div>
+          <h1 className="text-2xl font-bold">{user.name}&rsquo;s Profile</h1>
+          <div className="text-sm text-muted-foreground font-medium">{user.email}</div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-8">
-        {/* Password Change Section */}
-        <div className="space-y-6 p-6 border rounded-lg">
-          <h2 className="text-xl font-semibold">Change Password</h2>
-          <form onSubmit={handlePasswordSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Current Password</Label>
+      {/* Main Content */}
+      <div className="bg-white rounded-xl shadow border p-8 space-y-8">
+        {/* Account Info */}
+        <div>
+          <div className="mb-1 font-semibold text-lg">Account Information</div>
+          <div className="grid grid-cols-2 gap-4 mt-2">
+            <div>
+              <Label className="mb-1 text-xs">Full Name</Label>
+              <div className="border rounded px-3 py-2 bg-muted text-sm">{user.name}</div>
+            </div>
+            <div>
+              <Label className="mb-1 text-xs">Email Address</Label>
+              <div className="border rounded px-3 py-2 bg-muted text-sm">{user.email}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-b"></div>
+
+        {/* Password Change */}
+        <div>
+          <div className="mb-1 font-semibold text-lg">Change Password</div>
+          <form onSubmit={handlePasswordSubmit} className="grid gap-4 mt-3">
+            <div>
+              <Label htmlFor="current-password" className="text-xs">Current Password</Label>
               <Input
+                id="current-password"
                 type="password"
                 name="previousPassword"
                 value={passwordData.previousPassword}
                 onChange={handlePasswordChange}
-                required
+                autoComplete="current-password"
                 className={passwordErrors.previousPassword ? 'border-red-500' : ''}
               />
               {passwordErrors.previousPassword && (
-                <p className="text-sm text-red-500">{passwordErrors.previousPassword}</p>
+                <p className="text-xs text-red-500 mt-1">{passwordErrors.previousPassword}</p>
               )}
             </div>
-
-            <div className="space-y-2">
-              <Label>New Password</Label>
+            <div>
+              <Label htmlFor="new-password" className="text-xs">New Password</Label>
               <Input
+                id="new-password"
                 type="password"
                 name="newPassword"
                 value={passwordData.newPassword}
                 onChange={handlePasswordChange}
-                required
+                autoComplete="new-password"
                 minLength={8}
                 className={passwordErrors.newPassword ? 'border-red-500' : ''}
               />
               {passwordErrors.newPassword && (
-                <p className="text-sm text-red-500">{passwordErrors.newPassword}</p>
+                <p className="text-xs text-red-500 mt-1">{passwordErrors.newPassword}</p>
               )}
             </div>
-
-            <div className="space-y-2">
-              <Label>Confirm New Password</Label>
+            <div>
+              <Label htmlFor="confirm-password" className="text-xs">Confirm New Password</Label>
               <Input
+                id="confirm-password"
                 type="password"
                 name="confirmPassword"
                 value={passwordData.confirmPassword}
                 onChange={handlePasswordChange}
-                required
+                autoComplete="new-password"
                 className={passwordErrors.confirmPassword ? 'border-red-500' : ''}
               />
               {passwordErrors.confirmPassword && (
-                <p className="text-sm text-red-500">{passwordErrors.confirmPassword}</p>
+                <p className="text-xs text-red-500 mt-1">{passwordErrors.confirmPassword}</p>
               )}
             </div>
-
             <Button
               type="submit"
               disabled={isUpdatingPassword}
-              className="w-full"
+              className="w-full mt-3"
             >
               {isUpdatingPassword ? 'Updating...' : 'Update Password'}
             </Button>
