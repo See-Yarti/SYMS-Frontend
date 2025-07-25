@@ -23,7 +23,7 @@ import Appearance from './pages/settings/Appearance';
 import PasswordChanges from './pages/settings/password-changes';
 import CarClass from './pages/carclass/CarClass';
 import CarClassList from './pages/carclass/CarClassList';
-import Rate from './pages/rate/Rate';
+import Rate from './pages/rate/RatesLayout';
 import RatesPage from './pages/rate/RatesPage';
 import RatePlannerPage from './pages/rate/RatePlanner';
 import BlackoutPage from './pages/rate/BlackoutPage';
