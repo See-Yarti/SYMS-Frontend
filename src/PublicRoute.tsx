@@ -1,3 +1,5 @@
+// src/PublicRoute.tsx
+
 import React from 'react';
 import { Navigate, Outlet, NavigateProps } from 'react-router-dom';
 import { useSelector } from 'react-redux';

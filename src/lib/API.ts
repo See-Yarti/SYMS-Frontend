@@ -1,32 +1,29 @@
 // src/lib/API.ts
+
 import axios from 'axios';
 import { RootState, store } from '@/store';
 import { AuthActions, logoutUser } from '@/store/features/auth.slice';
+import { toast } from 'sonner';
 
 export const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10-second timeout
+  timeout: 10000, // 10 seconds
 });
 
-// Request tracking variables
 let isRefreshing = false;
 let failedQueue: Array<{ resolve: (value: unknown) => void; reject: (reason?: any) => void }> = [];
 
 const processQueue = (error?: any, token?: string) => {
   failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
+    if (error) prom.reject(error);
+    else prom.resolve(token);
   });
   failedQueue = [];
 };
 
-// Request interceptor
 axiosInstance.interceptors.request.use(
   (config) => {
     const state = store.getState() as RootState;
@@ -39,22 +36,21 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
     const status = error.response?.status;
 
-    // Handle 429 Too Many Requests
+    // 429: Too Many Requests, auto-retry
     if (status === 429 && !originalRequest._retry) {
       originalRequest._retry = true;
-      const retryAfter = error.response.headers['retry-after'] || 5; // Default 5 seconds
+      const retryAfter = error.response.headers['retry-after'] || 5;
       await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
       return axiosInstance(originalRequest);
     }
 
-    // Handle 401 Unauthorized
+    // 401: Unauthorized (token expired/invalid)
     if (status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
@@ -87,20 +83,27 @@ axiosInstance.interceptors.response.use(
         store.dispatch(AuthActions.updateAccessToken(newAccessToken));
         store.dispatch(AuthActions.updateRefreshToken(newRefreshToken));
 
-        // Process queued requests with 500ms delay between each
         failedQueue.forEach((prom, index) => {
           setTimeout(() => {
             originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
             prom.resolve(axiosInstance(originalRequest));
           }, index * 500);
         });
-        
+
         processQueue(null, newAccessToken);
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
+        toast.error('Session expired. Please login again.'); // Show toast
         processQueue(refreshError, undefined);
         store.dispatch(logoutUser());
+        // Auto redirect to login after short delay so toast can be seen
+        setTimeout(() => {
+          // Also clear localStorage, just in case
+          localStorage.removeItem('persist:root');
+          localStorage.removeItem('theme');
+          window.location.href = '/auth/login';
+        }, 500);
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

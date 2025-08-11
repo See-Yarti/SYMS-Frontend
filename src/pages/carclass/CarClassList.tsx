@@ -16,7 +16,7 @@ import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useFetchData, usePostData } from '@/hooks/useApi';
+import { useFetchData, usePostData, useDeleteData } from '@/hooks/useApi';
 import { axiosInstance } from '@/lib/API';
 
 const VEHICLE_SIZES = [
@@ -80,6 +80,41 @@ const CarClassList = () => {
   const [isToggling, setIsToggling] = useState<string | null>(null);
   const [toggleLock, setToggleLock] = useState<{ [slug: string]: boolean }>({});
   const debounceTimers = useRef<{ [slug: string]: NodeJS.Timeout }>({});
+
+  // --- DELETE STATE ---
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+  const { mutateAsync: deleteCarClass, isPending: isDeleting } = useDeleteData({
+    onSuccess: async () => {
+      toast.success('Car class deleted!');
+      setDeleteDialogOpen(false);
+      setDeleteTargetId(null);
+      await refetch();
+    },
+    onError: (error: any) => {
+      const errorMsg = error?.response?.data?.message || error?.message || 'Failed to delete car class';
+      toast.error(errorMsg);
+      setDeleteDialogOpen(false);
+      setDeleteTargetId(null);
+      console.error('Delete error', error);
+    },
+  });
+
+  const confirmDeleteCarClass = async () => {
+    if (!deleteTargetId) return;
+    await deleteCarClass({ endpoint: `car-class/id/${deleteTargetId}` });
+  };
+
+  const openDeleteDialog = (id: string) => {
+    setDeleteTargetId(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const cancelDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setDeleteTargetId(null);
+  };
 
   const {
     handleSubmit: addHandleSubmit,
@@ -238,7 +273,14 @@ const CarClassList = () => {
                     <span className="text-xs">{row.description}</span>
                   </td>
                   <td className="px-4 py-2 text-right">
-                    {/* No delete button as API does not support */}
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => openDeleteDialog(row.id)}
+                      disabled={isDeleting}
+                    >
+                      Delete
+                    </Button>
                   </td>
                 </tr>
               ))
@@ -374,6 +416,39 @@ const CarClassList = () => {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* --- Delete Confirmation Dialog --- */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Car Class</DialogTitle>
+          </DialogHeader>
+          <div>
+            <p className="mb-2 text-sm text-muted-foreground">
+              Are you sure you want to delete this car class? <br />
+              <strong>This action cannot be undone.</strong>
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={cancelDeleteDialog}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={confirmDeleteCarClass}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Card>

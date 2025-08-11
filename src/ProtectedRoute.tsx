@@ -1,3 +1,5 @@
+// src/ProtectedRoute.tsx
+
 import React from 'react';
 import { Navigate, Outlet, NavigateProps, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';

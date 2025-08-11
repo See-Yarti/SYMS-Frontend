@@ -6,6 +6,7 @@ import { LoginUserInitialData, User, Company, OtherInfo } from '@/types/user';
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { AxiosError } from 'axios';
 import { RootState, store } from '..';
+import { toast } from 'sonner'; // <- NEW
 
 export type AuthState = {
   isAuthenticated: boolean;
@@ -31,7 +32,7 @@ const initialState: AuthState = {
   companyId: null,
 };
 
-// Thunk: login (admin or operator)
+// Thunk: login
 export const loginUser = createAsyncThunk<
   LoginUserInitialData,
   LoginFormValues,
@@ -52,22 +53,34 @@ export const loginUser = createAsyncThunk<
 });
 
 // Thunk: logout
-export const logoutUser = createAsyncThunk('auth/logout', async (_, { rejectWithValue }) => {
-  try {
-    const state = store.getState() as RootState;
-    const token = state.auth._rT;
-    await axiosInstance.post(
-      '/auth/controller/logout',
-      {},
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
-  } catch (err) {
-    if (err instanceof AxiosError) {
-      return rejectWithValue(err.response?.data?.message ?? 'Logout failed');
+export const logoutUser = createAsyncThunk(
+  'auth/logout',
+  async (_, { rejectWithValue }) => {
+    try {
+      const state = store.getState() as RootState;
+      const token = state.auth._rT;
+      // API call to logout is optional, but let's keep it
+      await axiosInstance.post(
+        '/auth/controller/logout',
+        {},
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+    } catch (err) {
+      // Even if the API fails, proceed to clear the local state.
+      if (err instanceof AxiosError) {
+        toast.info('Session expired. Please login again.');
+        return rejectWithValue(err.response?.data?.message ?? 'Logout failed');
+      }
+      toast.info('Session expired. Please login again.');
+      return rejectWithValue('An unexpected error occurred during logout');
+    } finally {
+      // Always run this!
+      toast.info('You have been logged out.'); // <- Show toast always
+      localStorage.removeItem('persist:root');
+      localStorage.removeItem('theme');
     }
-    return rejectWithValue('An unexpected error occurred during logout');
-  }
-});
+  },
+);
 
 export const authSlice = createSlice({
   name: 'auth',
@@ -94,7 +107,6 @@ export const authSlice = createSlice({
       })
       .addCase(loginUser.fulfilled, (state, { payload }) => {
         const { _aT, _rT, user, otherInfo, company } = payload;
-
         state.isAuthenticated = true;
         state.isLoading = false;
         state.user = {
@@ -104,7 +116,9 @@ export const authSlice = createSlice({
           role: user.role,
           avatar: user.avatar,
           isFirstLogin: user.isFirstLogin,
-          ...(otherInfo?.operatorRole && { operatorRole: otherInfo.operatorRole })
+          ...(otherInfo?.operatorRole && {
+            operatorRole: otherInfo.operatorRole,
+          }),
         };
         state._aT = _aT;
         state._rT = _rT;
@@ -137,24 +151,25 @@ export const authSlice = createSlice({
   },
 });
 
-export const { 
-  updateAccessToken, 
-  updateRefreshToken, 
+export const {
+  updateAccessToken,
+  updateRefreshToken,
   clearAuthState,
-  setLoading 
+  setLoading,
 } = authSlice.actions;
 
 // Selectors
 export const selectCurrentUser = (state: RootState) => state.auth.user;
 export const selectAccessToken = (state: RootState) => state.auth._aT;
 export const selectRefreshToken = (state: RootState) => state.auth._rT;
-export const selectIsAuthenticated = (state: RootState) => state.auth.isAuthenticated;
+export const selectIsAuthenticated = (state: RootState) =>
+  state.auth.isAuthenticated;
 export const selectIsLoading = (state: RootState) => state.auth.isLoading;
 export const selectAuthError = (state: RootState) => state.auth.error;
 export const selectCompany = (state: RootState) => state.auth.company;
 export const selectOtherInfo = (state: RootState) => state.auth.otherInfo;
 export const selectCompanyId = (state: RootState) => state.auth.companyId;
-export const selectOperatorRole = (state: RootState) => 
+export const selectOperatorRole = (state: RootState) =>
   state.auth.user?.operatorRole || state.auth.otherInfo?.operatorRole;
 
 export const AuthActions = authSlice.actions;

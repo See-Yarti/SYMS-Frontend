@@ -51,22 +51,6 @@ const Login = () => {
                     </Label>
                   </div>
                   <LoginForm />
-                  {/* <div className="flex items-center justify-center w-full my-5">
-                    <div className="flex-1 h-px bg-gray-200" />
-                    <span className="px-4 text-gray-500">or</span>
-                    <div className="flex-1 h-px bg-gray-200" />
-                  </div> */}
-                  {/* <div className="mt-6">
-                    <p className="text-start text-sm text-gray-500">
-                      Don't have an account?{' '}
-                      <Link
-                        to="/register"
-                        className="font-medium text-gray-600 hover:text-gray-800"
-                      >
-                        Register now
-                      </Link>
-                    </p>
-                  </div> */}
                 </div>
               </BlurFade>
             </div>

@@ -1,304 +1,449 @@
 // src/components/Blackout/BlackoutDialog.tsx
 
-import * as React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import type { BlackoutDialogProps } from '@/types/blackout';
+"use client";
 
-interface CarClassSelectItem {
-  label: string;
+import * as React from "react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { parseISO, format } from "date-fns";
+import { useFetchData } from "@/hooks/useOperatorCarClass";
+import { useGetActiveLocations } from "@/hooks/useLocationApi";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command";
+import { ChevronsUpDown, Check, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+// ===== Types =====
+interface CarClass { id: string; slug: string; name: string; }
+interface Location { id: string; city: string; isAirportZone?: boolean; }
+interface Blackout {
+  id: string; description: string; type: "FULL" | "PICKUP_ONLY" | "RETURN_ONLY";
+  startDateTime: string; endDateTime: string;
+  carClasses: { id: string; carClass: CarClass }[];
+  locations: Location[]; isActive: boolean;
+}
+interface BlackoutDialogProps {
+  open: boolean; onClose: () => void;
+  onSave: (payload: {
+    description: string; type: "FULL" | "PICKUP_ONLY" | "RETURN_ONLY";
+    startDate: string; startTime: string; endDate: string; endTime: string;
+    carClassIds: string[]; locationIds: string[];
+  }) => Promise<void> | void;
+  blackout?: Blackout; companyId: string; initialLocationId?: string;
+}
+interface CompanyCarClassSelectItem {
+  id: string;        // companyCarClassId (per location)
+  label: string;     // "EVMN — Toyota Corolla @ City"
+  slug: string;
   selected: boolean;
 }
 
-function moveSelected(
-  from: CarClassSelectItem[],
-  to: CarClassSelectItem[],
-  setFrom: React.Dispatch<React.SetStateAction<CarClassSelectItem[]>>,
-  setTo: React.Dispatch<React.SetStateAction<CarClassSelectItem[]>>
-) {
-  const toMove = from.filter(x => x.selected);
-  setFrom(from.filter(x => !x.selected));
-  setTo([...to, ...toMove.map(x => ({ ...x, selected: false }))]);
-}
+// ===== New API shapes (multi-location) =====
+type CCCPerLocation = {
+  locationId: string;
+  companyCarClassId: string;
+  isAvailable: boolean;
+  make?: string; model?: string;
+  numberOfBags?: number; numberOfDoors?: number; numberOfPassengers?: number;
+};
+type CCCGroup = {
+  carClass: CarClass;
+  anyAvailable: boolean;
+  allAvailable: boolean;
+  locations: CCCPerLocation[];
+};
+type MultiLocationCCCResponse = {
+  success: true;
+  data: {
+    success: true;
+    data: CCCGroup[];
+    timestamp: string;
+  };
+  timestamp: string;
+};
 
-function moveAll(
-  from: CarClassSelectItem[],
-  setFrom: React.Dispatch<React.SetStateAction<CarClassSelectItem[]>>,
-  to: CarClassSelectItem[],
-  setTo: React.Dispatch<React.SetStateAction<CarClassSelectItem[]>>
-) {
-  setTo([...to, ...from.map(x => ({ ...x, selected: false }))]);
-  setFrom([]);
-}
+// ===== Helpers =====
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const useTodayIso = () => React.useMemo(() => {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}, []);
+const nowRoundedToMinute = () => {
+  const d = new Date(); d.setSeconds(0, 0);
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+};
+const toApiDate = (iso: string) => {
+  if (!iso) return ""; const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`;
+};
+const toApiTime = (hhmm: string) => {
+  if (!hhmm) return ""; const [h24, m] = hhmm.split(":").map(Number);
+  const ampm = h24 >= 12 ? "pm" : "am"; const h12 = (h24 % 12) || 12;
+  return `${pad2(h12)}.${pad2(m)} ${ampm}`;
+};
+const prettyLocationLabel = (loc?: Location) => (!loc ? "Unknown Location" : `PR: ${loc.city}${loc.isAirportZone ? " Airport" : ""}`);
+const arraysShallowEqual = <T,>(a: T[], b: T[]) => a.length === b.length && a.every((v, i) => v === b[i]);
 
 export default function BlackoutDialog({
-  open,
-  onClose,
-  onSave,
-  blackout,
-  locations = ['Marietta'],
-  carClasses = ['ECAR', 'CCAR', 'ICAR', 'SCAR', 'FCAR', 'MVAR', 'SSAR', 'LCAR', 'FFDR'],
-  blackoutTypes = ['Full', 'Partial'],
+  open, onClose, onSave, blackout, companyId, initialLocationId,
 }: BlackoutDialogProps) {
-  // Main fields
-  const [description, setDescription] = React.useState<string>(blackout?.description || '');
-  const [selectedLocations, setSelectedLocations] = React.useState<string[]>(blackout?.locations || [locations[0]]);
-  const [rateGroup, setRateGroup] = React.useState<string>(blackout?.group || 'All');
-  const [startDate, setStartDate] = React.useState<string>('');
-  const [startTime, setStartTime] = React.useState<string>('00:00');
-  const [endDate, setEndDate] = React.useState<string>('');
-  const [endTime, setEndTime] = React.useState<string>('23:59');
-  const [blackoutType, setBlackoutType] = React.useState<string>(blackout?.blackoutType || 'Full');
-  const [rateCategory, setRateCategory] = React.useState<string>('All');
-  const [lengthOfRents, setLengthOfRents] = React.useState<string>('All');
+  // Form
+  const [description, setDescription] = React.useState("");
+  const [blackoutType, setBlackoutType] = React.useState<"FULL" | "PICKUP_ONLY" | "RETURN_ONLY">("FULL");
+  const [startDate, setStartDate] = React.useState(""); const [startTime, setStartTime] = React.useState("00:00");
+  const [endDate, setEndDate] = React.useState(""); const [endTime, setEndTime] = React.useState("23:59");
+  const [selectedLocationIds, setSelectedLocationIds] = React.useState<string[]>([]);
+  const [availableCCCs, setAvailableCCCs] = React.useState<CompanyCarClassSelectItem[]>([]);
+  const [selectedCCCs, setSelectedCCCs] = React.useState<CompanyCarClassSelectItem[]>([]);
+  const [pendingSelectedCCCIds, setPendingSelectedCCCIds] = React.useState<string[] | null>(null);
 
-  // Car Classes dual-list
-  const [unblocked, setUnblocked] = React.useState<CarClassSelectItem[]>(
-    blackout
-      ? carClasses.filter(c => !(blackout.carClasses || []).includes(c)).map(c => ({ label: c, selected: false }))
-      : carClasses.map(c => ({ label: c, selected: false }))
-  );
-  const [blocked, setBlocked] = React.useState<CarClassSelectItem[]>(
-    blackout?.carClasses
-      ? blackout.carClasses.map(c => ({ label: c, selected: false }))
-      : []
+  // Locations list
+  const { data: activeLocationsResp, isLoading: isLocLoading, isError: isLocError } = useGetActiveLocations(companyId);
+  const activeLocations: Location[] = React.useMemo(
+    () => (Array.isArray(activeLocationsResp?.data) ? activeLocationsResp!.data : []),
+    [activeLocationsResp]
   );
 
-  // Reset form when opening (support Add/Edit)
+  // Build stable, sorted key for multi-location endpoint
+  const locKey = React.useMemo(() => selectedLocationIds.slice().sort().join(","), [selectedLocationIds]);
+
+  // 👉 Fetch NEW multi-location CCC endpoint
+  const { data: rawResp } = useFetchData<MultiLocationCCCResponse>(
+    selectedLocationIds.length > 0 ? `company-car-class/${companyId}/locations/${encodeURIComponent(locKey)}` : "",
+    ["company-car-class", companyId, locKey],
+    { enabled: selectedLocationIds.length > 0 }
+  );
+
+  // Flatten the grouped response to per-location selectable rows
+  const flatCCCItems = React.useMemo<CompanyCarClassSelectItem[]>(() => {
+    const payload =
+      Array.isArray((rawResp as any)?.data?.data)
+        ? (rawResp as any).data.data
+        : Array.isArray((rawResp as any)?.data)
+          ? (rawResp as any).data
+          : Array.isArray(rawResp)
+            ? (rawResp as any)
+            : [];
+
+    if (!Array.isArray(payload) || payload.length === 0) return [];
+
+    const selectedSet = new Set(selectedLocationIds);
+    const items: CompanyCarClassSelectItem[] = [];
+
+    for (const group of payload) {
+      const slug = group?.carClass?.slug || group?.carClass?.name || "Class";
+      const locs: CCCPerLocation[] = group?.locations || [];
+      for (const loc of locs) {
+        if (!selectedSet.has(loc.locationId)) continue;
+        items.push({ id: loc.companyCarClassId, label: `${slug}`, slug, selected: false });
+      }
+    }
+    return items;
+    // 👇 remove activeLocations here
+  }, [rawResp, selectedLocationIds]);
+
+
+
+
+  // Hydrate on open / edit
   React.useEffect(() => {
-    setDescription(blackout?.description || '');
-    setSelectedLocations(blackout?.locations || [locations[0]]);
-    setRateGroup(blackout?.group || 'All');
-    setBlackoutType(blackout?.blackoutType || 'Full');
-    setRateCategory('All');
-    setLengthOfRents('All');
-    setStartDate('');
-    setStartTime('00:00');
-    setEndDate('');
-    setEndTime('23:59');
-    setUnblocked(
-      blackout
-        ? carClasses.filter(c => !(blackout.carClasses || []).includes(c)).map(c => ({ label: c, selected: false }))
-        : carClasses.map(c => ({ label: c, selected: false }))
-    );
-    setBlocked(
-      blackout?.carClasses
-        ? blackout.carClasses.map(c => ({ label: c, selected: false }))
-        : []
-    );
-  }, [open, blackout, carClasses, locations]);
+    if (!open) return;
 
-  function toggleSelected(
-    list: CarClassSelectItem[],
-    idx: number,
-    setList: React.Dispatch<React.SetStateAction<CarClassSelectItem[]>>
-  ) {
-    setList(list.map((x, i) => (i === idx ? { ...x, selected: !x.selected } : x)));
-  }
+    if (blackout && blackout.id) {
+      setDescription(blackout.description ?? "");
+      setBlackoutType(blackout.type ?? "FULL");
+      try {
+        setStartDate(blackout.startDateTime ? format(parseISO(blackout.startDateTime), "yyyy-MM-dd") : "");
+        setStartTime(blackout.startDateTime ? format(parseISO(blackout.startDateTime), "HH:mm") : "00:00");
+      } catch { setStartDate(""); setStartTime("00:00"); }
+      try {
+        setEndDate(blackout.endDateTime ? format(parseISO(blackout.endDateTime), "yyyy-MM-dd") : "");
+        setEndTime(blackout.endDateTime ? format(parseISO(blackout.endDateTime), "HH:mm") : "23:59");
+      } catch { setEndDate(""); setEndTime("23:59"); }
 
-  function handleSubmit(e: React.FormEvent) {
+      const locs = Array.isArray(blackout.locations) ? blackout.locations.map(l => l.id) : [];
+      setSelectedLocationIds(locs);
+
+      const preIds = Array.isArray(blackout.carClasses) ? blackout.carClasses.map(cc => cc.id).filter(Boolean) : [];
+      setPendingSelectedCCCIds(preIds);
+    } else {
+      setDescription("");
+      setBlackoutType("FULL");
+      setStartDate(""); setStartTime("00:00");
+      setEndDate(""); setEndTime("23:59");
+      setSelectedLocationIds(initialLocationId ? [initialLocationId] : []);
+      setPendingSelectedCCCIds([]);
+      setSelectedCCCs([]); setAvailableCCCs([]);
+    }
+  }, [open, blackout?.id, initialLocationId, blackout]);
+
+  // Build transfer lists whenever flat items change
+  React.useEffect(() => {
+    if (flatCCCItems.length === 0) {
+      setAvailableCCCs([]);
+      setSelectedCCCs([]); // reset when nothing available for chosen locations
+      return;
+    }
+
+    // Apply pending preselect once (edit mode)
+    if (pendingSelectedCCCIds && pendingSelectedCCCIds.length > 0) {
+      const pre = new Set(pendingSelectedCCCIds);
+      const selected = flatCCCItems.filter(x => pre.has(x.id)).map(x => ({ ...x, selected: false }));
+      const available = flatCCCItems.filter(x => !pre.has(x.id));
+      setSelectedCCCs(selected);
+      setAvailableCCCs(available);
+      setPendingSelectedCCCIds([]);
+      return;
+    }
+
+    // Reconcile with user's existing selection when locations change
+    const allowed = new Set(flatCCCItems.map(i => i.id));
+    const stillSelected = selectedCCCs.filter(s => allowed.has(s.id));
+    const stillIds = new Set(stillSelected.map(s => s.id));
+    const nextSelected = flatCCCItems.filter(i => stillIds.has(i.id)).map(i => ({ ...i, selected: false }));
+    const nextAvailable = flatCCCItems.filter(i => !stillIds.has(i.id));
+
+    if (!arraysShallowEqual(nextSelected.map(s => s.id), selectedCCCs.map(s => s.id))) {
+      setSelectedCCCs(nextSelected);
+    }
+    if (!arraysShallowEqual(nextAvailable.map(a => a.id), availableCCCs.map(a => a.id))) {
+      setAvailableCCCs(nextAvailable);
+    }
+  }, [flatCCCItems, pendingSelectedCCCIds, selectedCCCs, availableCCCs]);
+
+  // Date constraints
+  const todayMin = useTodayIso();
+  const nowMinIfToday = startDate === todayMin ? nowRoundedToMinute() : "00:00";
+  React.useEffect(() => { if (startDate && startDate < todayMin) setStartDate(todayMin); }, [startDate, todayMin]);
+  React.useEffect(() => {
+    if (startDate === todayMin && startTime < nowMinIfToday) setStartTime(nowMinIfToday);
+  }, [startDate, startTime, nowMinIfToday, todayMin]);
+  const endDateMinIso = startDate ? (startDate > todayMin ? startDate : todayMin) : todayMin;
+  React.useEffect(() => { if (endDate && endDate < endDateMinIso) setEndDate(endDateMinIso); }, [endDate, endDateMinIso]);
+  React.useEffect(() => { if (endDate === startDate && endTime < startTime) setEndTime(startTime); },
+    [endTime, endDate, startDate, startTime]);
+
+  // Submit
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
-      id: blackout?.id ?? Math.random(),
+    const finalLocationIds = selectedLocationIds.length === 0 && initialLocationId
+      ? [initialLocationId] : selectedLocationIds;
+
+    await onSave({
       description,
-      locations: selectedLocations,
-      group: rateGroup,
-      carClasses: blocked.map(x => x.label),
-      blackoutType,
-      startDate: startDate + ' ' + startTime,
-      endDate: endDate + ' ' + endTime,
-      created: blackout?.created || 'Now',
-      modified: 'Now by you@demo.com',
+      type: blackoutType,
+      startDate: toApiDate(startDate),
+      startTime: toApiTime(startTime),
+      endDate: toApiDate(endDate),
+      endTime: toApiTime(endTime),
+      carClassIds: selectedCCCs.map(x => x.id), // <-- companyCarClassId(s) per selected location
+      locationIds: finalLocationIds,
     });
-    onClose();
-  }
+  };
+
+  // Transfer helpers
+  const toggleSelected = (
+    list: CompanyCarClassSelectItem[], idx: number,
+    setList: React.Dispatch<React.SetStateAction<CompanyCarClassSelectItem[]>>
+  ) => setList(list.map((x, i) => (i === idx ? { ...x, selected: !x.selected } : x)));
+
+  const moveSelected = (
+    from: CompanyCarClassSelectItem[], to: CompanyCarClassSelectItem[],
+    setFrom: React.Dispatch<React.SetStateAction<CompanyCarClassSelectItem[]>>,
+    setTo: React.Dispatch<React.SetStateAction<CompanyCarClassSelectItem[]>>
+  ) => {
+    const toMove = from.filter(x => x.selected);
+    setFrom(from.filter(x => !x.selected));
+    setTo([...to, ...toMove.map(x => ({ ...x, selected: false }))]);
+  };
+
+  const moveAll = (
+    from: CompanyCarClassSelectItem[], setFrom: React.Dispatch<React.SetStateAction<CompanyCarClassSelectItem[]>>,
+    to: CompanyCarClassSelectItem[], setTo: React.Dispatch<React.SetStateAction<CompanyCarClassSelectItem[]>>
+  ) => {
+    setTo([...to, ...from.map(x => ({ ...x, selected: false }))]); setFrom([]);
+  };
+
+  // Locations UI
+  const [locOpen, setLocOpen] = React.useState(false);
+  const allSelectedLabel =
+    selectedLocationIds.length > 0
+      ? selectedLocationIds.map((id) => prettyLocationLabel(activeLocations.find(l => l.id === id))).join(", ")
+      : "";
+
+  const toggleLocation = (id: string) =>
+    setSelectedLocationIds(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
+  const clearLocation = (id: string) => setSelectedLocationIds(prev => prev.filter(x => x !== id));
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl bg-background/95 text-foreground rounded-2xl border shadow-xl">
+      <DialogContent className="max-w-4xl bg-background/95 text-foreground rounded-2xl border shadow-xl" aria-describedby="blackout-dialog-desc">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">
-            {blackout ? 'Update' : 'Create'} Blackout
-          </DialogTitle>
+          <DialogTitle className="text-2xl font-bold">{blackout ? "Update" : "Create"} Blackout</DialogTitle>
+          <DialogDescription id="blackout-dialog-desc">
+            Configure blackout type, locations, company car classes, and the time window. Fields marked * are required.
+          </DialogDescription>
         </DialogHeader>
+
         <form className="space-y-6" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-5 gap-4 items-center">
-            <Input
-              className="col-span-1"
-              placeholder="Description *"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              required
-            />
-            <Select
-              value={selectedLocations[0]}
-              onValueChange={v => setSelectedLocations([v])}
-            >
-              <SelectTrigger className="col-span-1 w-full">
-                <SelectValue placeholder="Location(s)" />
-              </SelectTrigger>
-              <SelectContent>
-                {locations.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={rateGroup} onValueChange={setRateGroup}>
-              <SelectTrigger className="col-span-1 w-full">
-                <SelectValue placeholder="Rate Group" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All</SelectItem>
-                <SelectItem value="Group1">Group1</SelectItem>
-                <SelectItem value="Group2">Group2</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="col-span-2 flex gap-2">
-              <Input
-                type="date"
-                value={startDate}
-                onChange={e => setStartDate(e.target.value)}
-                className="w-40"
-                required
-              />
-              <Input
-                type="time"
-                value={startTime}
-                onChange={e => setStartTime(e.target.value)}
-                className="w-40"
-                required
-              />
+          {/* Description + Type */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col">
+              <label htmlFor="description" className="text-sm font-medium mb-1">Description *</label>
+              <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} required />
             </div>
-            <div className="col-span-1 flex gap-2">
-              <Input
-                type="date"
-                value={endDate}
-                onChange={e => setEndDate(e.target.value)}
-                className="w-40"
-                required
-              />
-              <Input
-                type="time"
-                value={endTime}
-                onChange={e => setEndTime(e.target.value)}
-                className="w-40"
-                required
-              />
+            <div className="flex flex-col">
+              <label className="text-sm font-medium mb-1">Blackout Type *</label>
+              <Select value={blackoutType} onValueChange={(v: "FULL" | "PICKUP_ONLY" | "RETURN_ONLY") => setBlackoutType(v)}>
+                <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="FULL">Full</SelectItem>
+                  <SelectItem value="PICKUP_ONLY">Pickup Only</SelectItem>
+                  <SelectItem value="RETURN_ONLY">Return Only</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
-          <div className="grid grid-cols-5 gap-4 items-center">
-            <Select value={blackoutType} onValueChange={setBlackoutType}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Rate Blackout Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {blackoutTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={rateCategory} onValueChange={setRateCategory}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Rate Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All</SelectItem>
-                <SelectItem value="Cat1">Cat1</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={lengthOfRents} onValueChange={setLengthOfRents}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Length of Rents" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All</SelectItem>
-                <SelectItem value="Short">Short</SelectItem>
-                <SelectItem value="Long">Long</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="flex gap-2 items-center col-span-2">
-              <Checkbox className="mr-1" />Sync to Rezpower
-              <Checkbox className="ml-4 mr-1" />Net Avail Blackout
-            </div>
-          </div>
-          <div className="text-sm text-muted-foreground mb-2">
-            Please select the car classes you would like to move between the blocked and unblocked columns.
-          </div>
-          {/* Car Classes dual list */}
-          <div>
-            <div className="mb-2 font-semibold">Car Classes</div>
-            <div className="flex">
-              {/* Unblocked */}
-              <div className="w-44 bg-background border border-muted rounded max-h-52 overflow-y-auto">
-                <div className="text-xs px-2 py-1 border-b border-muted">Unblocked<br />{unblocked.filter(x => x.selected).length} selected</div>
-                {unblocked.map((c, i) => (
-                  <div key={c.label} className="flex items-center px-2">
-                    <Checkbox
-                      checked={c.selected}
-                      onCheckedChange={() => toggleSelected(unblocked, i, setUnblocked)}
-                      className="mr-1"
-                    />
-                    {c.label}
-                  </div>
-                ))}
-              </div>
-              {/* Move Buttons */}
-              <div className="flex flex-col justify-center items-center mx-2 gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => moveAll(unblocked, setUnblocked, blocked, setBlocked)}
-                  className="w-40"
-                  type="button"
-                >Block All &gt;&gt;</Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => moveSelected(unblocked, blocked, setUnblocked, setBlocked)}
-                  className="w-40"
-                  type="button"
-                >Block &gt;</Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => moveSelected(blocked, unblocked, setBlocked, setUnblocked)}
-                  className="w-40"
-                  type="button"
-                >&lt; Unblock</Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => moveAll(blocked, setBlocked, unblocked, setUnblocked)}
-                  className="w-40"
-                  type="button"
-                >&lt;&lt; Unblock All</Button>
-              </div>
-              {/* Blocked */}
-              <div className="w-44 bg-background border border-muted rounded max-h-52 overflow-y-auto">
-                <div className="text-xs px-2 py-1 border-b border-muted">Blocked<br />{blocked.filter(x => x.selected).length} selected</div>
-                {blocked.map((c, i) => (
-                  <div key={c.label} className="flex items-center px-2">
-                    <Checkbox
-                      checked={c.selected}
-                      onCheckedChange={() => toggleSelected(blocked, i, setBlocked)}
-                      className="mr-1"
-                    />
-                    {c.label}
-                  </div>
-                ))}
+
+          {/* Locations */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col">
+              <label className="text-sm font-medium mb-1">Location(s) *</label>
+              <Popover open={locOpen} onOpenChange={setLocOpen}>
+                <PopoverTrigger asChild>
+                  <Button type="button" variant="outline" role="combobox" aria-expanded={locOpen} className="w-full justify-between" disabled={isLocLoading || isLocError}>
+                    <span className="truncate">
+                      {isLocLoading
+                        ? "Loading locations..."
+                        : isLocError
+                          ? "Failed to load locations"
+                          : selectedLocationIds.length > 0
+                            ? allSelectedLabel
+                            : initialLocationId
+                              ? prettyLocationLabel(activeLocations.find(l => l.id === initialLocationId)) || "Select Location(s)"
+                              : "Select Location(s)"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <div className="px-3 py-2 text-sm font-medium">Select Location(s)</div>
+                    <CommandInput placeholder="Search" />
+                    <CommandList className="max-h-64">
+                      <CommandEmpty>{activeLocations.length === 0 ? "No active locations" : "No match"}</CommandEmpty>
+                      <CommandGroup>
+                        {activeLocations.map((loc) => {
+                          const checked = selectedLocationIds.includes(loc.id);
+                          return (
+                            <CommandItem key={loc.id} value={loc.city} onSelect={() => toggleLocation(loc.id)} className="flex items-center gap-2">
+                              <span className={cn("mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
+                                checked ? "bg-primary text-primary-foreground" : "bg-background")}>
+                                {checked && <Check className="h-3 w-3" />}
+                              </span>
+                              <span className="truncate">{prettyLocationLabel(loc)}</span>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+
+              {/* Selected chips */}
+              <div className="flex flex-wrap gap-2 mt-2">
+                {(selectedLocationIds.length > 0 ? selectedLocationIds : initialLocationId ? [initialLocationId] : []).map((id) => {
+                  const loc = activeLocations.find((l) => l.id === id);
+                  const label = prettyLocationLabel(loc);
+                  const canRemove = selectedLocationIds.length > 0 || (initialLocationId && id !== initialLocationId);
+                  return (
+                    <div key={id} className="flex items-center gap-1 px-2 py-1 bg-primary/10 rounded-md">
+                      <span className="text-sm">{label}</span>
+                      {canRemove && (
+                        <button type="button" onClick={() => clearLocation(id)} className="text-destructive hover:text-destructive/80" aria-label="Remove location">
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
-          <DialogFooter className="mt-6">
+
+          {/* Company Car Classes */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Company Car Classes</label>
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1 border rounded-md p-2 max-h-60 overflow-y-auto">
+                <div className="text-xs font-medium mb-2">Available ({availableCCCs.filter(c => c.selected).length} selected)</div>
+                {availableCCCs.length === 0 ? (
+                  <div className="text-xs text-muted-foreground">No entries</div>
+                ) : (
+                  availableCCCs.map((item, index) => (
+                    <div key={item.id} className="flex items-center gap-2 p-1">
+                      <Checkbox checked={item.selected} onCheckedChange={() => toggleSelected(availableCCCs, index, setAvailableCCCs)} />
+                      <span>{item.label}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="flex md:flex-col justify-center gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => moveSelected(availableCCCs, selectedCCCs, setAvailableCCCs, setSelectedCCCs)}>&gt;</Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => moveAll(availableCCCs, setAvailableCCCs, selectedCCCs, setSelectedCCCs)}>&gt;&gt;</Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => moveSelected(selectedCCCs, availableCCCs, setSelectedCCCs, setAvailableCCCs)}>&lt;</Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => moveAll(selectedCCCs, setSelectedCCCs, availableCCCs, setAvailableCCCs)}>&lt;&lt;</Button>
+              </div>
+
+              <div className="flex-1 border rounded-md p-2 max-h-60 overflow-y-auto">
+                <div className="text-xs font-medium mb-2">Selected ({selectedCCCs.filter(c => c.selected).length} selected)</div>
+                {selectedCCCs.length === 0 ? (
+                  <div className="text-xs text-muted-foreground">No entries selected</div>
+                ) : (
+                  selectedCCCs.map((item, index) => (
+                    <div key={item.id} className="flex items-center gap-2 p-1">
+                      <Checkbox checked={item.selected} onCheckedChange={() => toggleSelected(selectedCCCs, index, setSelectedCCCs)} />
+                      <span>{item.label}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Dates & Times */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="flex flex-col">
+              <label htmlFor="start-date" className="text-sm font-medium mb-1">Start Date *</label>
+              <Input id="start-date" type="date" value={startDate} min={todayMin} onChange={(e) => setStartDate(e.target.value)} required />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-sm font-medium mb-1">Start Time *</label>
+              <Input type="time" value={startTime} min={startDate === todayMin ? nowMinIfToday : "00:00"} onChange={(e) => setStartTime(e.target.value)} required />
+            </div>
+            <div className="flex flex-col">
+              <label htmlFor="end-date" className="text-sm font-medium mb-1">End Date *</label>
+              <Input id="end-date" type="date" value={endDate} min={endDateMinIso} onChange={(e) => setEndDate(e.target.value)} required />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-sm font-medium mb-1">End Time *</label>
+              <Input type="time" value={endTime} min={endDate && startDate && endDate === startDate ? startTime : "00:00"} onChange={(e) => setEndTime(e.target.value)} required />
+            </div>
+          </div>
+
+          <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit">{blackout ? 'Save' : 'Add'}</Button>
+            <Button type="submit">{blackout ? "Update" : "Create"}</Button>
           </DialogFooter>
         </form>
-        {blackout && (
-          <div className="text-xs text-muted-foreground mt-4 border-t pt-2">
-            Created: {blackout.created} <br />
-            Modified: {blackout.modified}
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );

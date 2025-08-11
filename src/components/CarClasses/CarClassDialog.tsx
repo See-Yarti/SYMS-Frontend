@@ -1,5 +1,4 @@
 // src/components/CarClasses/CarClassDialog.tsx
-
 import * as React from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -8,185 +7,278 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
-import type { CarClass } from '@/pages/rate/CarClassesPage';
+import { Label } from '@/components/ui/label';
 
-const CATEGORIES = ['E - Economy', 'C - Compact', 'S - Standard', 'F - Fullsize'];
-const TYPES = ['C - 2/4 Door', 'S - SUV', 'V - Van'];
-const TRANSMISSIONS = ['A - Auto (drive unspec)', 'M - Manual'];
-const FUELS = ['R - Unspecified Fuel W', 'G - Gasoline', 'D - Diesel'];
-const OT_METHODS = ['Percentage', 'Fixed'];
-
-interface CarClassDialogProps {
-  open: boolean;
-  onClose: () => void;
-  onSave: (carClass: CarClass) => void;
-  editing: CarClass | null;
-  onDelete?: () => void;
-}
+const VEHICLE_SIZES = [
+  { code: 'M', name: 'Mini' }, { code: 'E', name: 'Economy' }, { code: 'C', name: 'Compact' },
+  { code: 'I', name: 'Intermediate' }, { code: 'S', name: 'Standard' }, { code: 'F', name: 'Full-size' },
+  { code: 'P', name: 'Premium' }, { code: 'L', name: 'Luxury' }, { code: 'X', name: 'Special' },
+];
+const BODY_TYPES = [
+  { code: 'C', name: 'Sedan/Hatchback' }, { code: 'R', name: 'SUV' }, { code: 'V', name: 'Van/MPV' },
+  { code: 'W', name: 'Wagon' }, { code: 'T', name: 'Convertible' }, { code: 'P', name: 'Pickup Truck' }, { code: 'E', name: 'Electric' },
+];
+const TRANSMISSION_TYPES = [
+  { code: 'A', name: 'Automatic' }, { code: 'M', name: 'Manual' }, { code: 'B', name: 'AWD/Auto' }, { code: 'D', name: '4WD/Manual' },
+];
+const FUEL_TYPES = [
+  { code: 'R', name: 'Petrol+AC' }, { code: 'N', name: 'Petrol' }, { code: 'D', name: 'Diesel' },
+  { code: 'E', name: 'Electric' }, { code: 'H', name: 'Hybrid' }, { code: 'L', name: 'CNG/LPG' },
+];
 
 export default function CarClassDialog({
   open,
   onClose,
   onSave,
   editing,
+  allCarClasses = [],
   onDelete,
-}: CarClassDialogProps) {
-  // Controlled state for fields (init from editing, else defaults)
-  const [enabled, setEnabled] = React.useState<boolean>(editing?.enabled ?? true);
-  const [code, setCode] = React.useState<string>(editing?.code ?? '');
-  const [category, setCategory] = React.useState<string>(editing?.category ?? CATEGORIES[0]);
-  const [type, setType] = React.useState<string>(editing?.type ?? TYPES[0]);
-  const [transmission, setTransmission] = React.useState<string>(editing?.transmission ?? TRANSMISSIONS[0]);
-  const [fuel, setFuel] = React.useState<string>(editing?.fuel ?? FUELS[0]);
-  const [make, setMake] = React.useState<string>(editing?.make ?? '');
-  const [model, setModel] = React.useState<string>(editing?.model ?? '');
-  const [description, setDescription] = React.useState<string>(editing?.description ?? '');
-  const [doors, setDoors] = React.useState<string>(editing?.doors?.toString() ?? '4');
-  const [passengers, setPassengers] = React.useState<string>(editing?.passengers?.toString() ?? '5');
-  const [baggages, setBaggages] = React.useState<string>(editing?.baggages?.toString() ?? '3');
-  const [automation, setAutomation] = React.useState<boolean>(editing?.automation ?? true);
-  const [overtimeDay, setOvertimeDay] = React.useState<string>(editing?.overtimeDay?.toString() ?? '50');
-  const [overtimeHour, setOvertimeHour] = React.useState<string>(editing?.overtimeHour?.toString() ?? '25');
-  const [otMethod, setOtMethod] = React.useState<string>(editing?.otMethod ?? OT_METHODS[0]);
-  const [deposit, setDeposit] = React.useState<string>(editing?.deposit?.toString() ?? '500');
-  const [customKeep, setCustomKeep] = React.useState<boolean>(editing?.customKeep ?? false);
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSave: (carClass: any) => void;
+  editing: any | null;
+  onDelete?: () => void;
+  allCarClasses?: any[];
+}) {
+  const [carClassCode, setCarClassCode] = React.useState(editing?.carClass?.name ?? editing?.code ?? '');
+  const [size, setSize] = React.useState<string>('');
+  const [body, setBody] = React.useState<string>('');
+  const [transmission, setTransmission] = React.useState<string>('');
+  const [fuel, setFuel] = React.useState<string>('');
+
+  const [make, setMake] = React.useState(editing?.make ?? '');
+  const [model, setModel] = React.useState(editing?.model ?? '');
+  const [description, setDescription] = React.useState(editing?.description ?? '');
+  const [numberOfDoors, setNumberOfDoors] = React.useState(editing?.numberOfDoors ?? 4);
+  const [numberOfPassengers, setNumberOfPassengers] = React.useState(editing?.numberOfPassengers ?? 5);
+  const [numberOfBags, setNumberOfBags] = React.useState(editing?.numberOfBags ?? 2);
+
+  const [automation, setAutomation] = React.useState(editing?.isAutomationEnabled ?? true);
+  const [overtimeDay, setOvertimeDay] = React.useState(editing?.overTimeAmountPerDay ?? '0.00');
+  const [overtimeHour, setOvertimeHour] = React.useState(editing?.overTimeAmountPerHour ?? '0.00');
+  const [deposit, setDeposit] = React.useState(editing?.depositAmount ?? '0.00');
+  const [customKeep, setCustomKeep] = React.useState(editing?.isCustomKeepDurationEnabled ?? false);
 
   React.useEffect(() => {
-    if (editing) {
-      setEnabled(editing.enabled);
-      setCode(editing.code);
-      setCategory(editing.category);
-      setType(editing.type);
-      setTransmission(editing.transmission);
-      setFuel(editing.fuel);
-      setMake(editing.make);
-      setModel(editing.model);
-      setDescription(editing.description);
-      setDoors(editing.doors?.toString());
-      setPassengers(editing.passengers?.toString());
-      setBaggages(editing.baggages?.toString());
-      setAutomation(editing.automation);
-      setOvertimeDay(editing.overtimeDay?.toString());
-      setOvertimeHour(editing.overtimeHour?.toString());
-      setOtMethod(editing.otMethod);
-      setDeposit(editing.deposit?.toString());
-      setCustomKeep(editing.customKeep);
+    if (carClassCode && carClassCode.length === 4) {
+      setSize(carClassCode[0]);
+      setBody(carClassCode[1]);
+      setTransmission(carClassCode[2]);
+      setFuel(carClassCode[3]);
     } else {
-      setEnabled(true);
-      setCode('');
-      setCategory(CATEGORIES[0]);
-      setType(TYPES[0]);
-      setTransmission(TRANSMISSIONS[0]);
-      setFuel(FUELS[0]);
-      setMake('');
-      setModel('');
-      setDescription('');
-      setDoors('4');
-      setPassengers('5');
-      setBaggages('3');
-      setAutomation(true);
-      setOvertimeDay('50');
-      setOvertimeHour('25');
-      setOtMethod(OT_METHODS[0]);
-      setDeposit('500');
-      setCustomKeep(false);
+      setSize('');
+      setBody('');
+      setTransmission('');
+      setFuel('');
+    }
+  }, [carClassCode]);
+
+  React.useEffect(() => {
+    setCarClassCode(editing?.carClass?.name ?? editing?.code ?? '');
+    setMake(editing?.make ?? '');
+    setModel(editing?.model ?? '');
+    setDescription(editing?.description ?? '');
+    setNumberOfDoors(editing?.numberOfDoors ?? 4);
+    setNumberOfPassengers(editing?.numberOfPassengers ?? 5);
+    setNumberOfBags(editing?.numberOfBags ?? 2);
+    setAutomation(editing?.isAutomationEnabled ?? true);
+    setOvertimeDay(editing?.overTimeAmountPerDay ?? '0.00');
+    setOvertimeHour(editing?.overTimeAmountPerHour ?? '0.00');
+    setDeposit(editing?.depositAmount ?? '0.00');
+    setCustomKeep(editing?.isCustomKeepDurationEnabled ?? false);
+
+    if (editing?.carClass?.name) {
+      setSize(editing.carClass.name[0]);
+      setBody(editing.carClass.name[1]);
+      setTransmission(editing.carClass.name[2]);
+      setFuel(editing.carClass.name[3]);
     }
   }, [editing, open]);
+
+  function labelForACRISS(code: string, arr: { code: string; name: string }[]) {
+    return arr.find(opt => opt.code === code)?.name || '';
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     onSave({
-      id: editing?.id ?? 0,
-      enabled, code, category, type, transmission, fuel,
-      make, model, description,
-      doors: Number(doors), passengers: Number(passengers), baggages: Number(baggages),
-      automation,
-      overtimeDay: Number(overtimeDay),
-      overtimeHour: Number(overtimeHour),
-      otMethod,
-      deposit: Number(deposit),
-      customKeep,
+      carClassId: allCarClasses.find(c => c.name === carClassCode)?.id || editing?.carClass?.id || '',
+      make,
+      model,
+      description,
+      numberOfDoors: Number(numberOfDoors),
+      numberOfPassengers: Number(numberOfPassengers),
+      numberOfBags: Number(numberOfBags),
+      overTimeAmountPerDay: overtimeDay,
+      overTimeAmountPerHour: overtimeHour,
+      depositAmount: deposit,
+      isAutomationEnabled: automation,
+      isCustomKeepDurationEnabled: customKeep,
     });
-    onClose();
   }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl bg-background text-foreground rounded-2xl shadow-xl">
+      <DialogContent className="max-w-2xl rounded-2xl shadow-xl border border-border bg-card text-card-foreground px-8 py-6">
         <DialogHeader>
-          <div className="flex justify-between items-center">
-            <DialogTitle className="text-2xl">{editing ? 'Update' : 'Add'} Car Class</DialogTitle>
-            <div className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-xl">
-              <span className="font-medium">Enabled</span>
-              <Checkbox checked={enabled} onCheckedChange={val => setEnabled(val === true)} />
-            </div>
+          <div className="flex justify-between items-center mb-2">
+            <DialogTitle className="text-2xl font-bold">{editing ? 'Update' : 'Add'} Car Class</DialogTitle>
           </div>
         </DialogHeader>
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input value={code} onChange={e => setCode(e.target.value)} placeholder="Car Class Code *" required />
-            <Input value={make} onChange={e => setMake(e.target.value)} placeholder="Make *" required />
-            <Input value={model} onChange={e => setModel(e.target.value)} placeholder="Model *" required />
-            <Input value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" />
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger><SelectValue placeholder="Category *" /></SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={type} onValueChange={setType}>
-              <SelectTrigger><SelectValue placeholder="Type *" /></SelectTrigger>
-              <SelectContent>
-                {TYPES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={transmission} onValueChange={setTransmission}>
-              <SelectTrigger><SelectValue placeholder="Transmission *" /></SelectTrigger>
-              <SelectContent>
-                {TRANSMISSIONS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={fuel} onValueChange={setFuel}>
-              <SelectTrigger><SelectValue placeholder="Fuel *" /></SelectTrigger>
-              <SelectContent>
-                {FUELS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Input value={doors} onChange={e => setDoors(e.target.value)} type="number" placeholder="Doors *" required />
-            <Input value={passengers} onChange={e => setPassengers(e.target.value)} type="number" placeholder="Passengers *" required />
-            <Input value={baggages} onChange={e => setBaggages(e.target.value)} type="number" placeholder="Baggage *" required />
-            <Input value={deposit} onChange={e => setDeposit(e.target.value)} type="number" placeholder="Deposit $" />
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Input value={overtimeDay} onChange={e => setOvertimeDay(e.target.value)} type="number" placeholder="OT/Day $" />
-            <Input value={overtimeHour} onChange={e => setOvertimeHour(e.target.value)} type="number" placeholder="OT/Hour $" />
-            <Select value={otMethod} onValueChange={setOtMethod}>
-              <SelectTrigger><SelectValue placeholder="OT Calculation" /></SelectTrigger>
-              <SelectContent>
-                {OT_METHODS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <div className="flex items-center gap-2">
-              <span className="font-medium">Automation</span>
-              <Checkbox checked={automation} onCheckedChange={val => setAutomation(val === true)} />
+            <div>
+              <Label className="mb-1">Car Class Code *</Label>
+              <Select
+                value={carClassCode}
+                onValueChange={setCarClassCode}
+              >
+                <SelectTrigger className="w-full bg-background border border-input rounded-md focus:ring-2 focus:ring-primary">
+                  <SelectValue placeholder="Select Car Class Code" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allCarClasses.map((cc) => (
+                    <SelectItem key={cc.id} value={cc.name}>
+                      <span className="font-mono font-bold">{cc.name}</span>
+                      {cc.description ? <span className="ml-2 text-xs text-muted-foreground">{cc.description}</span> : null}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="mb-1">Make *</Label>
+              <Input className="w-full bg-background border border-input rounded-md" value={make} onChange={e => setMake(e.target.value)} required />
+            </div>
+            <div>
+              <Label className="mb-1">Model *</Label>
+              <Input className="w-full bg-background border border-input rounded-md" value={model} onChange={e => setModel(e.target.value)} required />
+            </div>
+            <div>
+              <Label className="mb-1">Description</Label>
+              <Input className="w-full bg-background border border-input rounded-md" value={description} onChange={e => setDescription(e.target.value)} />
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="font-medium">Custom Keep Durations</span>
-            <Checkbox checked={customKeep} onCheckedChange={val => setCustomKeep(val === true)} />
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-muted px-3 py-3 rounded-xl border border-muted">
+            <div>
+              <Label className="mb-1">Vehicle Size *</Label>
+              <Input value={size ? `${size} - ${labelForACRISS(size, VEHICLE_SIZES)}` : ''} readOnly tabIndex={-1}
+                className="w-full bg-muted text-muted-foreground border border-input rounded-md cursor-not-allowed" />
+            </div>
+            <div>
+              <Label className="mb-1">Body Type *</Label>
+              <Input value={body ? `${body} - ${labelForACRISS(body, BODY_TYPES)}` : ''} readOnly tabIndex={-1}
+                className="w-full bg-muted text-muted-foreground border border-input rounded-md cursor-not-allowed" />
+            </div>
+            <div>
+              <Label className="mb-1">Transmission *</Label>
+              <Input value={transmission ? `${transmission} - ${labelForACRISS(transmission, TRANSMISSION_TYPES)}` : ''} readOnly tabIndex={-1}
+                className="w-full bg-muted text-muted-foreground border border-input rounded-md cursor-not-allowed" />
+            </div>
+            <div>
+              <Label className="mb-1">Fuel Type *</Label>
+              <Input value={fuel ? `${fuel} - ${labelForACRISS(fuel, FUEL_TYPES)}` : ''} readOnly tabIndex={-1}
+                className="w-full bg-muted text-muted-foreground border border-input rounded-md cursor-not-allowed" />
+            </div>
           </div>
-          <DialogFooter className="mt-8 gap-3 flex-row">
-            {editing && (
-              <Button type="button" variant="destructive" onClick={() => { onDelete?.(); onClose(); }}>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <Label className="mb-1">Doors *</Label>
+              <Input
+                type="number"
+                min={2}
+                className="w-full bg-background border border-input rounded-md"
+                value={numberOfDoors}
+                onChange={e => setNumberOfDoors(Number(e.target.value))}
+                required
+              />
+            </div>
+            <div>
+              <Label className="mb-1">Passengers *</Label>
+              <Input
+                type="number"
+                min={1}
+                className="w-full bg-background border border-input rounded-md"
+                value={numberOfPassengers}
+                onChange={e => setNumberOfPassengers(Number(e.target.value))}
+                required
+              />
+            </div>
+            <div>
+              <Label className="mb-1">Baggage *</Label>
+              <Input
+                type="number"
+                min={0}
+                className="w-full bg-background border border-input rounded-md"
+                value={numberOfBags}
+                onChange={e => setNumberOfBags(Number(e.target.value))}
+                required
+              />
+            </div>
+            <div>
+              <Label className="mb-1">Deposit Amount ($)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min={0}
+                className="w-full bg-background border border-input rounded-md"
+                value={deposit}
+                onChange={e => setDeposit(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <Label className="mb-1">OT/Day ($)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min={0}
+                className="w-full bg-background border border-input rounded-md"
+                value={overtimeDay}
+                onChange={e => setOvertimeDay(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <Label className="mb-1">OT/Hour ($)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min={0}
+                className="w-full bg-background border border-input rounded-md"
+                value={overtimeHour}
+                onChange={e => setOvertimeHour(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+            <div className="flex items-center gap-2 mt-6">
+              <Checkbox checked={automation} onCheckedChange={val => setAutomation(val === true)} id="automation-check" />
+              <Label htmlFor="automation-check" className="mb-0 cursor-pointer">Automation Enabled</Label>
+            </div>
+            <div className="flex items-center gap-2 mt-6">
+              <Checkbox checked={customKeep} onCheckedChange={val => setCustomKeep(val === true)} id="customkeep-check" />
+              <Label htmlFor="customkeep-check" className="mb-0 cursor-pointer">Custom Keep Duration</Label>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-8 gap-3 flex-row justify-end">
+            {editing && onDelete && (
+              <Button type="button" variant="destructive" onClick={onDelete} className="mr-auto">
                 Delete
               </Button>
             )}
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit" variant="default">{editing ? "Save" : "Add"}</Button>
+            <Button type="button" variant="outline" onClick={onClose} className="font-semibold">
+              Cancel
+            </Button>
+            <Button type="submit" variant="default" className="font-semibold">
+              {editing ? "Save" : "Add"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

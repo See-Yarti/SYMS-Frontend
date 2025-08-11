@@ -1,3 +1,5 @@
+// src/main.tsx
+
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import { PersistGate } from 'redux-persist/integration/react';

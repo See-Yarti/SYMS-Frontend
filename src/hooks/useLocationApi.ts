@@ -1,3 +1,5 @@
+// src/hoo/useLocationApi.ts:
+
 import { axiosInstance } from '@/lib/API';
 import {
   useQuery,
