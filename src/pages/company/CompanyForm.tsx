@@ -240,7 +240,17 @@ const RegisterForm: React.FC = () => {
 
     // ***** ADD THIS RIGHT HERE *****
     useEffect(() => {
-        const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
+        const googleMapsApiKey = import.meta.env.GOOGLE_MAPS_API_KEY;
+        // const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+        // const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
+
+
+        // if (!googleMapsApiKey) {
+        //     console.error('VITE_GOOGLE_MAPS_API_KEY is missing');
+        //     toast.error('Google Maps API key is missing. Please set VITE_GOOGLE_MAPS_API_KEY.');
+        //     return;
+        // }
+
 
         if (window.google && window.google.maps && window.google.maps.places) {
             setGoogleMapsLoaded(true);
@@ -249,6 +259,7 @@ const RegisterForm: React.FC = () => {
 
         const script = document.createElement('script');
         script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places&loading=async`;
+
         script.async = true;
         script.defer = true;
 
@@ -725,7 +736,7 @@ const RegisterForm: React.FC = () => {
                                                 onChange={field.onChange}
                                                 onPlaceSelected={handleAddressSelect}
                                                 placeholder="LDA Avenue I, Block C, plot#1088"
-                                                countryCode={selectedCountry || 'ae'} // <--- Add this line
+                                                countryCode={(selectedCountry || 'AE').toUpperCase()}
                                             />
 
                                         )}

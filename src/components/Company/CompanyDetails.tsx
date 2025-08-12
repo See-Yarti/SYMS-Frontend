@@ -201,7 +201,10 @@ const CompanyDetail = () => {
 
     // Load Google Maps API
     useEffect(() => {
-        const googleMapsApiKey = 'AIzaSyArcZmUlh5K8iNrlcPKlu53mis0MPe5hfI';
+        const googleMapsApiKey = import.meta.env.GOOGLE_MAPS_API_KEY;
+        // const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
+        // const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
+
 
         if (window.google && window.google.maps && window.google.maps.places) {
             setGoogleMapsLoaded(true);
@@ -732,7 +735,7 @@ const CompanyDetail = () => {
                         <h3 className="font-medium mb-2">Inactive Locations</h3>
                         <div className="space-y-3">
                             {locations.inactiveLocations.map((location) => (
-                                <div key={location.id} className="border rounded p-4 bg-gray-50">
+                                <div key={location.id} className="border rounded p-4">
                                     <div className="flex justify-between items-start">
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2">

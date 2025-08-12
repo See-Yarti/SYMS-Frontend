@@ -149,30 +149,6 @@ export const useAddOperator = () => {
   });
 };
 
-export const useUpdateOperator = () => {
-  return useMutation<
-    Operator,
-    Error,
-    { operatorId: string; payload: UpdateOperatorPayload }
-  >({
-    mutationFn: async ({ payload }) => {
-      const formData = new FormData();
-      if (payload.name) formData.append('name', payload.name);
-      if (payload.avatar) formData.append('avatar', payload.avatar);
-      if (payload.phoneNumber)
-        formData.append('phoneNumber', payload.phoneNumber);
-      if (payload.gender) formData.append('gender', payload.gender);
-
-      const { data } = await axiosInstance.patch(`/operator/update`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      return data.data.data.operator;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['operators'] });
-    },
-  });
-};
 
 // Update operator password --> Profile Page
 export const useUpdateOperatorPassword = () => {
@@ -205,5 +181,85 @@ export const useGetUserByEmail = (email: string) => {
     retry: false,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
+  });
+};
+
+export const useUpdateOperator = () => {
+  return useMutation<
+    Operator,
+    Error,
+    { operatorId: string; payload: UpdateOperatorPayload }
+  >({
+    mutationFn: async ({ payload }) => {
+      const formData = new FormData();
+      if (payload.name) formData.append('name', payload.name);
+      if (payload.avatar) formData.append('avatar', payload.avatar);
+      if (payload.phoneNumber)
+        formData.append('phoneNumber', payload.phoneNumber);
+      if (payload.gender) formData.append('gender', payload.gender);
+
+      const { data } = await axiosInstance.patch(`/operator/update`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return data.data.data.operator;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['operators'] });
+    },
+  });
+};
+
+// ===== Admin profile update hook =====
+type UpdateAdminPayload = {
+  name?: string;
+  phoneNumber?: string;
+  gender?: string;
+  avatar?: File;
+};
+
+export const useUpdateAdmin = () => {
+  return useMutation<
+    User,
+    Error,
+    { payload: UpdateAdminPayload }
+  >({
+    mutationFn: async ({ payload }) => {
+      const formData = new FormData();
+      if (payload.name) formData.append('name', payload.name);
+      if (payload.avatar) formData.append('avatar', payload.avatar);
+      if (payload.phoneNumber) formData.append('phoneNumber', payload.phoneNumber);
+      if (payload.gender) formData.append('gender', payload.gender);
+
+      // Explicit absolute URL per requirement
+      const { data } = await axiosInstance.patch(
+        'http://localhost:3000/api/admin/update',
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+
+      // Assuming a similar response shape to operator update; adjust if your API differs
+      return data?.data?.user ?? data?.data?.data?.user ?? data?.user;
+    },
+  });
+};
+
+// ===== Admin password update hook =====
+export const useUpdateAdminPassword = () => {
+  return useMutation<
+    { success?: boolean; message?: string },
+    Error,
+    { previousPassword: string; newPassword: string }
+  >({
+    mutationFn: async ({ previousPassword, newPassword }) => {
+      const { data } = await axiosInstance.patch(
+        'http://localhost:3000/api/admin/update-password',
+        { previousPassword, newPassword }
+      );
+      // Normalize a bit just in case the API shape differs
+      return data?.data ?? data;
+    },
+    onError: (err) => {
+      console.error('Admin password update failed:', err.message);
+    },
   });
 };

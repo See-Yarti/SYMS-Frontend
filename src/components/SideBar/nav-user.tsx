@@ -44,7 +44,6 @@ export function NavUser() {
   const handleLogout = async () => {
     try {
       localStorage.removeItem('persist:root');
-      localStorage.removeItem('theme');
       await dispatch(logoutUser()).unwrap();
       navigate('/auth/login');
     } catch (error) {
@@ -109,7 +108,7 @@ export function NavUser() {
               </div>
             )}
             <DropdownMenuGroup>
-              <Link to={'/profile'} className="w-full">
+              <Link to={'/settings/profile-update'} className="w-full">
                 <DropdownMenuItem>
                   <UserPen className="mr-2 h-4 w-4" />
                   Profile

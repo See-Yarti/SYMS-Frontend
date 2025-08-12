@@ -1,11 +1,12 @@
 // src/pages/profile/Profile.tsx
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useAppSelector } from '@/store';
-import { useUpdateOperatorPassword, useGetUserByEmail } from '@/hooks/useOperatorApi';
+import { useUpdateOperatorPassword, useGetUserByEmail, useUpdateAdminPassword } from '@/hooks/useOperatorApi';
 import { ChevronLeft, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AxiosError } from 'axios';
@@ -33,7 +34,8 @@ const Profile = () => {
 
   const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
 
-  const { mutate: updatePassword, isPending: isUpdatingPassword } = useUpdateOperatorPassword();
+  const { mutate: updateOperatorPassword, isPending: isUpdatingOperator } = useUpdateOperatorPassword();
+  const { mutate: updateAdminPassword, isPending: isUpdatingAdmin } = useUpdateAdminPassword();
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -61,39 +63,47 @@ const Profile = () => {
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validatePasswordForm()) return;
-    updatePassword(
-      {
-        previousPassword: passwordData.previousPassword,
-        newPassword: passwordData.newPassword
+
+    const variables = {
+      previousPassword: passwordData.previousPassword,
+      newPassword: passwordData.newPassword
+    };
+
+    const commonCallbacks = {
+      onSuccess: () => {
+        toast.success('Password updated successfully');
+        setPasswordData({
+          previousPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
       },
-      {
-        onSuccess: () => {
-          toast.success('Password updated successfully');
-          setPasswordData({
-            previousPassword: '',
-            newPassword: '',
-            confirmPassword: ''
+      onError: (error: unknown) => {
+        const backendError = error as AxiosError<{
+          message?: string;
+          errors?: Array<{ field: string; constraints: string[] }>;
+        }>;
+        if (backendError.response?.data?.errors) {
+          const errorMap: Record<string, string> = {};
+          backendError.response.data.errors.forEach((err) => {
+            errorMap[err.field] = err.constraints.join(', ');
           });
-        },
-        onError: (error: unknown) => {
-          const backendError = error as AxiosError<{
-            message?: string;
-            errors?: Array<{ field: string; constraints: string[] }>;
-          }>;
-          if (backendError.response?.data?.errors) {
-            const errorMap: Record<string, string> = {};
-            backendError.response.data.errors.forEach((err) => {
-              errorMap[err.field] = err.constraints.join(', ');
-            });
-            setPasswordErrors(errorMap);
-          }
-          toast.error(
-            backendError.response?.data?.message || 'Failed to update password'
-          );
+          setPasswordErrors(errorMap);
         }
+        toast.error(
+          backendError.response?.data?.message || 'Failed to update password'
+        );
       }
-    );
+    };
+
+    if (user?.role === 'admin') {
+      updateAdminPassword(variables, commonCallbacks);
+    } else {
+      updateOperatorPassword(variables, commonCallbacks);
+    }
   };
+
+  const isUpdating = isUpdatingOperator || isUpdatingAdmin;
 
   if (isLoading && !user) {
     return (
@@ -241,10 +251,10 @@ const Profile = () => {
             </div>
             <Button
               type="submit"
-              disabled={isUpdatingPassword}
+              disabled={isUpdating}
               className="w-full mt-3"
             >
-              {isUpdatingPassword ? 'Updating...' : 'Update Password'}
+              {isUpdating ? 'Updating...' : 'Update Password'}
             </Button>
           </form>
         </div>

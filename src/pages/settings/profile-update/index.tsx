@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useUpdateOperator, useGetUserByEmail } from '@/hooks/useOperatorApi';
+import { useUpdateOperator, useGetUserByEmail, useUpdateAdmin } from '@/hooks/useOperatorApi';
 import { useAppSelector } from '@/store';
 
 // Validation schema
@@ -36,7 +36,8 @@ export default function ProfileUpdate() {
   // Get the actual user data from the API response
   const user = data?.data?.user;
 
-  const { mutate: updateOperator, isPending } = useUpdateOperator();
+  const { mutate: updateOperator, isPending: isPendingOperator } = useUpdateOperator();
+  const { mutate: updateAdmin, isPending: isPendingAdmin } = useUpdateAdmin();
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -68,6 +69,7 @@ export default function ProfileUpdate() {
       gender: values.gender,
       avatar: values.avatar && values.avatar.length > 0 ? values.avatar[0] : undefined,
     };
+
     const hasChanges =
       values.name !== user.name ||
       values.phoneNumber !== user.phoneNumber ||
@@ -78,18 +80,24 @@ export default function ProfileUpdate() {
       toast.info('No changes detected');
       return;
     }
-    updateOperator(
-      { operatorId: user.id, payload }, // Pass the user.id from API as operatorId
-      {
-        onSuccess: () => {
-          toast.success('Profile updated successfully');
-          refetch();
-        },
-        onError: (error: any) => {
-          toast.error(error.message || 'Failed to update profile');
-        },
-      }
-    );
+
+    const commonCallbacks = {
+      onSuccess: () => {
+        toast.success('Profile updated successfully');
+        refetch();
+      },
+      onError: (error: any) => {
+        toast.error(error?.message || 'Failed to update profile');
+      },
+    };
+
+    if (user.role === 'admin') {
+      // Hit admin update endpoint
+      updateAdmin({ payload }, commonCallbacks);
+    } else {
+      // Default to operator flow
+      updateOperator({ operatorId: user.id, payload }, commonCallbacks);
+    }
   };
 
   if (!email) {
@@ -116,7 +124,7 @@ export default function ProfileUpdate() {
     );
   }
 
-    const displayRole =
+  const displayRole =
     user.role === 'operator' && otherInfo?.operatorRole
       ? otherInfo.operatorRole
       : user.role;
@@ -125,6 +133,8 @@ export default function ProfileUpdate() {
     .split(/(?=[A-Z])/)
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
+
+  const isSubmitting = isPendingOperator || isPendingAdmin;
 
   return (
     <div className="p-6">
@@ -225,8 +235,8 @@ export default function ProfileUpdate() {
           />
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={isPending}>
-              {isPending ? 'Updating...' : 'Update Profile'}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Updating...' : 'Update Profile'}
             </Button>
           </div>
         </form>

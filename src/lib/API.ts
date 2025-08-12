@@ -101,7 +101,7 @@ axiosInstance.interceptors.response.use(
         setTimeout(() => {
           // Also clear localStorage, just in case
           localStorage.removeItem('persist:root');
-          localStorage.removeItem('theme');
+          // localStorage.removeItem('theme');
           window.location.href = '/auth/login';
         }, 500);
         return Promise.reject(refreshError);
