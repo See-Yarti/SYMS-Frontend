@@ -96,7 +96,7 @@ const OperatorRegister: React.FC = () => {
     addOperator(dataToSend, {
       onSuccess: () => {
         toast.success('Operator registered successfully');
-        navigate('/operators');
+        // navigate('/operators');
       },
       onError: (error: unknown) => {
         console.error('Registration error:', error);

@@ -151,9 +151,7 @@ const LocationAutocomplete = React.forwardRef<HTMLInputElement, LocationAutocomp
             });
         };
 
-        const handleMapSelection = () => {
-            toast.info('Map selection would open here in a full implementation');
-        };
+      
 
         return (
             <div className="relative w-full">
@@ -171,16 +169,6 @@ const LocationAutocomplete = React.forwardRef<HTMLInputElement, LocationAutocomp
                         onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
                     />
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6"
-                        onClick={handleMapSelection}
-                        title="Select from map"
-                    >
-                        <MapPin className="h-4 w-4" />
-                    </Button>
                 </div>
 
                 {showSuggestions && suggestions.length > 0 && (
@@ -212,7 +200,6 @@ const RegisterForm: React.FC = () => {
     }>('/company/create');
     const [uploadProgress, setUploadProgress] = useState(0);
     const countryList: CountryType[] = Country.getAllCountries();
-    const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
 
     const {
         register,
@@ -238,46 +225,7 @@ const RegisterForm: React.FC = () => {
     const selectedCountry = watch('companyAddress.country');
     const selectedState = watch('companyAddress.state');
 
-    // ***** ADD THIS RIGHT HERE *****
-    useEffect(() => {
-        const googleMapsApiKey = import.meta.env.GOOGLE_MAPS_API_KEY;
-        // const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
-        // const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
-
-
-        // if (!googleMapsApiKey) {
-        //     console.error('VITE_GOOGLE_MAPS_API_KEY is missing');
-        //     toast.error('Google Maps API key is missing. Please set VITE_GOOGLE_MAPS_API_KEY.');
-        //     return;
-        // }
-
-
-        if (window.google && window.google.maps && window.google.maps.places) {
-            setGoogleMapsLoaded(true);
-            return;
-        }
-
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places&loading=async`;
-
-        script.async = true;
-        script.defer = true;
-
-        script.onload = () => {
-            setGoogleMapsLoaded(true);
-        };
-
-        script.onerror = () => {
-            console.error('Failed to load Google Maps script');
-            toast.error('Failed to load Google Maps. Please refresh the page.');
-        };
-
-        document.head.appendChild(script);
-
-        return () => {
-            document.head.removeChild(script);
-        };
-    }, []);
+ 
 
     const handleAddressSelect = (place: any) => {
         if (!place.geometry || !place.address_components) return;
@@ -408,17 +356,6 @@ const RegisterForm: React.FC = () => {
 
     return (
         <div className="max-w-4xl mx-auto p-4 md:p-6">
-            {!googleMapsLoaded && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-lg shadow-lg">
-                        <p className="text-lg font-medium">Loading Google Maps...</p>
-                        <div className="mt-4 flex justify-center">
-                            <Icons.spinner className="h-8 w-8 animate-spin" />
-                        </div>
-                    </div>
-                </div>
-            )}
-
             <form onSubmit={handleSubmit(handleRegister)} className="space-y-8">
                 {/* Operator Information Section */}
                 <Card className="border border-gray-200 shadow-sm">
