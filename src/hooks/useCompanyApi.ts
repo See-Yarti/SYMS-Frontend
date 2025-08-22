@@ -1,3 +1,5 @@
+// src/hooks/useCompanyApi.ts:
+
 import { axiosInstance } from '@/lib/API';
 import {
   useQuery,

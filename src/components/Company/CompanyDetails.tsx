@@ -1,7 +1,18 @@
+// src/components/Company/CompanyDetails.tsx
+
 import { useState, useEffect, useRef } from 'react';
+import { queryClient } from '@/hooks/useCompanyApi';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import {
+    useGetCompanySettings,
+    useGetPlanConfigs,
+    useEnsureDefaultPlans,
+    useSetCommissionOverride,
+    useStartCompanySubscription,
+} from '@/hooks/usePlansApi';
+import { Separator } from '@/components/ui/separator';
 import {
     Dialog,
     DialogContent,
@@ -68,12 +79,8 @@ const LocationAutocomplete = React.forwardRef<HTMLInputElement, LocationAutocomp
         const autocompleteService = useRef<any>(null);
 
         useEffect(() => {
-            if (!window.google || !window.google.maps || !window.google.maps.places) {
-                return;
-            }
-
+            if (!window.google || !window.google.maps || !window.google.maps.places) return;
             autocompleteService.current = new window.google.maps.places.AutocompleteService();
-
             return () => {
                 autocompleteService.current = null;
             };
@@ -104,7 +111,6 @@ const LocationAutocomplete = React.forwardRef<HTMLInputElement, LocationAutocomp
 
         const handleSelectSuggestion = (place: any) => {
             const placesService = new window.google.maps.places.PlacesService(document.createElement('div'));
-
             placesService.getDetails({ placeId: place.place_id }, (result: any, status: string) => {
                 if (status === window.google.maps.places.PlacesServiceStatus.OK) {
                     onChange(result.name || result.formatted_address);
@@ -114,9 +120,7 @@ const LocationAutocomplete = React.forwardRef<HTMLInputElement, LocationAutocomp
             });
         };
 
-        const handleMapSelection = () => {
-            toast.info('Map selection would open here in a full implementation');
-        };
+        const handleMapSelection = () => toast.info('Map selection would open here in a full implementation');
 
         return (
             <div className="relative w-full">
@@ -155,9 +159,7 @@ const LocationAutocomplete = React.forwardRef<HTMLInputElement, LocationAutocomp
                                 onMouseDown={() => handleSelectSuggestion(suggestion)}
                             >
                                 <div className="font-medium">{suggestion.structured_formatting.main_text}</div>
-                                <div className="text-sm text-muted-foreground">
-                                    {suggestion.structured_formatting.secondary_text}
-                                </div>
+                                <div className="text-sm text-muted-foreground">{suggestion.structured_formatting.secondary_text}</div>
                             </li>
                         ))}
                     </ul>
@@ -166,7 +168,7 @@ const LocationAutocomplete = React.forwardRef<HTMLInputElement, LocationAutocomp
         );
     }
 );
-LocationAutocomplete.displayName = "LocationAutocomplete";
+LocationAutocomplete.displayName = 'LocationAutocomplete';
 
 const CompanyDetail = () => {
     const { companyId } = useParams<{ companyId: string }>();
@@ -187,7 +189,44 @@ const CompanyDetail = () => {
     const [, setGoogleMapsLoaded] = useState(false);
     const countryList = Country.getAllCountries();
 
-    // Location form state
+    // Stable id before company fetch resolves
+    const safeCompanyId = companyId || '';
+
+    const { data: settingsRes, refetch: refetchSettings, isLoading: settingsLoading } = useGetCompanySettings(safeCompanyId);
+    const { data: planConfigs, isLoading: planLoading } = useGetPlanConfigs();
+    const ensureDefaults = useEnsureDefaultPlans();
+
+    const setOverride = useSetCommissionOverride(safeCompanyId);
+    const startSub = useStartCompanySubscription(safeCompanyId);
+
+    const [selectedTier, setSelectedTier] = useState<'BASIC' | 'GOLD' | 'PREMIUM' | 'DIAMOND'>('BASIC');
+    const [subscriptionDays, setSubscriptionDays] = useState<number>(30);
+    const [subscriptionMode, setSubscriptionMode] = useState<'startNow' | 'startAfterCurrent'>('startNow');
+    const [subscriptionNote, setSubscriptionNote] = useState<string>('');
+
+    // Prefer settings API; fall back to company
+    const baseRate =
+        settingsRes?.data.baseCommissionRate ??
+        (companyData?.data?.company as any)?.baseCommissionRate ??
+        '—';
+
+    const effectiveRate = settingsRes?.data.settings.effectiveCommissionRate ?? baseRate;
+
+    const [overrideRate, setOverrideRate] = useState<string>('');
+    const [overrideEndsAt, setOverrideEndsAt] = useState<string>('2099-01-01T00:00:00Z');
+
+    useEffect(() => {
+        ensureDefaults.mutate(undefined, {
+            onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plan-configs'] }),
+        });
+
+        if (settingsRes?.data.settings.currentTier) setSelectedTier(settingsRes.data.settings.currentTier);
+        if (settingsRes?.data.settings.overrideCommissionRate) setOverrideRate(settingsRes.data.settings.overrideCommissionRate);
+        if (settingsRes?.data.settings.overrideEndsAt) setOverrideEndsAt(settingsRes.data.settings.overrideEndsAt);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [settingsRes?.timestamp]);
+
+    // Location form
     const [locationForm, setLocationForm] = useState({
         title: '',
         city: '',
@@ -196,18 +235,13 @@ const CompanyDetail = () => {
         addressLine: '',
         longitude: 25.2048,
         latitude: 55.2708,
-        isAirportZone: false
+        isAirportZone: false,
     });
 
     // Load Google Maps API
     useEffect(() => {
-        // const googleMapsApiKey = import.meta.env.GOOGLE_MAPS_API_KEY;
-        // const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
-        // const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
-        const googleMapsApiKey = 'AIzaSyD44ENTOnnWT6hMuuXAmtHakGRoOvkCozA';
-        console.log("API Key is => ", googleMapsApiKey);
-
-
+        const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+        console.log("The Google Api Key : ", googleMapsApiKey);
 
         if (window.google && window.google.maps && window.google.maps.places) {
             setGoogleMapsLoaded(true);
@@ -218,29 +252,15 @@ const CompanyDetail = () => {
         script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places&loading=async`;
         script.async = true;
         script.defer = true;
-
-        script.onload = () => {
-            setGoogleMapsLoaded(true);
-        };
-
-        script.onerror = () => {
-            //   console.error('Failed to load Google Maps script');
-            toast.error('Failed to load Google Maps. Please refresh the page.');
-        };
-
+        script.onload = () => setGoogleMapsLoaded(true);
+        script.onerror = () => toast.error('Failed to load Google Maps. Please refresh the page.');
         document.head.appendChild(script);
-
         return () => {
             document.head.removeChild(script);
         };
     }, []);
 
-    useEffect(() => {
-        console.log('Current location form:', locationForm);
-    }, [locationForm]);
-
     const handleAddressSelect = (place: any) => {
-        console.log('Google Places response:', place);
         if (!place.geometry || !place.address_components) return;
 
         let streetNumber = '';
@@ -250,58 +270,39 @@ const CompanyDetail = () => {
         let country = '';
         const title = place.name || '';
 
-        // Extract address components
         place.address_components.forEach((comp: any) => {
             const componentTypes = comp.types;
-
-            if (componentTypes.includes('street_number')) {
-                streetNumber = comp.long_name;
-            }
-            if (componentTypes.includes('route')) {
-                route = comp.long_name;
-            }
-            if (componentTypes.includes('locality') || componentTypes.includes('postal_town')) {
-                city = comp.long_name;
-            }
+            if (componentTypes.includes('street_number')) streetNumber = comp.long_name;
+            if (componentTypes.includes('route')) route = comp.long_name;
+            if (componentTypes.includes('locality') || componentTypes.includes('postal_town')) city = comp.long_name;
             if (componentTypes.includes('administrative_area_level_1')) {
-                // Try to find matching state in our database
                 const countryStates = State.getStatesOfCountry(locationForm.country);
-                const matchedState = countryStates.find(s =>
-                    s.name === comp.long_name || s.isoCode === comp.short_name
-                );
+                const matchedState = countryStates.find((s) => s.name === comp.long_name || s.isoCode === comp.short_name);
                 state = matchedState?.isoCode || comp.short_name || comp.long_name;
             }
             if (componentTypes.includes('country')) {
-                const countryObj = Country.getAllCountries().find(c =>
-                    c.name === comp.long_name || c.isoCode === comp.short_name
-                );
-                if (countryObj) {
-                    country = countryObj.isoCode;
-                }
+                const countryObj = Country.getAllCountries().find((c) => c.name === comp.long_name || c.isoCode === comp.short_name);
+                if (countryObj) country = countryObj.isoCode;
             }
         });
 
-        // Fallback for city if not found in components
         if (!city && place.formatted_address) {
             const addressParts = place.formatted_address.split(',');
-            if (addressParts.length > 1) {
-                city = addressParts[addressParts.length - 2].trim();
-            }
+            if (addressParts.length > 1) city = addressParts[addressParts.length - 2].trim();
         }
 
-        setLocationForm(prev => ({
+        setLocationForm((prev) => ({
             ...prev,
-            title: title || prev.title,  // Use place name as title if available
+            title: title || prev.title,
             addressLine: `${streetNumber} ${route}`.trim(),
             city: city || prev.city,
             state: state || prev.state,
             country: country || prev.country,
             longitude: place.geometry.location.lng(),
-            latitude: place.geometry.location.lat()
+            latitude: place.geometry.location.lat(),
         }));
     };
 
-    // Add these inside the component
     const handleCountryChange = (value: string) => {
         const country = Country.getCountryByCode(value);
         setLocationForm({
@@ -309,7 +310,7 @@ const CompanyDetail = () => {
             country: value,
             state: '',
             city: '',
-            title: locationForm.title || country?.name || ''
+            title: locationForm.title || country?.name || '',
         });
     };
 
@@ -319,7 +320,7 @@ const CompanyDetail = () => {
             ...locationForm,
             state: value,
             city: '',
-            title: locationForm.title || stateObj?.name || ''
+            title: locationForm.title || stateObj?.name || '',
         });
     };
 
@@ -327,10 +328,9 @@ const CompanyDetail = () => {
         setLocationForm({
             ...locationForm,
             city: value,
-            title: locationForm.title || value || ''
+            title: locationForm.title || value || '',
         });
     };
-
 
     const handleVerify = () => {
         if (!companyId) return;
@@ -339,24 +339,16 @@ const CompanyDetail = () => {
                 toast.success('Company verified successfully');
                 refetch();
             },
-            onError: (error) => {
-                toast.error('Failed to verify company', {
-                    description: error.message,
-                });
-            },
+            onError: (err) => toast.error('Failed to verify company', { description: err.message }),
         });
     };
 
     const handleUnverifySubmit = () => {
         if (!companyId) return;
-
         unverifyCompany.mutate(
             {
                 companyId,
-                payload: {
-                    unverifiedReason,
-                    unverifiedReasonDescription,
-                },
+                payload: { unverifiedReason, unverifiedReasonDescription },
             },
             {
                 onSuccess: () => {
@@ -366,29 +358,16 @@ const CompanyDetail = () => {
                     setUnverifiedReasonDescription('');
                     refetch();
                 },
-                onError: (error) => {
-                    toast.error('Failed to unverify company', {
-                        description: error.message,
-                    });
-                },
+                onError: (err) => toast.error('Failed to unverify company', { description: err.message }),
             }
         );
     };
 
     const handleCreateLocation = () => {
         if (!companyId) return;
-
-        // Transform country code to name before sending
         const countryName = Country.getCountryByCode(locationForm.country)?.name || locationForm.country;
-
         createLocation.mutate(
-            {
-                companyId,
-                payload: {
-                    ...locationForm,
-                    country: countryName // Send country name instead of code
-                }
-            },
+            { companyId, payload: { ...locationForm, country: countryName } },
             {
                 onSuccess: () => {
                     toast.success('Location created successfully');
@@ -401,33 +380,21 @@ const CompanyDetail = () => {
                         addressLine: '',
                         longitude: 25.2048,
                         latitude: 55.2708,
-                        isAirportZone: false
+                        isAirportZone: false,
                     });
                     refetchLocations();
                 },
-                onError: (error) => {
-                    toast.error('Failed to create location', {
-                        description: error.message,
-                    });
-                },
+                onError: (err) => toast.error('Failed to create location', { description: err.message }),
             }
         );
     };
 
     const handleUpdateLocation = () => {
         if (!currentLocation?.id) return;
-
-        // Transform country code to name before sending
         const countryName = Country.getCountryByCode(locationForm.country)?.name || locationForm.country;
 
         updateLocation.mutate(
-            {
-                id: currentLocation.id,
-                payload: {
-                    ...locationForm,
-                    country: countryName // Send country name instead of code
-                }
-            },
+            { id: currentLocation.id, payload: { ...locationForm, country: countryName } },
             {
                 onSuccess: () => {
                     toast.success('Location updated successfully');
@@ -441,15 +408,11 @@ const CompanyDetail = () => {
                         addressLine: '',
                         longitude: 25.2048,
                         latitude: 55.2708,
-                        isAirportZone: false
+                        isAirportZone: false,
                     });
                     refetchLocations();
                 },
-                onError: (error) => {
-                    toast.error('Failed to update location', {
-                        description: error.message,
-                    });
-                },
+                onError: (err) => toast.error('Failed to update location', { description: err.message }),
             }
         );
     };
@@ -460,22 +423,13 @@ const CompanyDetail = () => {
                 toast.success('Location status updated');
                 refetchLocations();
             },
-            onError: (error) => {
-                toast.error('Failed to update location status', {
-                    description: error.message,
-                });
-            },
+            onError: (err) => toast.error('Failed to update location status', { description: err.message }),
         });
     };
 
     const openEditLocationDialog = (location: Location) => {
         setCurrentLocation(location);
-
-        // Convert country name back to code when editing
-        const countryCode = Country.getAllCountries().find(c =>
-            c.name === location.country
-        )?.isoCode || 'AE';
-
+        const countryCode = Country.getAllCountries().find((c) => c.name === location.country)?.isoCode || 'AE';
         setLocationForm({
             title: location.title,
             city: location.city,
@@ -484,7 +438,7 @@ const CompanyDetail = () => {
             addressLine: location.addressLine,
             longitude: parseFloat(location.longitude),
             latitude: parseFloat(location.latitude),
-            isAirportZone: location.isAirportZone
+            isAirportZone: location.isAirportZone,
         });
         setIsEditLocationDialogOpen(true);
     };
@@ -501,13 +455,8 @@ const CompanyDetail = () => {
         return (
             <div className="rounded-lg border border-destructive p-4 text-destructive">
                 <p>Error loading company details:</p>
-                <p className="font-medium">{error.message}</p>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-2"
-                    onClick={() => refetch()}
-                >
+                <p className="font-medium">{(error as any).message}</p>
+                <Button variant="outline" size="sm" className="mt-2" onClick={() => refetch()}>
                     Retry
                 </Button>
             </div>
@@ -531,20 +480,18 @@ const CompanyDetail = () => {
 
     return (
         <div className="space-y-6">
+            {/* Header */}
             <div className="flex justify-between items-start gap-4">
                 <div>
                     <h1 className="text-2xl font-bold">{company.name}</h1>
                     <p className="text-muted-foreground">{company.description}</p>
                 </div>
-
-                <Badge
-                    variant={company.isVerified ? 'default' : 'secondary'}
-                    className="ml-2"
-                >
+                <Badge variant={company.isVerified ? 'default' : 'secondary'} className="ml-2">
                     {company.isVerified ? 'Verified' : 'Not Verified'}
                 </Badge>
             </div>
 
+            {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="border rounded-lg p-4">
                     <h2 className="text-lg font-semibold mb-4">Company Details</h2>
@@ -584,93 +531,52 @@ const CompanyDetail = () => {
                 <div className="border rounded-lg p-4">
                     <h2 className="text-lg font-semibold mb-4">Documents</h2>
                     <div className="space-y-4">
-                        {company.taxFile ? (
-                            <div>
-                                <p className="text-sm text-muted-foreground">Tax File</p>
-                                <a
-                                    href={company.taxFile}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-primary hover:underline inline-flex items-center"
-                                >
+                        <div>
+                            <p className="text-sm text-muted-foreground">Tax File</p>
+                            {company.taxFile ? (
+                                <a href={company.taxFile} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center">
                                     View Tax File
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="16"
-                                        height="16"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        className="ml-1"
-                                    >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1">
                                         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
                                         <polyline points="15 3 21 3 21 9"></polyline>
                                         <line x1="10" y1="14" x2="21" y2="3"></line>
                                     </svg>
                                 </a>
-                            </div>
-                        ) : (
-                            <div>
-                                <p className="text-sm text-muted-foreground">Tax File</p>
+                            ) : (
                                 <p className="text-muted-foreground">Not provided</p>
-                            </div>
-                        )}
+                            )}
+                        </div>
 
-                        {company.tradeLicenseFile ? (
-                            <div>
-                                <p className="text-sm text-muted-foreground">Trade License</p>
-                                <a
-                                    href={company.tradeLicenseFile}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-primary hover:underline inline-flex items-center"
-                                >
+                        <div>
+                            <p className="text-sm text-muted-foreground">Trade License</p>
+                            {company.tradeLicenseFile ? (
+                                <a href={company.tradeLicenseFile} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center">
                                     View Trade License
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="16"
-                                        height="16"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        className="ml-1"
-                                    >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ml-1">
                                         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
                                         <polyline points="15 3 21 3 21 9"></polyline>
                                         <line x1="10" y1="14" x2="21" y2="3"></line>
                                     </svg>
                                 </a>
-                            </div>
-                        ) : (
-                            <div>
-                                <p className="text-sm text-muted-foreground">Trade License</p>
+                            ) : (
                                 <p className="text-muted-foreground">Not provided</p>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Locations Section with Accordion */}
+            {/* Locations */}
             <div className="border rounded-lg p-4">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-lg font-semibold">Locations</h2>
-                    <Button
-                        size="sm"
-                        onClick={() => setIsLocationDialogOpen(true)}
-                    >
+                    <Button size="sm" onClick={() => setIsLocationDialogOpen(true)}>
                         <Plus className="h-4 w-4 mr-2" />
                         Add Location
                     </Button>
                 </div>
 
-                {/* Active Locations */}
+                {/* Active */}
                 {locations.activeLocations.length > 0 && (
                     <div className="mb-6">
                         <h3 className="font-medium mb-2">Active Locations</h3>
@@ -681,27 +587,17 @@ const CompanyDetail = () => {
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2">
                                                 <h4 className="font-medium">{location.title}</h4>
-                                                {location.isAirportZone && (
-                                                    <Badge variant="default">Airport Zone</Badge>
-                                                )}
+                                                {location.isAirportZone && <Badge variant="default">Airport Zone</Badge>}
                                             </div>
                                             <p className="text-sm mt-1">
                                                 {location.addressLine}, {location.city}, {location.state}, {location.country}
                                             </p>
                                         </div>
                                         <div className="flex gap-2">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => openEditLocationDialog(location)}
-                                            >
+                                            <Button variant="outline" size="sm" onClick={() => openEditLocationDialog(location)}>
                                                 Edit
                                             </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => handleToggleLocation(location.id)}
-                                            >
+                                            <Button variant="outline" size="sm" onClick={() => handleToggleLocation(location.id)}>
                                                 Disable
                                             </Button>
                                         </div>
@@ -717,11 +613,15 @@ const CompanyDetail = () => {
                                             </AccordionTrigger>
                                             <AccordionContent>
                                                 <div className="h-[200px] w-full rounded-lg overflow-hidden mt-2">
-                                                    <CompanyMap locations={[{
-                                                        lat: parseFloat(location.latitude),
-                                                        lng: parseFloat(location.longitude),
-                                                        address: location.addressLine
-                                                    }]} />
+                                                    <CompanyMap
+                                                        locations={[
+                                                            {
+                                                                lat: parseFloat(location.latitude),
+                                                                lng: parseFloat(location.longitude),
+                                                                address: location.addressLine,
+                                                            },
+                                                        ]}
+                                                    />
                                                 </div>
                                             </AccordionContent>
                                         </AccordionItem>
@@ -732,7 +632,7 @@ const CompanyDetail = () => {
                     </div>
                 )}
 
-                {/* Inactive Locations */}
+                {/* Inactive */}
                 {locations.inactiveLocations.length > 0 && (
                     <div>
                         <h3 className="font-medium mb-2">Inactive Locations</h3>
@@ -743,9 +643,7 @@ const CompanyDetail = () => {
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2">
                                                 <h4 className="font-medium">{location.title}</h4>
-                                                {location.isAirportZone && (
-                                                    <Badge variant="default">Airport Zone</Badge>
-                                                )}
+                                                {location.isAirportZone && <Badge variant="default">Airport Zone</Badge>}
                                             </div>
                                             <p className="text-sm mt-1">
                                                 {location.addressLine}, {location.city}, {location.state}, {location.country}
@@ -755,18 +653,10 @@ const CompanyDetail = () => {
                                             </p>
                                         </div>
                                         <div className="flex gap-2">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => openEditLocationDialog(location)}
-                                            >
+                                            <Button variant="outline" size="sm" onClick={() => openEditLocationDialog(location)}>
                                                 Edit
                                             </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => handleToggleLocation(location.id)}
-                                            >
+                                            <Button variant="outline" size="sm" onClick={() => handleToggleLocation(location.id)}>
                                                 Enable
                                             </Button>
                                         </div>
@@ -782,11 +672,15 @@ const CompanyDetail = () => {
                                             </AccordionTrigger>
                                             <AccordionContent>
                                                 <div className="h-[200px] w-full rounded-lg overflow-hidden mt-2">
-                                                    <CompanyMap locations={[{
-                                                        lat: parseFloat(location.latitude),
-                                                        lng: parseFloat(location.longitude),
-                                                        address: location.addressLine
-                                                    }]} />
+                                                    <CompanyMap
+                                                        locations={[
+                                                            {
+                                                                lat: parseFloat(location.latitude),
+                                                                lng: parseFloat(location.longitude),
+                                                                address: location.addressLine,
+                                                            },
+                                                        ]}
+                                                    />
                                                 </div>
                                             </AccordionContent>
                                         </AccordionItem>
@@ -798,7 +692,7 @@ const CompanyDetail = () => {
                 )}
             </div>
 
-            {/* Operators Section */}
+            {/* Operators */}
             {company.operators && company.operators.length > 0 && (
                 <div className="border rounded-lg p-4">
                     <h2 className="text-lg font-semibold mb-4">Operators</h2>
@@ -815,9 +709,7 @@ const CompanyDetail = () => {
                                         <Badge variant="outline" className="text-xs capitalize">
                                             {operator.operatorRole.replace('Operator', '').trim() || 'Operator'}
                                         </Badge>
-                                        <span className="text-xs text-muted-foreground">
-                                            Last active: {format(new Date(operator.user.lastActivityAt), 'MMM d, yyyy')}
-                                        </span>
+                                        <span className="text-xs text-muted-foreground">Last active: {format(new Date(operator.user.lastActivityAt), 'MMM d, yyyy')}</span>
                                     </div>
                                 </div>
                             </div>
@@ -826,7 +718,7 @@ const CompanyDetail = () => {
                 </div>
             )}
 
-            {/* Addresses Section */}
+            {/* Addresses */}
             {company.addresses && company.addresses.length > 0 && (
                 <div className="border rounded-lg p-4">
                     <h2 className="text-lg font-semibold mb-4">Addresses</h2>
@@ -840,24 +732,265 @@ const CompanyDetail = () => {
                                 <p className="text-sm">
                                     {address.city}, {address.state}, {address.country}
                                 </p>
-                                <p className="text-sm text-muted-foreground mt-2">
-                                    {address.additionalInfo}
-                                </p>
+                                <p className="text-sm text-muted-foreground mt-2">{address.additionalInfo}</p>
                             </div>
                         ))}
                     </div>
                 </div>
             )}
 
-            {/* Verification Actions */}
+            {/* Plans & Commission — SIMPLE + CLEAR */}
+            <div className="border rounded-lg p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h2 className="text-lg font-semibold">Plans & Commission</h2>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Badge className="uppercase" variant="outline">
+                            Tier: {settingsRes?.data.settings.currentTier ?? '—'}
+                        </Badge>
+                        <Badge variant="outline">Source: {settingsRes?.data.settings.commissionSource ?? '—'}</Badge>
+                        <Badge>Effective: {effectiveRate}%</Badge>
+                    </div>
+                </div>
+
+                <p className="text-sm text-muted-foreground mt-1 flex flex-wrap gap-4">
+                    <span>
+                        Base rate: <span className="font-medium">{baseRate}%</span>
+                    </span>
+                    <span>
+                        Subscription ends:{' '}
+                        <span className="font-medium">
+                            {settingsRes?.data.settings.subscriptionEndsAt
+                                ? format(new Date(settingsRes.data.settings.subscriptionEndsAt), 'MMM d, yyyy HH:mm')
+                                : '—'}
+                        </span>
+                    </span>
+                </p>
+
+                <Separator className="my-4" />
+
+                <div className="grid gap-6 md:grid-cols-2">
+                    {/* LEFT: Tier + Duration + Mode */}
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <Label className="text-sm">Choose Tier</Label>
+                            <div className="flex flex-wrap gap-2">
+                                {(planConfigs?.data ?? []).map((p: any) => {
+                                    const isActive = selectedTier === p.tier;
+                                    return (
+                                        <Button
+                                            key={p.tier}
+                                            type="button"
+                                            variant={isActive ? 'default' : 'outline'}
+                                            size="sm"
+                                            onClick={() => setSelectedTier(p.tier)}
+                                            className="rounded-full"
+                                        >
+                                            {p.tier}
+                                            {p.commissionDelta !== '0.00' ? ` · +${p.commissionDelta}%` : ''}
+                                        </Button>
+                                    );
+                                })}
+                                {!planLoading && !planConfigs?.data?.length && (
+                                    <span className="text-xs text-muted-foreground">No tiers found</span>
+                                )}
+                            </div>
+                            <ProjectedRateHelper baseRate={baseRate} selectedTier={selectedTier} planConfigs={planConfigs} />
+                        </div>
+
+                        <div className="flex flex-wrap items-end gap-3">
+                            <div className="grow min-w-[160px]">
+                                <Label className="text-sm">Days</Label>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => setSubscriptionDays((d) => Math.max(1, d - 1))}
+                                    >
+                                        —
+                                    </Button>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        value={subscriptionDays}
+                                        onChange={(e) => setSubscriptionDays(Math.max(1, Number(e.target.value || 1)))}
+                                    />
+                                    <Button type="button" variant="outline" size="icon" onClick={() => setSubscriptionDays((d) => d + 1)}>
+                                        +
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="grow min-w-[220px]">
+                                <Label className="text-sm">Mode</Label>
+                                <div className="flex gap-2">
+                                    <Button
+                                        type="button"
+                                        variant={subscriptionMode === 'startNow' ? 'default' : 'outline'}
+                                        onClick={() => setSubscriptionMode('startNow')}
+                                        className="flex-1"
+                                    >
+                                        Start now
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant={subscriptionMode === 'startAfterCurrent' ? 'default' : 'outline'}
+                                        onClick={() => setSubscriptionMode('startAfterCurrent')}
+                                        className="flex-1"
+                                    >
+                                        Queue
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <Label className="text-sm">Note (optional)</Label>
+                            <Input
+                                value={subscriptionNote}
+                                onChange={(e) => setSubscriptionNote(e.target.value)}
+                                placeholder="e.g., upgrade now"
+                            />
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <Button
+                                className="min-w-[160px]"
+                                disabled={startSub.isPending || planLoading || settingsLoading || !selectedTier}
+                                onClick={() => {
+                                    startSub.mutate(
+                                        { tier: selectedTier, days: subscriptionDays, mode: subscriptionMode, note: subscriptionNote || undefined },
+                                        {
+                                            onSuccess: (r) => {
+                                                toast.success(r.data.message, {
+                                                    description: `Active ${format(new Date(r.data.data.startsAt), 'MMM d, yyyy HH:mm')} → ${format(
+                                                        new Date(r.data.data.endsAt),
+                                                        'MMM d, yyyy HH:mm'
+                                                    )}`,
+                                                });
+                                                refetchSettings();
+                                            },
+                                            onError: (err) => toast.error('Failed to start subscription', { description: err.message }),
+                                        }
+                                    );
+                                }}
+                            >
+                                {startSub.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {subscriptionMode === 'startNow' ? 'Start subscription' : 'Queue subscription'}
+                            </Button>
+                            {planLoading && <span className="text-xs text-muted-foreground">Loading plans…</span>}
+                        </div>
+                    </div>
+
+                    {/* RIGHT: Override */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h3 className="font-medium">Commission Override</h3>
+                            <span className="text-xs text-muted-foreground">Overrides beat tier/base until expiry.</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                                <Label className="text-sm">Override Rate (%)</Label>
+                                <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={overrideRate}
+                                    onChange={(e) => setOverrideRate(e.target.value)}
+                                    placeholder="e.g., 8.50"
+                                />
+                            </div>
+                            <div>
+                                <Label className="text-sm">Override Ends (local)</Label>
+                                <Input
+                                    type="datetime-local"
+                                    value={toLocalInputValue(overrideEndsAt)}
+                                    onChange={(e) => setOverrideEndsAt(fromLocalInputValueToISO(e.target.value))}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                                variant="secondary"
+                                disabled={setOverride.isPending || !overrideRate || !overrideEndsAt}
+                                onClick={() => {
+                                    const rateNum = Number(overrideRate);
+                                    if (Number.isNaN(rateNum) || rateNum <= 0) {
+                                        toast.error('Enter a valid override rate > 0');
+                                        return;
+                                    }
+                                    setOverride.mutate(
+                                        { rate: rateNum, endsAt: overrideEndsAt },
+                                        {
+                                            onSuccess: () => {
+                                                toast.success('Override applied');
+                                                refetchSettings();
+                                            },
+                                            onError: (err) => toast.error('Failed to set override', { description: err.message }),
+                                        }
+                                    );
+                                }}
+                            >
+                                {setOverride.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Save Override
+                            </Button>
+
+                            <Button
+                                variant="outline"
+                                type="button"
+                                onClick={() => {
+                                    const in30 = new Date();
+                                    in30.setDate(in30.getDate() + 30);
+                                    setOverrideEndsAt(in30.toISOString());
+                                }}
+                            >
+                                +30 days
+                            </Button>
+
+                            {settingsRes?.data.settings.overrideCommissionRate && (
+                                <Button
+                                    variant="outline"
+                                    type="button"
+                                    onClick={() => {
+                                        const current = Number(settingsRes.data.settings.overrideCommissionRate);
+                                        setOverride.mutate(
+                                            { rate: current, endsAt: new Date().toISOString() },
+                                            {
+                                                onSuccess: () => {
+                                                    toast.success('Override expired');
+                                                    refetchSettings();
+                                                },
+                                                onError: (err) => toast.error('Failed to expire override', { description: err.message }),
+                                            }
+                                        );
+                                    }}
+                                >
+                                    Expire now
+                                </Button>
+                            )}
+
+                            <span className="text-xs text-muted-foreground">
+                                Current:{' '}
+                                <strong>
+                                    {settingsRes?.data.settings.overrideCommissionRate
+                                        ? `${settingsRes.data.settings.overrideCommissionRate}% until ${settingsRes.data.settings.overrideEndsAt
+                                            ? format(new Date(settingsRes.data.settings.overrideEndsAt), 'MMM d, yyyy HH:mm')
+                                            : '—'
+                                        }`
+                                        : 'none'}
+                                </strong>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Verification */}
             <div className="flex gap-2">
                 {company.isVerified ? (
                     <>
-                        <Button
-                            variant="outline"
-                            onClick={() => setIsUnverifyDialogOpen(true)}
-                            disabled={unverifyCompany.isPending}
-                        >
+                        <Button variant="outline" onClick={() => setIsUnverifyDialogOpen(true)} disabled={unverifyCompany.isPending}>
                             Unverify Company
                         </Button>
 
@@ -865,9 +998,7 @@ const CompanyDetail = () => {
                             <DialogContent>
                                 <DialogHeader>
                                     <DialogTitle>Unverify Company</DialogTitle>
-                                    <DialogDescription>
-                                        Please provide a reason for unverifying this company.
-                                    </DialogDescription>
+                                    <DialogDescription>Please provide a reason for unverifying this company.</DialogDescription>
                                 </DialogHeader>
 
                                 <div className="space-y-4">
@@ -880,9 +1011,7 @@ const CompanyDetail = () => {
                                             placeholder="e.g., Document Expired, Missing Information"
                                             className="mt-1"
                                         />
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            Short description of why you're unverifying this company
-                                        </p>
+                                        <p className="text-xs text-muted-foreground mt-1">Short description of why you're unverifying this company</p>
                                     </div>
 
                                     <div>
@@ -895,9 +1024,7 @@ const CompanyDetail = () => {
                                             className="mt-1"
                                             rows={4}
                                         />
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            This will be visible to the company
-                                        </p>
+                                        <p className="text-xs text-muted-foreground mt-1">This will be visible to the company</p>
                                     </div>
                                 </div>
 
@@ -912,17 +1039,8 @@ const CompanyDetail = () => {
                                     >
                                         Cancel
                                     </Button>
-                                    <Button
-                                        onClick={handleUnverifySubmit}
-                                        disabled={
-                                            unverifyCompany.isPending ||
-                                            !unverifiedReason ||
-                                            !unverifiedReasonDescription
-                                        }
-                                    >
-                                        {unverifyCompany.isPending && (
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        )}
+                                    <Button onClick={handleUnverifySubmit} disabled={unverifyCompany.isPending || !unverifiedReason || !unverifiedReasonDescription}>
+                                        {unverifyCompany.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                         Confirm Unverification
                                     </Button>
                                 </DialogFooter>
@@ -930,13 +1048,8 @@ const CompanyDetail = () => {
                         </Dialog>
                     </>
                 ) : (
-                    <Button
-                        onClick={handleVerify}
-                        disabled={verifyCompany.isPending}
-                    >
-                        {verifyCompany.isPending && (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        )}
+                    <Button onClick={handleVerify} disabled={verifyCompany.isPending}>
+                        {verifyCompany.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Verify Company
                     </Button>
                 )}
@@ -947,9 +1060,7 @@ const CompanyDetail = () => {
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader className="sticky top-0 bg-background">
                         <DialogTitle>Add New Location</DialogTitle>
-                        <DialogDescription>
-                            Note: Firstly Select the country , then fill Address field, so it show options and then it auto fill all the fields 
-                        </DialogDescription>
+                        <DialogDescription>Note: Select the country first, then type the address—fields will auto-fill.</DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-2">
@@ -959,9 +1070,10 @@ const CompanyDetail = () => {
                                 id="title"
                                 value={locationForm.title}
                                 onChange={(e) => setLocationForm({ ...locationForm, title: e.target.value })}
-                                placeholder={locationForm.city || locationForm.state || locationForm.country ?
-                                    `e.g., ${locationForm.city || locationForm.state || Country.getCountryByCode(locationForm.country)?.name}` :
-                                    "e.g., Main Office, Warehouse"
+                                placeholder={
+                                    locationForm.city || locationForm.state || locationForm.country
+                                        ? `e.g., ${locationForm.city || locationForm.state || Country.getCountryByCode(locationForm.country)?.name}`
+                                        : 'e.g., Main Office, Warehouse'
                                 }
                             />
                         </div>
@@ -985,12 +1097,12 @@ const CompanyDetail = () => {
                                     value={locationForm.country}
                                     onValueChange={(value) => {
                                         const countryObj = Country.getCountryByCode(value);
-                                        setLocationForm(prev => ({
+                                        setLocationForm((prev) => ({
                                             ...prev,
                                             country: value,
                                             state: '',
                                             city: '',
-                                            title: prev.title || countryObj?.name || ''
+                                            title: prev.title || countryObj?.name || '',
                                         }));
                                     }}
                                 >
@@ -1013,17 +1125,17 @@ const CompanyDetail = () => {
                                     value={locationForm.state}
                                     onValueChange={(value) => {
                                         const stateObj = State.getStateByCodeAndCountry(value, locationForm.country);
-                                        setLocationForm(prev => ({
+                                        setLocationForm((prev) => ({
                                             ...prev,
                                             state: value,
                                             city: '',
-                                            title: prev.title || stateObj?.name || ''
+                                            title: prev.title || stateObj?.name || '',
                                         }));
                                     }}
                                     disabled={!stateList.length}
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder={stateList.length ? "Select state" : "No states available"} />
+                                        <SelectValue placeholder={stateList.length ? 'Select state' : 'No states available'} />
                                     </SelectTrigger>
                                     <SelectContent className="max-h-[200px] overflow-y-auto">
                                         {stateList.map((s) => (
@@ -1040,16 +1152,16 @@ const CompanyDetail = () => {
                                 <Select
                                     value={locationForm.city}
                                     onValueChange={(value) => {
-                                        setLocationForm(prev => ({
+                                        setLocationForm((prev) => ({
                                             ...prev,
                                             city: value,
-                                            title: prev.title || value || ''
+                                            title: prev.title || value || '',
                                         }));
                                     }}
                                     disabled={!cityList.length}
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder={cityList.length ? "Select city" : "No cities available"} />
+                                        <SelectValue placeholder={cityList.length ? 'Select city' : 'No cities available'} />
                                     </SelectTrigger>
                                     <SelectContent className="max-h-[200px] overflow-y-auto">
                                         {cityList.map((ct) => (
@@ -1059,7 +1171,6 @@ const CompanyDetail = () => {
                                         ))}
                                     </SelectContent>
                                 </Select>
-
                             </div>
                         </div>
 
@@ -1088,11 +1199,13 @@ const CompanyDetail = () => {
 
                         <div className="h-[200px] w-full rounded-lg overflow-hidden">
                             <CompanyMap
-                                locations={[{
-                                    lat: locationForm.latitude,
-                                    lng: locationForm.longitude,
-                                    address: locationForm.addressLine
-                                }]}
+                                locations={[
+                                    {
+                                        lat: locationForm.latitude,
+                                        lng: locationForm.longitude,
+                                        address: locationForm.addressLine,
+                                    },
+                                ]}
                             />
                         </div>
 
@@ -1107,19 +1220,11 @@ const CompanyDetail = () => {
                     </div>
 
                     <DialogFooter className="sticky bottom-0 bg-background pt-4 border-t">
-                        <Button
-                            variant="outline"
-                            onClick={() => setIsLocationDialogOpen(false)}
-                        >
+                        <Button variant="outline" onClick={() => setIsLocationDialogOpen(false)}>
                             Cancel
                         </Button>
-                        <Button
-                            onClick={handleCreateLocation}
-                            disabled={createLocation.isPending || !locationForm.title || !locationForm.addressLine}
-                        >
-                            {createLocation.isPending && (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            )}
+                        <Button onClick={handleCreateLocation} disabled={createLocation.isPending || !locationForm.title || !locationForm.addressLine}>
+                            {createLocation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Add Location
                         </Button>
                     </DialogFooter>
@@ -1131,9 +1236,7 @@ const CompanyDetail = () => {
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader className="sticky top-0 bg-background">
                         <DialogTitle>Edit Location</DialogTitle>
-                        <DialogDescription>
-                            Update the details for this location
-                        </DialogDescription>
+                        <DialogDescription>Update the details for this location</DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4 py-2">
@@ -1143,16 +1246,16 @@ const CompanyDetail = () => {
                                 id="edit-title"
                                 value={locationForm.title}
                                 onChange={(e) => setLocationForm({ ...locationForm, title: e.target.value })}
-                                placeholder={locationForm.city || locationForm.state || locationForm.country ?
-                                    `e.g., ${locationForm.city || locationForm.state || Country.getCountryByCode(locationForm.country)?.name}` :
-                                    "e.g., Main Office, Warehouse"
+                                placeholder={
+                                    locationForm.city || locationForm.state || locationForm.country
+                                        ? `e.g., ${locationForm.city || locationForm.state || Country.getCountryByCode(locationForm.country)?.name}`
+                                        : 'e.g., Main Office, Warehouse'
                                 }
                             />
                         </div>
 
                         <div>
                             <Label>Address *</Label>
-                            {/* In the Edit Location Dialog */}
                             <LocationAutocomplete
                                 id="edit-addressLine"
                                 value={locationForm.addressLine}
@@ -1166,10 +1269,7 @@ const CompanyDetail = () => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <Label>Country *</Label>
-                                <Select
-                                    value={locationForm.country}
-                                    onValueChange={handleCountryChange}
-                                >
+                                <Select value={locationForm.country} onValueChange={handleCountryChange}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select country" />
                                     </SelectTrigger>
@@ -1185,12 +1285,7 @@ const CompanyDetail = () => {
 
                             <div>
                                 <Label>State *</Label>
-                                <Select
-                                    value={locationForm.state}
-                                    onValueChange={handleStateChange}
-                                    disabled={!stateList.length}
-                                >
-
+                                <Select value={locationForm.state} onValueChange={handleStateChange} disabled={!stateList.length}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select state" />
                                     </SelectTrigger>
@@ -1206,11 +1301,7 @@ const CompanyDetail = () => {
 
                             <div>
                                 <Label>City *</Label>
-                                <Select
-                                    value={locationForm.city}
-                                    onValueChange={handleCityChange}
-                                    disabled={!cityList.length}
-                                >
+                                <Select value={locationForm.city} onValueChange={handleCityChange} disabled={!cityList.length}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select city" />
                                     </SelectTrigger>
@@ -1250,11 +1341,13 @@ const CompanyDetail = () => {
 
                         <div className="h-[200px] w-full rounded-lg overflow-hidden">
                             <CompanyMap
-                                locations={[{
-                                    lat: locationForm.latitude,
-                                    lng: locationForm.longitude,
-                                    address: locationForm.addressLine
-                                }]}
+                                locations={[
+                                    {
+                                        lat: locationForm.latitude,
+                                        lng: locationForm.longitude,
+                                        address: locationForm.addressLine,
+                                    },
+                                ]}
                             />
                         </div>
 
@@ -1269,19 +1362,11 @@ const CompanyDetail = () => {
                     </div>
 
                     <DialogFooter className="sticky bottom-0 bg-background pt-4 border-t">
-                        <Button
-                            variant="outline"
-                            onClick={() => setIsEditLocationDialogOpen(false)}
-                        >
+                        <Button variant="outline" onClick={() => setIsEditLocationDialogOpen(false)}>
                             Cancel
                         </Button>
-                        <Button
-                            onClick={handleUpdateLocation}
-                            disabled={updateLocation.isPending || !locationForm.title || !locationForm.addressLine}
-                        >
-                            {updateLocation.isPending && (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            )}
+                        <Button onClick={handleUpdateLocation} disabled={updateLocation.isPending || !locationForm.title || !locationForm.addressLine}>
+                            {updateLocation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Update Location
                         </Button>
                     </DialogFooter>
@@ -1292,3 +1377,54 @@ const CompanyDetail = () => {
 };
 
 export default CompanyDetail;
+
+/* ---------- Helpers ---------- */
+
+function ProjectedRateHelper({
+    baseRate,
+    selectedTier,
+    planConfigs,
+}: {
+    baseRate: string | number;
+    selectedTier: 'BASIC' | 'GOLD' | 'PREMIUM' | 'DIAMOND';
+    planConfigs: any;
+}) {
+    const base = Number(baseRate);
+    const delta = planConfigs
+        ? Number((planConfigs.data.find((p: any) => p.tier === selectedTier)?.commissionDelta) ?? '0')
+        : 0;
+    const projected = Number.isFinite(base) ? (base + delta).toFixed(2) : '—';
+
+    return (
+        <div className="text-xs text-muted-foreground">
+            Projected effective with <span className="font-medium">{selectedTier}</span>:{' '}
+            <span className="font-medium">{projected}%</span>
+        </div>
+    );
+}
+
+// Convert ISO -> <input type="datetime-local">
+function toLocalInputValue(iso: string) {
+    try {
+        const d = new Date(iso);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        const mm = pad(d.getMonth() + 1);
+        const dd = pad(d.getDate());
+        const hh = pad(d.getHours());
+        const mi = pad(d.getMinutes());
+        return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+    } catch {
+        return '';
+    }
+}
+
+// Convert local input -> UTC ISO
+function fromLocalInputValueToISO(localValue: string) {
+    try {
+        const d = new Date(localValue);
+        return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString();
+    } catch {
+        return new Date().toISOString();
+    }
+}

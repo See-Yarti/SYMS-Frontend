@@ -95,7 +95,6 @@ export interface VerificationResponse {
   timestamp: string;
 }
 
-
 export type AddOperatorPayload = {
   operatorName: string;
   operatorEmail: string;
@@ -103,7 +102,6 @@ export type AddOperatorPayload = {
   phoneNumber: string;
   operatorRole: string;
 };
-
 
 export type UpdateOperatorPayload = {
   name?: string;
@@ -121,4 +119,74 @@ export interface OperatorProfileFlat {
   gender: string;
   operatorRole: string;
   company: Company;
+}
+
+// --- add below your existing types ---
+
+export type CommissionSource = 'BASE' | 'TIER' | 'OVERRIDE';
+export type Tier = 'BASIC' | 'GOLD' | 'PREMIUM' | 'DIAMOND';
+
+export interface CompanySettingsPayload {
+  effectiveCommissionRate: string; // e.g. "10.00"
+  commissionSource: CommissionSource;
+  currentTier: Tier;
+  subscriptionEndsAt: string | null; // ISO
+  overrideCommissionRate: string | null; // e.g. "8.50"
+  overrideEndsAt: string | null; // ISO
+}
+
+export interface CompanySettingsResponse {
+  success: boolean;
+  data: {
+    companyId: string;
+    baseCommissionRate: string;
+    settings: CompanySettingsPayload;
+  };
+  timestamp: string;
+}
+
+export interface PlanConfig {
+  tier: Tier;
+  durationDays: number;
+  commissionDelta: string; // "0.00" | "1.00" | ...
+  boostScore: number;
+}
+
+export interface PlanConfigsResponse {
+  success: boolean;
+  data: PlanConfig[];
+  timestamp: string;
+}
+
+export type SubscriptionMode = 'startNow' | 'startAfterCurrent';
+
+export interface StartSubscriptionBody {
+  tier: Tier;
+  days: number; // default 30, or custom
+  mode: SubscriptionMode;
+  note?: string;
+}
+
+export interface StartSubscriptionResponse {
+  success: boolean;
+  data: {
+    message: string;
+    data: {
+      subscriptionId: string;
+      startsAt: string;
+      endsAt: string;
+    };
+  };
+  timestamp: string;
+}
+
+export interface OverrideCommissionBody {
+  rate: number; // 8.5
+  endsAt: string; // ISO (UTC)
+}
+
+export interface GenericOk {
+  success: boolean;
+  data: unknown;
+  timestamp: string;
 }
