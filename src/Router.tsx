@@ -28,6 +28,7 @@ import RatesPage from './pages/rate/RatesPage';
 import RatePlannerPage from './pages/rate/RatePlanner';
 import BlackoutPage from './pages/rate/BlackoutPage';
 import CarClassesPage from './pages/rate/CarClassesPage';
+import TaxesPage from './pages/rate/TaxesPage';
 
 const router = createBrowserRouter([
   {
@@ -122,6 +123,7 @@ const router = createBrowserRouter([
               { path: ':locationId/planner', element: <RatePlannerPage /> },
               { path: ':locationId/blackouts', element: <BlackoutPage /> },
               { path: ':locationId/car-classes', element: <CarClassesPage /> },
+              { path: ':locationId/taxes', element: <TaxesPage /> },
             ],
           }
         ],

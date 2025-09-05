@@ -314,7 +314,7 @@ export default function BlackoutDialog({
           {/* Locations */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col">
-              <label className="text-sm font-medium mb-1">Location(s) *</label>
+              <label className="text-sm font-medium mb-1">Location(s)= *</label>
               <Popover open={locOpen} onOpenChange={setLocOpen}>
                 <PopoverTrigger asChild>
                   <Button type="button" variant="outline" role="combobox" aria-expanded={locOpen} className="w-full justify-between" disabled={isLocLoading || isLocError}>
