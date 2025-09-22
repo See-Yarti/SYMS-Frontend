@@ -1,5 +1,7 @@
 // src/components/Rates/NewRateDialog.tsx
 
+// src/components/Rates/NewRateDialog.tsx
+
 import * as React from 'react';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -11,14 +13,8 @@ import {
   Select, SelectTrigger, SelectContent, SelectItem, SelectValue,
 } from '@/components/ui/select';
 
+// ---------- Types ----------
 type CarClassOption = { value: string; label: string };
-
-export type NewRateDialogProps = {
-  open: boolean;
-  onClose: () => void;
-  onAddRate: (payload: any) => void; // shaped as backend expects
-  carClasses: CarClassOption[];      // value = companyCarClassId (non-empty!)
-};
 
 type DailyLOR = {
   first: number; second: number; third: number; fourth: number; fifth: number; sixth: number;
@@ -27,9 +23,43 @@ type WeeklyLOR = {
   first: number; second: number; third: number; fourth: number;
 };
 
+export type CreateRatePayload = {
+  companyCarClassId: string;
+  startDateTime: string;
+  endDateTime: string;
+
+  extraKmRate: number;
+
+  dailyBaseRate: number;
+  dailyBaseKm: number;
+  dailyExtraHourRate: number;
+  dailyExtraDayRate: number;
+  dailyLORAdjustments: DailyLOR;
+
+  weeklyBaseRate: number;
+  weeklyBaseKm: number;
+  weeklyExtraDayKm: number;
+  weeklyExtraHourRate: number;
+  weeklyExtraDayRate: number;
+  weeklyLORAdjustments: WeeklyLOR;
+
+  monthlyBaseRate: number;
+  monthlyBaseKm: number;
+  monthlyExtraDayKm: number;
+  monthlyExtraHourRate: number;
+  monthlyExtraDayRate: number;
+};
+
+export type NewRateDialogProps = {
+  open: boolean;
+  onClose: () => void;
+  onAddRate: (payload: CreateRatePayload) => void;
+  carClasses: CarClassOption[]; // value = companyCarClassId
+};
+
+// ---------- Helpers ----------
 const DEFAULT_DAILY_LOR: DailyLOR = { first: 0, second: 0, third: 0, fourth: 0, fifth: 0, sixth: 0 };
 const DEFAULT_WEEKLY_LOR: WeeklyLOR = { first: 0, second: 0, third: 0, fourth: 0 };
-
 
 const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
 const fmt = (n: number) => currency.format(Number.isFinite(n) ? n : 0);
@@ -94,6 +124,7 @@ function NumberInput({
   );
 }
 
+// ---------- Component ----------
 export default function NewRateDialog({ open, onClose, onAddRate, carClasses }: NewRateDialogProps) {
   // top-level
   const [companyCarClassId, setCompanyCarClassId] = React.useState('');
@@ -122,7 +153,6 @@ export default function NewRateDialog({ open, onClose, onAddRate, carClasses }: 
   const [monthlyExtraDayKm, setMonthlyExtraDayKm] = React.useState<number>(0);
   const [monthlyExtraHourRate, setMonthlyExtraHourRate] = React.useState<number>(0);
   const [monthlyExtraDayRate, setMonthlyExtraDayRate] = React.useState<number>(0);
-
 
   const resetForm = () => {
     setCompanyCarClassId('');
@@ -159,7 +189,7 @@ export default function NewRateDialog({ open, onClose, onAddRate, carClasses }: 
   };
 
   const handleAdd = () => {
-    const payload = {
+    const payload: CreateRatePayload = {
       companyCarClassId,
       startDateTime: toApiDate(startDate),
       endDateTime: toApiDate(endDate),
@@ -240,7 +270,6 @@ export default function NewRateDialog({ open, onClose, onAddRate, carClasses }: 
                   )}
                 </SelectContent>
               </Select>
-
             </div>
 
             <div className="space-y-2">
@@ -258,8 +287,16 @@ export default function NewRateDialog({ open, onClose, onAddRate, carClasses }: 
               <NumberInput value={extraKmRate} onValue={setExtraKmRate} min={0} step="0.01" />
             </div>
           </div>
+
           <div className="px-6 py-5 overflow-y-auto h-[calc(92vh-140px-68px)] md:h-[calc(92vh-150px-72px)]">
-            <form id="rate-form" className="space-y-8" onSubmit={(e) => { e.preventDefault(); if (companyCarClassId && startDate && endDate) handleAdd(); }}>
+            <form
+              id="rate-form"
+              className="space-y-8"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (companyCarClassId && startDate && endDate) handleAdd();
+              }}
+            >
               {/* Daily */}
               <div className="space-y-4">
                 <h3 className="font-medium text-lg">Daily</h3>
@@ -278,7 +315,12 @@ export default function NewRateDialog({ open, onClose, onAddRate, carClasses }: 
                         {(['first', 'second', 'third', 'fourth', 'fifth', 'sixth'] as const).map((key, idx) => (
                           <td key={key} className="p-2 align-top">
                             <div className="flex flex-col items-center gap-1">
-                              <NumberInput value={dailyLOR[key]} onValue={(n) => setDailyLOR((p) => ({ ...p, [key]: n }))} step="0.01" className="w-28 text-center" />
+                              <NumberInput
+                                value={dailyLOR[key]}
+                                onValue={(n) => setDailyLOR((p) => ({ ...p, [key]: n }))}
+                                step="0.01"
+                                className="w-28 text-center"
+                              />
                               <div className="text-xs text-muted-foreground">{fmt(dailyTotals[idx])}</div>
                             </div>
                           </td>
@@ -308,7 +350,12 @@ export default function NewRateDialog({ open, onClose, onAddRate, carClasses }: 
                         {(['first', 'second', 'third', 'fourth'] as const).map((key, idx) => (
                           <td key={key} className="p-2 align-top">
                             <div className="flex flex-col items-center gap-1">
-                              <NumberInput value={weeklyLOR[key]} onValue={(n) => setWeeklyLOR((p) => ({ ...p, [key]: n }))} step="0.01" className="w-28 text-center" />
+                              <NumberInput
+                                value={weeklyLOR[key]}
+                                onValue={(n) => setWeeklyLOR((p) => ({ ...p, [key]: n }))}
+                                step="0.01"
+                                className="w-28 text-center"
+                              />
                               <div className="text-xs text-muted-foreground">{fmt(weeklyTotals[idx])}</div>
                             </div>
                           </td>
@@ -332,14 +379,14 @@ export default function NewRateDialog({ open, onClose, onAddRate, carClasses }: 
               </div>
             </form>
           </div>
+
           <DialogFooter className="px-6 py-4 gap-2">
             <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
-            <Button type="submit" form="rate-form" disabled={!(companyCarClassId && startDate && endDate)}>Add Rate</Button>
+            <Button type="submit" form="rate-form" disabled={!(companyCarClassId && startDate && endDate)}>
+              Add Rate
+            </Button>
           </DialogFooter>
         </div>
-
-
-
       </DialogContent>
     </Dialog>
   );

@@ -16,6 +16,7 @@ import EditRateDialog from '@/components/Rates/EditRateDialog';
 import { useAppSelector } from '@/store';
 import { useFetchData, usePostJson, useDeleteData } from '@/hooks/useOperatorCarClass';
 
+// ---------- Types ----------
 type RateRow = {
   id: string;
   car: string;
@@ -29,101 +30,172 @@ type RateRow = {
 
 type CarClassOption = { value: string; label: string };
 
+type CompanyCarClassItem = {
+  id: string; // companyCarClassId
+  carClass: {
+    id: string;
+    slug: string;
+    name: string;
+  };
+  make: string | null;
+  model: string | null;
+  isAvailable: boolean;
+  numberOfBags: number | null;
+  numberOfDoors: number | null;
+  numberOfPassengers: number | null;
+};
+
+type CreateRatePayload = {
+  companyCarClassId: string;
+  startDateTime: string; // dd/mm/yyyy (as your existing code formats)
+  endDateTime: string;
+
+  extraKmRate: number;
+
+  dailyBaseRate: number;
+  dailyBaseKm: number;
+  dailyExtraHourRate: number;
+  dailyExtraDayRate: number;
+  dailyLORAdjustments: {
+    first: number; second: number; third: number; fourth: number; fifth: number; sixth: number;
+  };
+
+  weeklyBaseRate: number;
+  weeklyBaseKm: number;
+  weeklyExtraDayKm: number;
+  weeklyExtraHourRate: number;
+  weeklyExtraDayRate: number;
+  weeklyLORAdjustments: {
+    first: number; second: number; third: number; fourth: number;
+  };
+
+  monthlyBaseRate: number;
+  monthlyBaseKm: number;
+  monthlyExtraDayKm: number;
+  monthlyExtraHourRate: number;
+  monthlyExtraDayRate: number;
+};
+
+// ---------- Helpers ----------
 function toCurrency(n: number) {
   const nf = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
   return nf.format(Number.isFinite(n) ? n : 0);
 }
 
-function normalizeRatesData(obj: any): RateRow[] {
+function normalizeRatesData(obj: unknown): RateRow[] {
   if (!obj || typeof obj !== 'object') return [];
-  const keys = Object.keys(obj).filter((k) => !['total', 'page', 'limit'].includes(k));
+  const keys = Object.keys(obj as Record<string, unknown>).filter((k) => !['total', 'page', 'limit'].includes(k));
   return keys.map((k) => {
-    const r = obj[k] ?? {};
-    const nestedSlug = r?.companyCarClass?.carClass?.slug || r?.companyCarClass?.carClass?.name;
-    const car = nestedSlug || r.carClassName || 'Unknown';
+    const r = (obj as Record<string, unknown>)[k] as Record<string, unknown> | undefined;
+
+    const nestedSlug =
+      (r?.companyCarClass as any)?.carClass?.slug ||
+      (r?.companyCarClass as any)?.carClass?.name;
+
+    const car = (nestedSlug as string) || (r?.carClassName as string) || 'Unknown';
+
     const begin =
-      r.startDate ??
-      (r.startDateTime ? new Date(r.startDateTime).toLocaleDateString('en-GB') : '—');
+      (r?.startDate as string) ??
+      ((r?.startDateTime as string)
+        ? new Date(r?.startDateTime as string).toLocaleDateString('en-GB')
+        : '—');
+
     const end =
-      r.endDate ??
-      (r.endDateTime ? new Date(r.endDateTime).toLocaleDateString('en-GB') : '—');
+      (r?.endDate as string) ??
+      ((r?.endDateTime as string)
+        ? new Date(r?.endDateTime as string).toLocaleDateString('en-GB')
+        : '—');
 
     return {
-      id: String(r.id ?? k),
+      id: String((r?.id as string) ?? k),
       car,
       begin: String(begin),
       end: String(end),
-      daily: Number(r.dailyBaseRate ?? 0),
-      weekly: Number(r.weeklyBaseRate ?? 0),
-      monthly: Number(r.monthlyBaseRate ?? 0),
-      isInBlackout: Boolean(r.isInBlackout),
+      daily: Number(r?.dailyBaseRate ?? 0),
+      weekly: Number(r?.weeklyBaseRate ?? 0),
+      monthly: Number(r?.monthlyBaseRate ?? 0),
+      isInBlackout: Boolean(r?.isInBlackout),
     };
   });
 }
 
+function getErrMessage(e: unknown): string {
+  if (typeof e === 'string') return e;
+  if (e && typeof e === 'object') {
+    const maybe = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+    if (typeof maybe === 'string' && maybe) return maybe;
+  }
+  return 'Something went wrong.';
+}
+
+// ---------- Component ----------
 export default function RatesPage() {
   const { locationId = '' } = useParams<{ locationId?: string }>();
   const { otherInfo } = useAppSelector((s) => s.auth);
   const companyId = otherInfo?.companyId || '';
   const canOperate = Boolean(companyId && locationId);
 
-  // Rates (list by location) — NOTE: "gel-all"
+  // Rates (list by location)
   const {
     data: ratesRaw,
     error: ratesErrObj,
     isError: ratesError,
     isLoading: ratesLoading,
     refetch: refetchRates,
-  } = useFetchData<any>(
+  } = useFetchData<unknown>(
     canOperate ? `company-car-class-rate/gel-all/${locationId}` : '',
     ['rates', locationId || ''],
     { enabled: canOperate, retry: false }
   );
 
   const rows: RateRow[] = React.useMemo(() => {
-    const payload = ratesRaw?.data ?? ratesRaw ?? {};
+    const payload = (ratesRaw as { data?: unknown })?.data ?? ratesRaw ?? {};
     return normalizeRatesData(payload);
   }, [ratesRaw]);
 
-  // Car classes for dropdowns: GET /api/car-class/filter-car-classes
+  // ✅ Company car classes by Company + Location (NEW ENDPOINT)
   const {
-    data: carClassesRaw,
+    data: companyClasses,
     isLoading: carClassesLoading,
     isError: carClassesError,
-  } = useFetchData<any>(
-    'car-class/filter-car-classes',
-    ['car-classes'],
-    { enabled: true, retry: false }
+  } = useFetchData<CompanyCarClassItem[]>(
+    canOperate ? `company-car-class/${companyId}/${locationId}` : '',
+    ['company-car-class', companyId, locationId],
+    { enabled: canOperate, retry: false }
   );
 
   const carClassOptions: CarClassOption[] = React.useMemo(() => {
-    const list = (carClassesRaw?.data ?? carClassesRaw ?? []) as Array<any>;
-    return Array.isArray(list)
-      ? list
-        .filter((c) => c?.id && (c?.name || c?.slug))
-        .map((c) => ({ value: c.id, label: c.name || c.slug }))
-      : [];
-  }, [carClassesRaw]);
+    if (!Array.isArray(companyClasses)) return [];
+    return companyClasses
+      .filter((c) => c?.id && c?.carClass?.name)
+      .map((c) => ({
+        value: c.id, // companyCarClassId to send when creating a rate
+        label:
+          c.carClass?.name ||
+          c.carClass?.slug ||
+          [c.make, c.model].filter(Boolean).join(' ') ||
+          'Class',
+      }));
+  }, [companyClasses]);
 
   // Create / Delete
-  const { mutateAsync: createRate, isPending: creating } = usePostJson<any, any>(
+  const { mutateAsync: createRate, isPending: creating } = usePostJson<CreateRatePayload, unknown>(
     'company-car-class-rate',
     {
       onSuccess: () => {
         toast.success('Rate created');
         refetchRates();
       },
-      onError: (err: any) =>
-        toast.error(err?.response?.data?.message || 'Failed to create rate'),
+      onError: (err: unknown) => toast.error(getErrMessage(err)),
     }
   );
+
   const { mutateAsync: deleteRate, isPending: deleting } = useDeleteData({
     onSuccess: () => {
       toast.success('Rate deleted');
       refetchRates();
     },
-    onError: (err: any) =>
-      toast.error(err?.response?.data?.message || 'Failed to delete rate'),
+    onError: (err: unknown) => toast.error(getErrMessage(err)),
   });
 
   // UI state
@@ -141,7 +213,7 @@ export default function RatesPage() {
     (r) => filterCarClass === '__ALL__' || r.car === filterCarClass
   );
 
-  const handleAddRate = async (payload: any) => {
+  const handleAddRate = async (payload: CreateRatePayload) => {
     await createRate(payload);
     setDialogOpenCreate(false);
   };
@@ -314,7 +386,6 @@ export default function RatesPage() {
               </TableRow>
             ))}
 
-
             {ratesLoading && (
               <TableRow>
                 <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
@@ -332,7 +403,7 @@ export default function RatesPage() {
             {ratesError && (
               <TableRow>
                 <TableCell colSpan={10} className="h-24 text-center text-destructive">
-                  {(ratesErrObj as any)?.response?.data?.message || 'Failed to load rates.'}
+                  {getErrMessage(ratesErrObj)}
                 </TableCell>
               </TableRow>
             )}
