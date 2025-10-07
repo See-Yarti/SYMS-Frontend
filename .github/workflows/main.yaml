@@ -6,6 +6,19 @@ on:
       - main
 
 jobs:
+
+  show-info:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show info
+        run: |
+          echo "Current branch: ${{ github.ref_name }}"
+          echo "Commit message: ${{ github.event.head_commit.message }}"
+          echo "Commit author: ${{ github.event.head_commit.author.name }}"
+          echo "Commit timestamp: ${{ github.event.head_commit.timestamp }}"
+          echo "VPS Username: ${{ secrets.VPS_USERNAME }}"
+          echo "VPS Host: ${{ secrets.VPS_HOST }}"
+
   Build_Docker_Image:
     runs-on: ubuntu-latest
     steps:
