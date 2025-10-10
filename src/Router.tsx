@@ -9,6 +9,7 @@ import Home from './pages/Home';
 import ProtectedRoute from './ProtectedRoute';
 import Register from './pages/auth/register/Register';
 import Operators from './pages/operators/Operators';
+import OperatorBookings from './pages/operators/OperatorBookings';
 import Profile from './pages/settings/profile-update';
 import Products from './pages/products/Products';
 import CompaniesList from '@/components/Company/CompanyList';
@@ -58,6 +59,10 @@ const router = createBrowserRouter([
           {
             path: 'operators',
             element: <Operators />,
+          },
+          {
+            path: '/operators/bookings',
+            element: <OperatorBookings />,
           },
           {
             path: '/operators/register',

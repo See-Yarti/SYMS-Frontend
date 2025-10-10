@@ -110,3 +110,291 @@
     font-size: 0.875rem;
     color: #1f2937;
 }
+
+/* Operator Bookings Styles */
+.operator-bookings-container {
+    @apply space-y-6;
+}
+
+.operator-bookings-header {
+    @apply flex flex-col lg:flex-row justify-between lg:items-center gap-6 mb-8;
+}
+
+.operator-bookings-title-section {
+    @apply space-y-3;
+}
+
+.operator-bookings-title-wrapper {
+    @apply flex items-center gap-3;
+}
+
+.operator-bookings-icon-wrapper {
+    @apply p-2 bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg;
+}
+
+.operator-bookings-icon {
+    @apply h-6 w-6 text-primary;
+}
+
+.operator-bookings-title {
+    @apply text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent;
+}
+
+.operator-bookings-subtitle {
+    @apply text-sm text-muted-foreground;
+}
+
+.operator-bookings-actions {
+    @apply flex items-center gap-3;
+}
+
+.operator-bookings-reset-btn {
+    @apply shadow-sm;
+}
+
+.operator-bookings-filters-card {
+    @apply rounded-xl border bg-card text-card-foreground shadow;
+}
+
+.operator-bookings-filters-header {
+    @apply flex flex-col space-y-1.5 p-6;
+}
+
+.operator-bookings-filters-title {
+    @apply flex items-center gap-2 text-lg font-semibold leading-none tracking-tight;
+}
+
+.operator-bookings-filters-icon {
+    @apply h-5 w-5 text-blue-600;
+}
+
+.operator-bookings-filters-description {
+    @apply text-sm text-muted-foreground;
+}
+
+.operator-bookings-filters-content {
+    @apply p-6 pt-0 space-y-4;
+}
+
+.operator-bookings-filters-grid {
+    @apply grid grid-cols-1 lg:grid-cols-4 gap-4;
+}
+
+.operator-bookings-search-wrapper {
+    @apply relative mt-2;
+}
+
+.operator-bookings-search-icon {
+    @apply absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground;
+}
+
+.operator-bookings-search-input {
+    @apply pl-9;
+}
+
+.operator-bookings-date-input {
+    @apply mt-2;
+}
+
+.operator-bookings-select-grid {
+    @apply grid grid-cols-2 gap-3;
+}
+
+.operator-bookings-select-trigger {
+    @apply mt-2;
+}
+
+.operator-bookings-results-card {
+    @apply rounded-xl border bg-card text-card-foreground shadow;
+}
+
+.operator-bookings-results-header {
+    @apply flex flex-col space-y-1.5 p-6 pb-4;
+}
+
+.operator-bookings-results-title {
+    @apply flex items-center gap-2 text-xl font-semibold leading-none tracking-tight;
+}
+
+.operator-bookings-results-icon {
+    @apply h-6 w-6 text-blue-600;
+}
+
+.operator-bookings-results-description {
+    @apply text-sm text-muted-foreground;
+}
+
+.operator-bookings-results-content {
+    @apply p-6 pt-0 space-y-4;
+}
+
+.operator-bookings-empty-state {
+    @apply flex flex-col items-center justify-center py-12 text-center;
+}
+
+.operator-bookings-empty-icon {
+    @apply h-12 w-12 text-muted-foreground mb-4;
+}
+
+.operator-bookings-empty-title {
+    @apply text-lg font-semibold;
+}
+
+.operator-bookings-empty-description {
+    @apply text-sm text-muted-foreground max-w-md;
+}
+
+.operator-bookings-grid {
+    @apply grid grid-cols-1 xl:grid-cols-2 gap-4;
+}
+
+.operator-bookings-pagination {
+    @apply flex flex-col md:flex-row md:items-center justify-between gap-3;
+}
+
+.operator-bookings-pagination-info {
+    @apply text-sm text-muted-foreground;
+}
+
+.operator-bookings-pagination-controls {
+    @apply flex items-center gap-2;
+}
+
+/* Booking Card Styles */
+.booking-card {
+    @apply border border-slate-200/60 dark:border-slate-800/60 hover:border-primary/20 transition-all duration-200 shadow-sm hover:shadow-md rounded-xl bg-card text-card-foreground;
+}
+
+.booking-card-header {
+    @apply flex flex-col space-y-1.5 p-6 pb-3;
+}
+
+.booking-card-header-content {
+    @apply flex items-start justify-between gap-3;
+}
+
+.booking-card-title-section {
+    @apply flex-1 min-w-0;
+}
+
+.booking-card-title {
+    @apply text-lg font-semibold truncate font-semibold leading-none tracking-tight;
+}
+
+.booking-card-subtitle {
+    @apply text-sm text-muted-foreground;
+}
+
+.booking-card-badges {
+    @apply flex flex-col gap-1;
+}
+
+.booking-card-status-badge {
+    @apply text-xs font-medium;
+}
+
+.booking-card-paid-badge {
+    @apply text-xs;
+}
+
+.booking-card-content {
+    @apply p-6 pt-0 space-y-4 text-sm;
+}
+
+.booking-card-info-grid {
+    @apply grid grid-cols-2 gap-4;
+}
+
+.booking-card-info-label {
+    @apply text-muted-foreground text-xs font-medium uppercase tracking-wide;
+}
+
+.booking-card-info-value {
+    @apply font-medium text-sm;
+}
+
+.booking-card-info-secondary {
+    @apply text-muted-foreground text-xs;
+}
+
+.booking-card-address {
+    @apply font-medium text-sm truncate;
+}
+
+.booking-card-total-section {
+    @apply border-t pt-3;
+}
+
+.booking-card-total-wrapper {
+    @apply flex justify-between items-center;
+}
+
+.booking-card-total-amount {
+    @apply font-bold text-lg text-primary;
+}
+
+.booking-card-breakdown {
+    @apply text-right;
+}
+
+.booking-card-breakdown-item {
+    @apply text-xs text-muted-foreground;
+}
+
+/* Access Restricted Styles */
+.access-restricted-container {
+    @apply flex items-center justify-center min-h-[400px];
+}
+
+.access-restricted-card {
+    @apply w-full max-w-md mx-auto rounded-xl border bg-card text-card-foreground shadow;
+}
+
+.access-restricted-header {
+    @apply flex flex-col space-y-1.5 p-6 text-center;
+}
+
+.access-restricted-title {
+    @apply text-destructive font-semibold leading-none tracking-tight;
+}
+
+.access-restricted-description {
+    @apply text-sm text-muted-foreground;
+}
+
+.access-restricted-content {
+    @apply p-6 pt-0 text-center;
+}
+
+.access-restricted-message {
+    @apply text-sm text-muted-foreground;
+}
+
+/* Error State Styles */
+.error-state-container {
+    @apply space-y-6;
+}
+
+.error-state-card {
+    @apply border-destructive/20 bg-destructive/5 rounded-xl border text-card-foreground shadow;
+}
+
+.error-state-header {
+    @apply flex flex-col space-y-1.5 p-6;
+}
+
+.error-state-title {
+    @apply text-destructive flex items-center gap-2 font-semibold leading-none tracking-tight;
+}
+
+.error-state-icon {
+    @apply h-5 w-5;
+}
+
+.error-state-description {
+    @apply text-destructive/80 text-sm;
+}
+
+.error-state-content {
+    @apply p-6 pt-0 flex gap-3;
+}

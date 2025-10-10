@@ -185,7 +185,7 @@ export const sideBarLinks: SideBarItem[] = [
     type: 'dropdown',
     slug: 'operator-management',
     icon: UsersRound,
-    roles: ['operator'],
+    roles: ['adminOperator', 'managerOperator', 'accountantOperator', 'salesOperator'],
     items: [
       {
         title: 'Operator Dashboard',
@@ -193,7 +193,7 @@ export const sideBarLinks: SideBarItem[] = [
         url: '/operator-management/dashboard',
         type: 'routed',
         icon: Layers2,
-        roles: ['operator'],
+        roles: ['adminOperator', 'managerOperator', 'accountantOperator', 'salesOperator'],
       },
       {
         title: 'Performance Metrics',
@@ -201,7 +201,15 @@ export const sideBarLinks: SideBarItem[] = [
         url: '/operator-management/metrics',
         type: 'routed',
         icon: Layers3,
-        roles: ['operator'],
+        roles: ['adminOperator', 'managerOperator', 'accountantOperator', 'salesOperator'],
+      },
+      {
+        title: 'Bookings',
+        slug: 'operator-bookings',
+        url: '/operators/bookings',
+        type: 'routed',
+        icon: NotebookTabs,
+        roles: ['adminOperator', 'managerOperator', 'accountantOperator', 'salesOperator'],
       },
     ],
   },

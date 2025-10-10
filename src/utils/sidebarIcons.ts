@@ -26,6 +26,9 @@ export function getSidebarIcon(name: string) {
       return UsersRound;
     case 'operators':
       return UsersRound;
+    case 'bookings':
+    case 'operatorbookings':
+      return NotebookTabs;
     case 'products':
       return Package;
     case 'orders':
