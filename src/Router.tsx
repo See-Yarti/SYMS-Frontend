@@ -30,6 +30,7 @@ import RatePlannerPage from './pages/rate/RatePlanner';
 import BlackoutPage from './pages/rate/BlackoutPage';
 import CarClassesPage from './pages/rate/CarClassesPage';
 import TaxesPage from './pages/rate/TaxesPage';
+import AllBookings from './pages/bookings';
 
 const router = createBrowserRouter([
   {
@@ -130,6 +131,10 @@ const router = createBrowserRouter([
               { path: ':locationId/car-classes', element: <CarClassesPage /> },
               { path: ':locationId/taxes', element: <TaxesPage /> },
             ],
+          },
+          {
+            path: 'all-bookings',
+            element: <AllBookings/>
           }
         ],
       },
