@@ -7,13 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
 type Props = {
     open: boolean;
     onClose: () => void;
-    onSave: (payload: { title: string; description?: string; percentage: string }) => Promise<void> | void;
-    initialValues?: { title: string; description?: string; percentage: string };
+    onSave: (payload: { title: string; description?: string; percentage?: string; amount?: string; taxType: 'PERCENTAGE' | 'FIXED' }) => Promise<void> | void;
+    initialValues?: { title: string; description?: string; percentage?: string; amount?: string; taxType?: 'PERCENTAGE' | 'FIXED' };
     editing?: boolean;
     saving?: boolean;
 };
@@ -65,6 +66,8 @@ export default function TaxDialog({
     const [title, setTitle] = React.useState(initialValues?.title ?? '');
     const [description, setDescription] = React.useState(initialValues?.description ?? '');
     const [percentage, setPercentage] = React.useState(initialValues?.percentage ?? '');
+    const [amount, setAmount] = React.useState(initialValues?.amount ?? '');
+    const [taxType, setTaxType] = React.useState<'PERCENTAGE' | 'FIXED'>(initialValues?.taxType ?? 'PERCENTAGE');
 
     // keep last accepted value so we can revert on invalid keystrokes
     const lastAcceptedRef = React.useRef<string>('');
@@ -82,9 +85,12 @@ export default function TaxDialog({
     React.useEffect(() => {
         if (open) {
             const p = initialValues?.percentage ?? '';
+            const a = initialValues?.amount ?? '';
             setTitle(initialValues?.title ?? '');
             setDescription(initialValues?.description ?? '');
             setPercentage(p);
+            setAmount(a);
+            setTaxType(initialValues?.taxType ?? 'PERCENTAGE');
             // initialize last accepted
             lastAcceptedRef.current = p ?? '';
         }
@@ -153,11 +159,33 @@ export default function TaxDialog({
         }
     };
 
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const raw = e.target.value;
+        // Allow only numbers, decimal point, and up to 2 decimal places
+        const sanitized = raw.replace(/[^0-9.]/g, '').replace(/^\./, '0.').replace(/\.{2,}/g, '.');
+        const parts = sanitized.split('.');
+        if (parts.length > 2) {
+            return; // Don't allow multiple decimal points
+        }
+        if (parts[1] && parts[1].length > 2) {
+            return; // Don't allow more than 2 decimal places
+        }
+        setAmount(sanitized);
+    };
+
     function validate(): string | null {
         if (!title.trim()) return 'Title is required';
-        if (!isWithinOpenInterval(percentage)) {
-            return 'Percentage must be greater than 0 and less than 100 (up to 2 decimals)';
+        
+        if (taxType === 'PERCENTAGE') {
+            if (!isWithinOpenInterval(percentage)) {
+                return 'Percentage must be greater than 0 and less than 100 (up to 2 decimals)';
+            }
+        } else if (taxType === 'FIXED') {
+            if (!amount || Number(amount) <= 0) {
+                return 'Amount must be a positive number with up to 2 decimals';
+            }
         }
+        
         return null;
     }
 
@@ -167,12 +195,22 @@ export default function TaxDialog({
             toast.error(err);
             return;
         }
-        const asFixed = Number(percentage).toFixed(2);
-        await onSave({
+        
+        const payload: { title: string; description?: string; percentage?: string; amount?: string; taxType: 'PERCENTAGE' | 'FIXED' } = {
             title: title.trim(),
             description: (description || '').trim() || undefined,
-            percentage: asFixed,
-        });
+            taxType: taxType,
+        };
+        
+        if (taxType === 'PERCENTAGE') {
+            const asFixed = Number(percentage).toFixed(2);
+            payload.percentage = asFixed;
+        } else if (taxType === 'FIXED') {
+            const asFixed = Number(amount).toFixed(2);
+            payload.amount = asFixed;
+        }
+        
+        await onSave(payload);
     };
 
     return (
@@ -196,21 +234,51 @@ export default function TaxDialog({
                     </div>
 
                     <div>
-                        <Label>Percentage *</Label>
-                        <Input
-                            inputMode="decimal"
-                            step="0.01"
-                            min={0}
-                            max={100}
-                            value={percentage}
-                            onChange={handlePercentChange}
-                            onBlur={handlePercentBlur}
-                            placeholder="e.g., 5.00"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">
-                            Enter a value between 0 and 100 (exclusive), up to 2 decimals. Whole numbers auto-format to <code>.00</code>.
-                        </p>
+                        <Label>Tax Type *</Label>
+                        <Select value={taxType} onValueChange={(value: 'PERCENTAGE' | 'FIXED') => setTaxType(value)}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select tax type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="PERCENTAGE">Percentage</SelectItem>
+                                <SelectItem value="FIXED">Fixed Amount</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
+
+                    {taxType === 'PERCENTAGE' ? (
+                        <div>
+                            <Label>Percentage *</Label>
+                            <Input
+                                inputMode="decimal"
+                                step="0.01"
+                                min={0}
+                                max={100}
+                                value={percentage}
+                                onChange={handlePercentChange}
+                                onBlur={handlePercentBlur}
+                                placeholder="e.g., 5.00"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Enter a value between 0 and 100 (exclusive), up to 2 decimals. Whole numbers auto-format to <code>.00</code>.
+                            </p>
+                        </div>
+                    ) : (
+                        <div>
+                            <Label>Amount *</Label>
+                            <Input
+                                inputMode="decimal"
+                                step="0.01"
+                                min={0}
+                                value={amount}
+                                onChange={handleAmountChange}
+                                placeholder="e.g., 12.50"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Enter a positive amount with up to 2 decimals (e.g., 12.50).
+                            </p>
+                        </div>
+                    )}
 
                     <div>
                         <Label>Description</Label>
@@ -225,7 +293,7 @@ export default function TaxDialog({
 
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose}>Cancel</Button>
-                    <Button onClick={submit} disabled={Boolean(saving) || !title.trim() || !isWithinOpenInterval(percentage)}>
+                    <Button onClick={submit} disabled={Boolean(saving) || !title.trim() || (taxType === 'PERCENTAGE' ? !isWithinOpenInterval(percentage) : !amount || Number(amount) <= 0)}>
                         {editing ? 'Update' : 'Create'}
                     </Button>
                 </DialogFooter>

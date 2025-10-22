@@ -56,7 +56,7 @@ export default function TaxesPage() {
     const [togglingId, setTogglingId] = React.useState<string | null>(null);
     const [savingEdit, setSavingEdit] = React.useState(false);
 
-    const handleCreate = async (payload: { title: string; description?: string; percentage: string }) => {
+    const handleCreate = async (payload: { title: string; description?: string; percentage?: string; amount?: string; taxType: 'PERCENTAGE' | 'FIXED' }) => {
         try {
             await createTax.mutateAsync({ ...payload, locationId });
             toast.success('Tax created');
@@ -67,7 +67,7 @@ export default function TaxesPage() {
         }
     };
 
-    const handleEditSave = async (vals: { title: string; description?: string; percentage: string }) => {
+    const handleEditSave = async (vals: { title: string; description?: string; percentage?: string; amount?: string; taxType: 'PERCENTAGE' | 'FIXED' }) => {
         if (!editing) return;
         try {
             setSavingEdit(true);
@@ -147,7 +147,7 @@ export default function TaxesPage() {
                             <TableHead className="w-[48px]"></TableHead>
                             <TableHead>Title</TableHead>
                             <TableHead>Description</TableHead>
-                            <TableHead className="text-right">Percentage</TableHead>
+                            <TableHead className="text-right">Value</TableHead>
                             <TableHead className="text-center">Status</TableHead>
                             <TableHead className="text-right">Created</TableHead>
                             <TableHead className="w-[120px] text-right"></TableHead>
@@ -176,7 +176,12 @@ export default function TaxesPage() {
                                 <TableCell className="max-w-[420px] truncate" title={t.description || ''}>
                                     {t.description || <span className="text-muted-foreground italic">—</span>}
                                 </TableCell>
-                                <TableCell className="text-right font-semibold">{Number(t.percentage).toFixed(2)}%</TableCell>
+                                <TableCell className="text-right font-semibold">
+                                    {t.taxType === 'PERCENTAGE' 
+                                        ? `${Number(t.percentage).toFixed(2)}%` 
+                                        : `$${Number(t.amount).toFixed(2)}`
+                                    }
+                                </TableCell>
 
                                 <TableCell className="text-center">
                                     {t.isActive ? (
@@ -265,6 +270,8 @@ export default function TaxesPage() {
                             title: editing.title,
                             description: editing.description || '',
                             percentage: editing.percentage, // keep as string
+                            amount: editing.amount, // keep as string
+                            taxType: editing.taxType,
                         }
                         : undefined
                 }

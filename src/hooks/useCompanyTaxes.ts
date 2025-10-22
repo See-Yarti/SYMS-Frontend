@@ -8,7 +8,9 @@ export interface CompanyTaxItem {
   locationId: string;
   title: string;
   description: string;
-  percentage: string;
+  percentage?: string; // for PERCENTAGE type
+  amount?: string; // for FIXED type
+  taxType: 'PERCENTAGE' | 'FIXED';
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -26,7 +28,9 @@ export interface CompanyTaxDetail {
   };
   title: string;
   description: string;
-  percentage: string;
+  percentage?: string; // for PERCENTAGE type
+  amount?: string; // for FIXED type
+  taxType: 'PERCENTAGE' | 'FIXED';
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -53,13 +57,17 @@ export interface CreateTaxBody {
   title: string;
   locationId: string;
   description?: string;
-  percentage: string; // "5.00"
+  percentage?: string; // "5.00" - for PERCENTAGE type
+  amount?: string; // "12.50" - for FIXED type
+  taxType: 'PERCENTAGE' | 'FIXED';
 }
 
 export interface UpdateTaxBody {
   title?: string;
   description?: string;
-  percentage?: string; // "7.50"
+  percentage?: string; // "7.50" - for PERCENTAGE type
+  amount?: string; // "12.50" - for FIXED type
+  taxType?: 'PERCENTAGE' | 'FIXED';
 }
 
 // ------- QUERIES -------
