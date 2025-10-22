@@ -54,7 +54,7 @@ type RateServerItem = {
   monthlyExtraDayRate?: number;
 };
 
-// We fetch "gel-all/:locationId" which returns an object-like bag with entries and some meta keys
+// We fetch "get-all/:locationId" which returns an object-like bag with entries and some meta keys
 type RateListBag = Record<string, unknown> & {
   total?: unknown;
   page?: unknown;
@@ -189,14 +189,14 @@ export default function EditRateDialog({
   carClasses: CarClassOption[];
   onSaved?: () => void;
 }) {
-  // Fetch list by location, then pick item by id (API: gel-all/:locationId)
+  // Fetch list by location, then pick item by id (API: get-all/:locationId)
   const {
     data: listRaw,
     isLoading: listLoading,
     isError,
     error,
   } = useFetchData<unknown>(
-    open && locationId ? `company-car-class-rate/gel-all/${locationId}` : '',
+    open && locationId ? `company-car-class-rate/get-all/${locationId}` : '',
     ['rate-list-for-edit', locationId],
     { enabled: Boolean(open && locationId) }
   );

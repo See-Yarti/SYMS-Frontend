@@ -143,7 +143,7 @@ export default function RatesPage() {
     isLoading: ratesLoading,
     refetch: refetchRates,
   } = useFetchData<unknown>(
-    canOperate ? `company-car-class-rate/gel-all/${locationId}` : '',
+    canOperate ? `company-car-class-rate/get-all/${locationId}` : '',
     ['rates', locationId || ''],
     { enabled: canOperate, retry: false }
   );
