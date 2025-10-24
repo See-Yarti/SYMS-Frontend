@@ -7,6 +7,7 @@ import { Pencil, Trash2, Car, PlusCircle } from 'lucide-react';
 import CarClassDialog from '@/components/CarClasses/CarClassDialog';
 import { useFetchData, usePostData, usePutData, useDeleteData } from '@/hooks/useOperatorCarClass';
 import { useAppSelector } from '@/store';
+import { axiosInstance } from '@/lib/API';
 
 interface CarClassAPI {
   id: string;
@@ -16,6 +17,12 @@ interface CarClassAPI {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+interface CarImage {
+  id: string;
+  url: string;
+  sortOrder: number;
 }
 
 interface CompanyCarClass {
@@ -33,6 +40,7 @@ interface CompanyCarClass {
   depositAmount?: string;
   isAutomationEnabled?: boolean;
   isCustomKeepDurationEnabled?: boolean;
+  images?: CarImage[];
 }
 
 export default function CarClassesPage() {
@@ -100,6 +108,20 @@ export default function CarClassesPage() {
   const [editing, setEditing] = React.useState<CompanyCarClass | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [pendingDelete, setPendingDelete] = React.useState<CompanyCarClass | null>(null);
+  const [editingWithImages, setEditingWithImages] = React.useState<CompanyCarClass | null>(null);
+
+  // Function to fetch car class with images for editing
+  const fetchCarClassWithImages = async (carClassId: string) => {
+    try {
+      const { data } = await axiosInstance.get(
+        `company-car-class/${companyId}/${locationId}/${carClassId}`
+      );
+      return data.data;
+    } catch (error) {
+      console.error('Error fetching car class with images:', error);
+      return null;
+    }
+  };
 
   async function handleSave(values: any) {
     const payload = {
@@ -118,6 +140,7 @@ export default function CarClassesPage() {
       depositAmount: values.depositAmount || '0.00',
       isAutomationEnabled: values.isAutomationEnabled,
       isCustomKeepDurationEnabled: values.isCustomKeepDurationEnabled,
+      images: values.image, // The hook will handle FormData conversion
     };
 
     try {
@@ -196,10 +219,15 @@ export default function CarClassesPage() {
                       size="icon"
                       variant="ghost"
                       className="hover:bg-primary/15"
-                      onClick={() => {
+                      onClick={async () => {
                         if (canOperate) {
                           setEditing(cl);
                           setDialogOpen(true);
+                          // Fetch car class with images for editing
+                          const carClassWithImages = await fetchCarClassWithImages(cl.id);
+                          if (carClassWithImages) {
+                            setEditingWithImages(carClassWithImages);
+                          }
                         } else {
                           toast.error('Company and Location required');
                         }
@@ -237,7 +265,7 @@ export default function CarClassesPage() {
               ))
             ) : (
               <tr>
-                <td colSpan={8} className="h-24 text-center text-muted-foreground text-lg">
+                <td colSpan={9} className="h-24 text-center text-muted-foreground text-lg">
                   <span>No car classes found. Click <b>Add Car Class</b> to get started.</span>
                 </td>
               </tr>
@@ -248,14 +276,18 @@ export default function CarClassesPage() {
 
       <CarClassDialog
         open={dialogOpen}
-        onClose={() => { setDialogOpen(false); setEditing(null); }}
+        onClose={() => { 
+          setDialogOpen(false); 
+          setEditing(null); 
+          setEditingWithImages(null);
+        }}
         onSave={handleSave}
         onDelete={editing ? () => {
           setDialogOpen(false);
           setPendingDelete(editing);
           setDeleteDialogOpen(true);
         } : undefined}
-        editing={editing}
+        editing={editingWithImages || editing}
         allCarClasses={allCarClasses}
       />
 

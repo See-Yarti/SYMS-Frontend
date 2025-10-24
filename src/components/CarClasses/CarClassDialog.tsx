@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Upload, X, Image as ImageIcon } from 'lucide-react';
 
 const VEHICLE_SIZES = [
   { code: 'M', name: 'Mini' }, { code: 'E', name: 'Economy' }, { code: 'C', name: 'Compact' },
@@ -59,6 +60,10 @@ export default function CarClassDialog({
   const [overtimeHour, setOvertimeHour] = React.useState(editing?.overTimeAmountPerHour ?? '0.00');
   const [deposit, setDeposit] = React.useState(editing?.depositAmount ?? '0.00');
   const [customKeep, setCustomKeep] = React.useState(editing?.isCustomKeepDurationEnabled ?? false);
+  
+  // Image upload state
+  const [selectedImage, setSelectedImage] = React.useState<File | null>(null);
+  const [imagePreview, setImagePreview] = React.useState<string | null>(editing?.imageUrl || null);
 
   React.useEffect(() => {
     if (carClassCode && carClassCode.length === 4) {
@@ -88,6 +93,10 @@ export default function CarClassDialog({
     setDeposit(editing?.depositAmount ?? '0.00');
     setCustomKeep(editing?.isCustomKeepDurationEnabled ?? false);
 
+    // Reset image state
+    setSelectedImage(null);
+    setImagePreview(editing?.images && editing.images.length > 0 ? editing.images[0].url : null);
+
     if (editing?.carClass?.name) {
       setSize(editing.carClass.name[0]);
       setBody(editing.carClass.name[1]);
@@ -99,6 +108,38 @@ export default function CarClassDialog({
   function labelForACRISS(code: string, arr: { code: string; name: string }[]) {
     return arr.find(opt => opt.code === code)?.name || '';
   }
+
+  // Image upload handlers
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select a valid image file');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size should be less than 5MB');
+        return;
+      }
+      
+      setSelectedImage(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+  };
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -115,6 +156,7 @@ export default function CarClassDialog({
       depositAmount: deposit,
       isAutomationEnabled: automation,
       isCustomKeepDurationEnabled: customKeep,
+      image: selectedImage,
     });
   }
 
@@ -158,6 +200,57 @@ export default function CarClassDialog({
             <div>
               <Label className="mb-1">Description</Label>
               <Input className="w-full bg-background border border-input rounded-md" value={description} onChange={e => setDescription(e.target.value)} />
+            </div>
+          </div>
+
+          {/* Image Upload Section */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Car Image</Label>
+            <div className="flex items-center gap-4">
+              {imagePreview ? (
+                <div className="relative">
+                  <img 
+                    src={imagePreview} 
+                    alt="Car preview" 
+                    className="w-24 h-24 object-cover rounded-lg border border-input"
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="destructive"
+                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                    onClick={handleRemoveImage}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="w-24 h-24 border-2 border-dashed border-input rounded-lg flex items-center justify-center">
+                  <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                </div>
+              )}
+              
+              <div className="flex-1">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                  id="image-upload"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById('image-upload')?.click()}
+                  className="w-full"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  {imagePreview ? 'Change Image' : 'Upload Image'}
+                </Button>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Max size: 5MB. Supported formats: JPG, PNG, GIF
+                </p>
+              </div>
             </div>
           </div>
 

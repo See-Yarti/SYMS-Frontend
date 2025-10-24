@@ -10,10 +10,15 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { CalendarClock, CalendarRange, Filter, RefreshCw, Search, UserCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { CalendarClock, CalendarRange, Filter, RefreshCw, Search, UserCircle, MoreVertical, X } from 'lucide-react';
 import { Booking } from '@/types/booking';
 import { cn } from '@/lib/utils';
 import { InlineLoader, PageLoadingSkeleton } from '@/components/ui/loading';
+import { useMutation } from '@tanstack/react-query';
+import { axiosInstance } from '@/lib/API';
+import { toast } from 'sonner';
 
 const statusStyles: Record<string, string> = {
   PENDING: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
@@ -23,6 +28,30 @@ const statusStyles: Record<string, string> = {
   IN_PROGRESS: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
   SCHEDULED: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300',
 };
+
+export enum BookingCancelType {
+  /** Full refund, no payout, no commission */
+  FREE_CANCEL = 'FREE_CANCEL',
+  /** Customer cancels after free period – partial refund, commission on penalty */
+  LATE_CANCEL = 'LATE_CANCEL',
+  /** Customer never showed up – partial refund, commission on no-show fee */
+  NO_SHOW = 'NO_SHOW',
+  /** Booking cancelled due to customer's fault (invalid docs, etc.) */
+  CUSTOMER_FAULT = 'CUSTOMER_FAULT',
+  /** Booking cancelled due to operator/company issue (vehicle unavailable, etc.) */
+  OPERATOR_FAULT = 'OPERATOR_FAULT',
+  /** Rental used partially – refund unused portion, commission on used portion */
+  PARTIAL_USE = 'PARTIAL_USE',
+}
+
+const cancelTypeOptions = [
+  { value: BookingCancelType.FREE_CANCEL, label: 'Free Cancel', description: 'Full refund, no payout, no commission' },
+  { value: BookingCancelType.LATE_CANCEL, label: 'Late Cancel', description: 'Customer cancels after free period' },
+  { value: BookingCancelType.NO_SHOW, label: 'No Show', description: 'Customer never showed up' },
+  { value: BookingCancelType.CUSTOMER_FAULT, label: 'Customer Fault', description: 'Invalid docs, etc.' },
+  { value: BookingCancelType.OPERATOR_FAULT, label: 'Operator Fault', description: 'Vehicle unavailable, etc.' },
+  { value: BookingCancelType.PARTIAL_USE, label: 'Partial Use', description: 'Rental used partially' },
+];
 
 
 
@@ -52,6 +81,103 @@ const formatDateTime = (value?: string | null) => {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date);
+};
+
+// Cancellation Dialog Component
+const CancellationDialog: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  booking: Booking;
+  companyId: string;
+  onSuccess: () => void;
+}> = ({ open, onClose, booking, companyId, onSuccess }) => {
+  const [cancelType, setCancelType] = React.useState<BookingCancelType | ''>('');
+  const [note, setNote] = React.useState('');
+
+  const { mutate: cancelBooking, isPending } = useMutation({
+    mutationFn: async (data: { cancelType: BookingCancelType; note: string }) => {
+      const { data: response } = await axiosInstance.patch(
+        `booking/cancel-booking/${booking.id}/${companyId}`,
+        data
+      );
+      return response;
+    },
+    onSuccess: () => {
+      toast.success('Booking cancelled successfully');
+      onSuccess();
+      onClose();
+      setCancelType('');
+      setNote('');
+    },
+    onError: (error: any) => {
+      console.error('Error cancelling booking:', error);
+      toast.error(error?.response?.data?.message || 'Failed to cancel booking');
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cancelType) return;
+    
+    cancelBooking({
+      cancelType: cancelType as BookingCancelType,
+      note: note.trim(),
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Cancel Booking</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="cancelType">Cancellation Type *</Label>
+            <Select value={cancelType} onValueChange={(value) => setCancelType(value as BookingCancelType)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select cancellation type" />
+              </SelectTrigger>
+              <SelectContent>
+                {cancelTypeOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    <div>
+                      <div className="font-medium">{option.label}</div>
+                      <div className="text-sm text-muted-foreground">{option.description}</div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="note">Cancellation Note</Label>
+            <Textarea
+              id="note"
+              placeholder="Enter cancellation reason or notes..."
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={3}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              variant="destructive" 
+              disabled={!cancelType || isPending}
+            >
+              {isPending ? 'Cancelling...' : 'Cancel Booking'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
 };
 
 const OperatorBookings: React.FC = () => {
@@ -326,7 +452,7 @@ const OperatorBookings: React.FC = () => {
           ) : (
             <div className="operator-bookings-grid">
               {bookings.map((booking) => (
-                <BookingCard key={booking.id} booking={booking} />
+                <BookingCard key={booking.id} booking={booking} companyId={otherInfo?.companyId || ''} onRefetch={refetch} />
               ))}
             </div>
           )}
@@ -352,32 +478,96 @@ const OperatorBookings: React.FC = () => {
   );
 };
 
-const BookingCard: React.FC<{ booking: Booking }> = ({ booking }) => {
+const BookingCard: React.FC<{ booking: Booking; companyId: string; onRefetch: () => void }> = ({ booking, companyId, onRefetch }) => {
   const statusKey = booking.status?.toUpperCase() ?? 'PENDING';
   const statusClass = statusStyles[statusKey] ?? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200';
+  const [showActions, setShowActions] = React.useState(false);
+  const [showCancelDialog, setShowCancelDialog] = React.useState(false);
+
+  // Only show cancel option for bookings that can be cancelled
+  const canCancel = booking.status && !['CANCELLED', 'COMPLETED'].includes(booking.status.toUpperCase());
+  
+  // Debug: Log booking status to see what we're working with
+  console.log('Booking status:', booking.status, 'Can cancel:', canCancel);
+  
+  // Debug: Log showActions state changes
+  React.useEffect(() => {
+    console.log('showActions changed to:', showActions);
+  }, [showActions]);
+
+  // Close actions dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (showActions && !target.closest('.actions-dropdown')) {
+        setShowActions(false);
+      }
+    };
+
+    if (showActions) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showActions]);
 
   return (
-    <div className="booking-card">
-      <div className="booking-card-header">
-        <div className="booking-card-header-content">
-          <div className="booking-card-title-section">
-            <div className="booking-card-title">
-              Booking #{booking.id.slice(0, 8)}
+    <>
+      <div className="booking-card">
+        <div className="booking-card-header">
+          <div className="booking-card-header-content">
+            <div className="booking-card-title-section">
+              <div className="booking-card-title">
+                Booking #{booking.id.slice(0, 8)}
+              </div>
+              <div className="booking-card-subtitle">
+                Created {formatDateTime(booking.createdAt)}
+              </div>
             </div>
-            <div className="booking-card-subtitle">
-              Created {formatDateTime(booking.createdAt)}
+            <div className="booking-card-badges">
+              <Badge className={cn('booking-card-status-badge', statusClass)}>
+                {booking.status}
+              </Badge>
+              <Badge variant="outline" className="booking-card-paid-badge">
+                {booking.paidStatus}
+              </Badge>
+              {canCancel && (
+                <div className="relative actions-dropdown">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('3-dot button clicked, current showActions:', showActions);
+                      setShowActions(!showActions);
+                    }}
+                    className="h-8 w-8 p-0"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                  {showActions && (
+                    <div className="absolute right-0 top-8 z-10 w-48 rounded-md border bg-background shadow-lg">
+                      <div className="p-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowCancelDialog(true);
+                            setShowActions(false);
+                          }}
+                          className="w-full justify-start text-destructive hover:bg-destructive/10"
+                        >
+                          <X className="mr-2 h-4 w-4" />
+                          Cancel Booking
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          </div>
-          <div className="booking-card-badges">
-            <Badge className={cn('booking-card-status-badge', statusClass)}>
-              {booking.status}
-            </Badge>
-            <Badge variant="outline" className="booking-card-paid-badge">
-              {booking.paidStatus}
-            </Badge>
           </div>
         </div>
-      </div>
       <div className="booking-card-content">
         <div className="booking-card-info-grid">
           <div>
@@ -420,7 +610,16 @@ const BookingCard: React.FC<{ booking: Booking }> = ({ booking }) => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+
+      <CancellationDialog
+        open={showCancelDialog}
+        onClose={() => setShowCancelDialog(false)}
+        booking={booking}
+        companyId={companyId}
+        onSuccess={onRefetch}
+      />
+    </>
   );
 };
 
