@@ -9,6 +9,7 @@ import {
   UsersRound,
   Package,
   PanelRightDashed,
+  Calculator,
 } from 'lucide-react';
 import { OperatorRole, UserRole } from './auth';
 
@@ -108,6 +109,22 @@ export const sideBarLinks: SideBarItem[] = [
     slug: 'all-bookings',
     icon: NotebookTabs,
     roles: ['admin'],
+  },
+  {
+    title: 'Admin Accounting',
+    type: 'routed',
+    url: '/admin-accounting',
+    slug: 'admin-accounting',
+    icon: Calculator,
+    roles: ['admin'],
+  },
+  {
+    title: 'Company Accounting',
+    type: 'routed',
+    url: '/operator-accounting',
+    slug: 'operator-accounting',
+    icon: Calculator,
+    roles: ['adminOperator', 'managerOperator', 'accountantOperator', 'salesOperator'],
   },
   {
     type: 'separation',

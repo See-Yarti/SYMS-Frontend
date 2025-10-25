@@ -31,6 +31,8 @@ import BlackoutPage from './pages/rate/BlackoutPage';
 import CarClassesPage from './pages/rate/CarClassesPage';
 import TaxesPage from './pages/rate/TaxesPage';
 import AllBookings from './pages/bookings';
+import AdminAccounting from './pages/accounting/AdminAccounting';
+import OperatorAccounting from './pages/accounting/OperatorAccounting';
 
 const router = createBrowserRouter([
   {
@@ -135,6 +137,14 @@ const router = createBrowserRouter([
           {
             path: 'all-bookings',
             element: <AllBookings/>
+          },
+          {
+            path: 'admin-accounting',
+            element: <AdminAccounting />
+          },
+          {
+            path: 'operator-accounting',
+            element: <OperatorAccounting />
           }
         ],
       },

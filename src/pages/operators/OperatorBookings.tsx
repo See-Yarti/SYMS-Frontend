@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { CalendarClock, CalendarRange, Filter, RefreshCw, Search, UserCircle, MoreVertical, X } from 'lucide-react';
+import { CalendarClock, CalendarRange, Filter, RefreshCw, Search, UserCircle, MoreVertical, X, CheckCircle } from 'lucide-react';
 import { Booking } from '@/types/booking';
 import { cn } from '@/lib/utils';
 import { InlineLoader, PageLoadingSkeleton } from '@/components/ui/loading';
@@ -172,6 +172,80 @@ const CancellationDialog: React.FC<{
               disabled={!cancelType || isPending}
             >
               {isPending ? 'Cancelling...' : 'Cancel Booking'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Complete Booking Dialog Component
+const CompleteBookingDialog: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  booking: Booking;
+  companyId: string;
+  onSuccess: () => void;
+}> = ({ open, onClose, booking, companyId, onSuccess }) => {
+  const [note, setNote] = React.useState('');
+
+  const { mutate: completeBooking, isPending } = useMutation({
+    mutationFn: async (data: { note?: string }) => {
+      const { data: response } = await axiosInstance.patch(
+        `booking/complete-booking/${booking.id}/${companyId}`,
+        data
+      );
+      return response;
+    },
+    onSuccess: () => {
+      toast.success('Booking completed successfully');
+      onSuccess();
+      onClose();
+      setNote('');
+    },
+    onError: (error: any) => {
+      console.error('Error completing booking:', error);
+      toast.error(error?.response?.data?.message || 'Failed to complete booking');
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    completeBooking({
+      note: note.trim() || undefined,
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Complete Booking</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="note">Completion Notes (Optional)</Label>
+            <Textarea
+              id="note"
+              placeholder="Enter any completion notes or remarks..."
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={3}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              variant="default" 
+              disabled={isPending}
+            >
+              {isPending ? 'Completing...' : 'Complete Booking'}
             </Button>
           </DialogFooter>
         </form>
@@ -483,12 +557,16 @@ const BookingCard: React.FC<{ booking: Booking; companyId: string; onRefetch: ()
   const statusClass = statusStyles[statusKey] ?? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200';
   const [showActions, setShowActions] = React.useState(false);
   const [showCancelDialog, setShowCancelDialog] = React.useState(false);
+  const [showCompleteDialog, setShowCompleteDialog] = React.useState(false);
 
   // Only show cancel option for bookings that can be cancelled
   const canCancel = booking.status && !['CANCELLED', 'COMPLETED'].includes(booking.status.toUpperCase());
   
+  // Only show complete option for bookings that can be completed
+  const canComplete = booking.status && ['CONFIRMED', 'IN_PROGRESS', 'SCHEDULED'].includes(booking.status.toUpperCase());
+  
   // Debug: Log booking status to see what we're working with
-  console.log('Booking status:', booking.status, 'Can cancel:', canCancel);
+  console.log('Booking status:', booking.status, 'Can cancel:', canCancel, 'Can complete:', canComplete);
   
   // Debug: Log showActions state changes
   React.useEffect(() => {
@@ -530,7 +608,7 @@ const BookingCard: React.FC<{ booking: Booking; companyId: string; onRefetch: ()
               <Badge variant="outline" className="booking-card-paid-badge">
                 {booking.paidStatus}
               </Badge>
-              {canCancel && (
+              {(canCancel || canComplete) && (
                 <div className="relative actions-dropdown">
                   <Button
                     variant="ghost"
@@ -546,20 +624,37 @@ const BookingCard: React.FC<{ booking: Booking; companyId: string; onRefetch: ()
                   </Button>
                   {showActions && (
                     <div className="absolute right-0 top-8 z-10 w-48 rounded-md border bg-background shadow-lg">
-                      <div className="p-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowCancelDialog(true);
-                            setShowActions(false);
-                          }}
-                          className="w-full justify-start text-destructive hover:bg-destructive/10"
-                        >
-                          <X className="mr-2 h-4 w-4" />
-                          Cancel Booking
-                        </Button>
+                      <div className="p-1 space-y-1">
+                        {canComplete && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowCompleteDialog(true);
+                              setShowActions(false);
+                            }}
+                            className="w-full justify-start text-green-600 hover:bg-green-50"
+                          >
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Complete Booking
+                          </Button>
+                        )}
+                        {canCancel && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowCancelDialog(true);
+                              setShowActions(false);
+                            }}
+                            className="w-full justify-start text-destructive hover:bg-destructive/10"
+                          >
+                            <X className="mr-2 h-4 w-4" />
+                            Cancel Booking
+                          </Button>
+                        )}
                       </div>
                     </div>
                   )}
@@ -615,6 +710,14 @@ const BookingCard: React.FC<{ booking: Booking; companyId: string; onRefetch: ()
       <CancellationDialog
         open={showCancelDialog}
         onClose={() => setShowCancelDialog(false)}
+        booking={booking}
+        companyId={companyId}
+        onSuccess={onRefetch}
+      />
+
+      <CompleteBookingDialog
+        open={showCompleteDialog}
+        onClose={() => setShowCompleteDialog(false)}
         booking={booking}
         companyId={companyId}
         onSuccess={onRefetch}

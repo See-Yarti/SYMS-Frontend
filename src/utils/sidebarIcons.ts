@@ -8,6 +8,7 @@ import {
   Layers3,
   Box,
   Command,
+  Calculator,
 } from 'lucide-react';
 
 export function getSidebarIcon(name: string) {
@@ -44,6 +45,10 @@ export function getSidebarIcon(name: string) {
       return UsersRound;
     case 'settings':
       return Box;
+    case 'accounting':
+    case 'adminaccounting':
+    case 'operatoraccounting':
+      return Calculator;
     default:
       return Command; // fallback icon
   }

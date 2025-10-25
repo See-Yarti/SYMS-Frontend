@@ -369,11 +369,21 @@ export default function EditRateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] md:max-w-3xl lg:max-w-5xl p-0 h-[92vh]">
+      <DialogContent className="w-[95vw] md:max-w-3xl lg:max-w-5xl p-0 h-[92vh] flex flex-col">
         <div className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <DialogHeader className="px-6 pt-4 pb-3">
+          <div className="flex items-center justify-between px-6 pt-4 pb-3">
             <DialogTitle className="text-xl md:text-2xl">Edit Rate</DialogTitle>
-          </DialogHeader>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
+              <Button
+                type="submit"
+                form="edit-rate-form"
+                disabled={saving || listLoading || !companyCarClassId || !startDate || !endDate}
+              >
+                Save
+              </Button>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 px-6 pb-4">
             <div className="space-y-2">
@@ -414,7 +424,7 @@ export default function EditRateDialog({
           </div>
         </div>
 
-        <div className="px-6 py-5 overflow-y-auto h-[calc(92vh-140px-68px)] md:h-[calc(92vh-150px-72px)]">
+        <div className="px-6 py-5 overflow-y-auto flex-1">
           {isError && (
             <div className="text-destructive mb-4">
               {getErrMessage(error)}
@@ -495,18 +505,6 @@ export default function EditRateDialog({
           </form>
         </div>
 
-        <div className="sticky bottom-0 z-10 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <DialogFooter className="px-6 py-4 gap-2">
-            <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
-            <Button
-              type="submit"
-              form="edit-rate-form"
-              disabled={saving || listLoading || !companyCarClassId || !startDate || !endDate}
-            >
-              Save
-            </Button>
-          </DialogFooter>
-        </div>
       </DialogContent>
     </Dialog>
   );
