@@ -1444,23 +1444,23 @@ const CompanyDetail = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="edit-longitude">Longitude *</Label>
-                <Input
-                  id="edit-longitude"
-                  type="number"
-                  value={locationForm.longitude}
-                  onChange={(e) => setLocationForm({ ...locationForm, longitude: parseFloat(e.target.value) })}
-                  placeholder="e.g., 55.2708"
-                />
-              </div>
-              <div>
                 <Label htmlFor="edit-latitude">Latitude *</Label>
                 <Input
                   id="edit-latitude"
                   type="number"
                   value={locationForm.latitude}
                   onChange={(e) => setLocationForm({ ...locationForm, latitude: parseFloat(e.target.value) })}
-                  placeholder="e.g., 25.2048"
+                  placeholder="e.g., 33.9437"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-longitude">Longitude *</Label>
+                <Input
+                  id="edit-longitude"
+                  type="number"
+                  value={locationForm.longitude}
+                  onChange={(e) => setLocationForm({ ...locationForm, longitude: parseFloat(e.target.value) })}
+                  placeholder="e.g., -84.51763"
                 />
               </div>
             </div>
