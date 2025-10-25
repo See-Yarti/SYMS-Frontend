@@ -73,25 +73,60 @@ const OperatorAccounting: React.FC = () => {
   const { otherInfo } = useAppSelector((state) => state.auth);
   const companyId = otherInfo?.companyId || '';
 
-  const [dateFrom, setDateFrom] = useState('2025-08-01');
-  const [dateTo, setDateTo] = useState('2025-10-31');
+  const [dateFrom, setDateFrom] = useState(() => {
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    return firstDay.toISOString().split('T')[0];
+  });
+  const [dateTo, setDateTo] = useState(() => {
+    const today = new Date();
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    return lastDay.toISOString().split('T')[0];
+  });
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
+  const [appliedFilters, setAppliedFilters] = useState({
+    dateFrom: '',
+    dateTo: '',
+    page: 1,
+    limit: 20,
+  });
 
   const params = useMemo(() => ({
-    dateFrom: dateFrom || undefined,
-    dateTo: dateTo || undefined,
-    page,
-    limit,
-  }), [dateFrom, dateTo, page, limit]);
+    dateFrom: appliedFilters.dateFrom || undefined,
+    dateTo: appliedFilters.dateTo || undefined,
+    page: appliedFilters.page,
+    limit: appliedFilters.limit,
+  }), [appliedFilters]);
 
   const { data, isLoading, isError, refetch } = useOperatorAccounting(companyId, params);
 
+  const handleApplyFilters = () => {
+    setAppliedFilters({
+      dateFrom,
+      dateTo,
+      page: 1,
+      limit,
+    });
+  };
+
   const handleResetFilters = () => {
-    setDateFrom('2025-08-01');
-    setDateTo('2025-10-31');
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const newDateFrom = firstDay.toISOString().split('T')[0];
+    const newDateTo = lastDay.toISOString().split('T')[0];
+    
+    setDateFrom(newDateFrom);
+    setDateTo(newDateTo);
     setPage(1);
     setLimit(20);
+    setAppliedFilters({
+      dateFrom: newDateFrom,
+      dateTo: newDateTo,
+      page: 1,
+      limit: 20,
+    });
   };
 
   const handleExport = () => {
@@ -219,7 +254,7 @@ const OperatorAccounting: React.FC = () => {
           </div>
           <div className="flex justify-end mt-4">
             <Button 
-              onClick={() => refetch()} 
+              onClick={handleApplyFilters} 
               disabled={!dateFrom || !dateTo}
             >
               <Calendar className="mr-2 h-4 w-4" />

@@ -15,15 +15,15 @@ export const useAdminAccounting = (params: AccountingParams) => {
   return useQuery<AccountingResponse>({
     queryKey: ['admin-accounting', params],
     queryFn: async () => {
-      // Build query string like Postman - only include parameters that have values
-      const queryParts: string[] = [];
-      if (params.dateFrom) queryParts.push(`dateFrom=${encodeURIComponent(params.dateFrom)}`);
-      if (params.dateTo) queryParts.push(`dateTo=${encodeURIComponent(params.dateTo)}`);
-      if (params.page && params.page > 1) queryParts.push(`page=${params.page}`);
-      if (params.limit && params.limit !== 20) queryParts.push(`limit=${params.limit}`);
+      // Use URLSearchParams for proper encoding like other hooks
+      const searchParams = new URLSearchParams();
+      if (params.dateFrom) searchParams.append('dateFrom', params.dateFrom);
+      if (params.dateTo) searchParams.append('dateTo', params.dateTo);
+      if (params.page && params.page > 1) searchParams.append('page', String(params.page));
+      if (params.limit && params.limit !== 20) searchParams.append('limit', String(params.limit));
 
-      const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
-      const fullUrl = `accounting/admin${queryString}`;
+      const queryString = searchParams.toString();
+      const fullUrl = queryString ? `accounting/admin?${queryString}` : 'accounting/admin';
 
       console.log('Admin Accounting API Call:', {
         url: 'accounting/admin',
@@ -40,7 +40,7 @@ export const useAdminAccounting = (params: AccountingParams) => {
       const { data } = await axiosInstance.get(fullUrl);
       return data;
     },
-    enabled: true,
+    enabled: !!(params.dateFrom && params.dateTo),
   });
 };
 
@@ -49,15 +49,15 @@ export const useOperatorAccounting = (companyId: string, params: AccountingParam
   return useQuery<AccountingResponse>({
     queryKey: ['operator-accounting', companyId, params],
     queryFn: async () => {
-      // Build query string like Postman - only include parameters that have values
-      const queryParts: string[] = [];
-      if (params.dateFrom) queryParts.push(`dateFrom=${encodeURIComponent(params.dateFrom)}`);
-      if (params.dateTo) queryParts.push(`dateTo=${encodeURIComponent(params.dateTo)}`);
-      if (params.page && params.page > 1) queryParts.push(`page=${params.page}`);
-      if (params.limit && params.limit !== 20) queryParts.push(`limit=${params.limit}`);
+      // Use URLSearchParams for proper encoding like other hooks
+      const searchParams = new URLSearchParams();
+      if (params.dateFrom) searchParams.append('dateFrom', params.dateFrom);
+      if (params.dateTo) searchParams.append('dateTo', params.dateTo);
+      if (params.page && params.page > 1) searchParams.append('page', String(params.page));
+      if (params.limit && params.limit !== 20) searchParams.append('limit', String(params.limit));
 
-      const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
-      const fullUrl = `accounting/company/${companyId}${queryString}`;
+      const queryString = searchParams.toString();
+      const fullUrl = queryString ? `accounting/company/${companyId}?${queryString}` : `accounting/company/${companyId}`;
 
       console.log('Operator Accounting API Call:', {
         url: `accounting/company/${companyId}`,
@@ -75,6 +75,6 @@ export const useOperatorAccounting = (companyId: string, params: AccountingParam
       const { data } = await axiosInstance.get(fullUrl);
       return data;
     },
-    enabled: !!companyId,
+    enabled: !!(companyId && params.dateFrom && params.dateTo),
   });
 };
