@@ -71,24 +71,34 @@ const normalizeResponse = (data: unknown, fallbackMeta: BookingMeta) => {
 				return { bookings: [], meta: { ...DEFAULT_META, page, limit } };
 			}
 
-			const params = new URLSearchParams();
-			if (search) params.append('q', search.trim());
-			if (sortDir) params.append('sortDir', sortDir);
-			if (dateFrom) params.append('dateFrom', dateFrom);
-			if (dateTo) params.append('dateTo', dateTo);
-			if (page) params.append('page', String(page));
-			if (limit) params.append('limit', String(limit));
+		const params: Record<string, string> = {};
+		if (search && search.trim()) {
+			params.q = search.trim();
+		}
+		if (sortDir) {
+			params.sortDir = sortDir;
+		}
+		if (dateFrom) {
+			params.dateFrom = dateFrom;
+		}
+		if (dateTo) {
+			params.dateTo = dateTo;
+		}
+		if (page) {
+			params.page = String(page);
+		}
+		if (limit) {
+			params.limit = String(limit);
+		}
 
-			const endpoint = `/booking/get-bookings-of-company/${companyId}`;
-			const url = params.toString() ? `${endpoint}?${params.toString()}` : endpoint;
+		const endpoint = `/booking/get-bookings-of-company/${companyId}`;
+		const { data } = await axiosInstance.get(endpoint, { params });
 
-			const { data } = await axiosInstance.get(url);
-
-			return normalizeResponse(data, {
-				...DEFAULT_META,
-				page,
-				limit,
-			});
+		return normalizeResponse(data, {
+			...DEFAULT_META,
+			page,
+			limit,
+		});
 		},
 		placeholderData: keepPreviousData,
 		enabled: canAccess,

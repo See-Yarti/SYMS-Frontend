@@ -10,6 +10,20 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { CalendarClock, CalendarRange, Filter, RefreshCw, Search, UserCircle, MoreVertical, X, CheckCircle } from 'lucide-react';
@@ -278,8 +292,11 @@ const OperatorBookings: React.FC = () => {
     return new Date(`${dateToInput}T23:59:59.999Z`).toISOString();
   }, [dateToInput]);
 
+  // Only send search if it has a value (not empty string)
+  const searchValue = debouncedSearch && debouncedSearch.trim() ? debouncedSearch.trim() : undefined;
+
   const { data, isLoading, isError, error, isFetching, refetch } = useBookings({
-    search: debouncedSearch || undefined,
+    search: searchValue,
     sortDir,
     dateFrom: dateFromIso,
     dateTo: dateToIso,
@@ -341,6 +358,11 @@ const OperatorBookings: React.FC = () => {
   }
 
   if (isError) {
+    const errorMessage = (error as any)?.response?.data?.message || 
+                         (error as Error)?.message || 
+                         'An unexpected error occurred while fetching bookings.';
+    const isServerError = (error as any)?.response?.status === 500;
+
     return (
       <div className="error-state-container">
         <div className="operator-bookings-header">
@@ -367,7 +389,12 @@ const OperatorBookings: React.FC = () => {
               Unable to load bookings
             </div>
             <div className="error-state-description">
-              {(error as Error)?.message ?? 'An unexpected error occurred while fetching bookings.'}
+              {errorMessage}
+              {isServerError && (
+                <div className="mt-2 text-sm">
+                  This might be a temporary server issue. Please try again or contact support if the problem persists.
+                </div>
+              )}
             </div>
           </div>
           <div className="error-state-content">
@@ -524,38 +551,62 @@ const OperatorBookings: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className="operator-bookings-grid">
-              {bookings.map((booking) => (
-                <BookingCard key={booking.id} booking={booking} companyId={otherInfo?.companyId || ''} onRefetch={refetch} />
-              ))}
-            </div>
+            <>
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/70">
+                      <TableHead className="font-semibold">Booking ID</TableHead>
+                      <TableHead className="font-semibold">Created</TableHead>
+                      <TableHead className="font-semibold">Car</TableHead>
+                      <TableHead className="font-semibold">Location</TableHead>
+                      <TableHead className="font-semibold">Pickup</TableHead>
+                      <TableHead className="font-semibold">Drop-off</TableHead>
+                      <TableHead className="font-semibold">Status</TableHead>
+                      <TableHead className="font-semibold">Payment</TableHead>
+                      <TableHead className="text-right font-semibold">Total</TableHead>
+                      <TableHead className="text-center font-semibold w-[80px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {bookings.map((booking) => (
+                      <BookingTableRow 
+                        key={booking.id} 
+                        booking={booking} 
+                        companyId={otherInfo?.companyId || ''} 
+                        onRefetch={refetch} 
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <Separator />
+
+              <div className="operator-bookings-pagination">
+                <p className="operator-bookings-pagination-info">
+                  Page {meta.page} of {totalPages}
+                </p>
+                <div className="operator-bookings-pagination-controls">
+                  <Button variant="outline" disabled={!canGoBack} onClick={() => setPage((prev) => Math.max(1, prev - 1))}>
+                    Previous
+                  </Button>
+                  <Button variant="outline" disabled={!canGoForward} onClick={() => setPage((prev) => prev + 1)}>
+                    Next
+                  </Button>
+                </div>
+              </div>
+            </>
           )}
-
-          <Separator />
-
-          <div className="operator-bookings-pagination">
-            <p className="operator-bookings-pagination-info">
-              Page {meta.page} of {totalPages}
-            </p>
-            <div className="operator-bookings-pagination-controls">
-              <Button variant="outline" disabled={!canGoBack} onClick={() => setPage((prev) => Math.max(1, prev - 1))}>
-                Previous
-              </Button>
-              <Button variant="outline" disabled={!canGoForward} onClick={() => setPage((prev) => prev + 1)}>
-                Next
-              </Button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
   );
 };
 
-const BookingCard: React.FC<{ booking: Booking; companyId: string; onRefetch: () => void }> = ({ booking, companyId, onRefetch }) => {
+const BookingTableRow: React.FC<{ booking: Booking; companyId: string; onRefetch: () => void }> = ({ booking, companyId, onRefetch }) => {
   const statusKey = booking.status?.toUpperCase() ?? 'PENDING';
   const statusClass = statusStyles[statusKey] ?? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200';
-  const [showActions, setShowActions] = React.useState(false);
   const [showCancelDialog, setShowCancelDialog] = React.useState(false);
   const [showCompleteDialog, setShowCompleteDialog] = React.useState(false);
 
@@ -564,148 +615,96 @@ const BookingCard: React.FC<{ booking: Booking; companyId: string; onRefetch: ()
   
   // Only show complete option for bookings that can be completed
   const canComplete = booking.status && ['CONFIRMED', 'IN_PROGRESS', 'SCHEDULED'].includes(booking.status.toUpperCase());
-  
-  // Debug: Log booking status to see what we're working with
-  console.log('Booking status:', booking.status, 'Can cancel:', canCancel, 'Can complete:', canComplete);
-  
-  // Debug: Log showActions state changes
-  React.useEffect(() => {
-    console.log('showActions changed to:', showActions);
-  }, [showActions]);
-
-  // Close actions dropdown when clicking outside
-  React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Element;
-      if (showActions && !target.closest('.actions-dropdown')) {
-        setShowActions(false);
-      }
-    };
-
-    if (showActions) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [showActions]);
 
   return (
     <>
-      <div className="booking-card">
-        <div className="booking-card-header">
-          <div className="booking-card-header-content">
-            <div className="booking-card-title-section">
-              <div className="booking-card-title">
-                Booking #{booking.id.slice(0, 8)}
-              </div>
-              <div className="booking-card-subtitle">
-                Created {formatDateTime(booking.createdAt)}
-              </div>
-            </div>
-            <div className="booking-card-badges">
-              <Badge className={cn('booking-card-status-badge', statusClass)}>
-                {booking.status}
-              </Badge>
-              <Badge variant="outline" className="booking-card-paid-badge">
-                {booking.paidStatus}
-              </Badge>
-              {(canCancel || canComplete) && (
-                <div className="relative actions-dropdown">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log('3-dot button clicked, current showActions:', showActions);
-                      setShowActions(!showActions);
-                    }}
-                    className="h-8 w-8 p-0"
+      <TableRow className="hover:bg-muted/50">
+        <TableCell className="font-mono text-sm">
+          #{booking.id.slice(0, 8)}
+        </TableCell>
+        <TableCell className="text-sm">
+          {formatDateTime(booking.createdAt)}
+        </TableCell>
+        <TableCell>
+          <div className="font-medium">
+            {booking.car.make} {booking.car.model}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {booking.car.passengers} passengers • {booking.car.doors} doors
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="font-medium">{booking.operationalLocation.city}</div>
+          <div className="text-xs text-muted-foreground max-w-[200px] truncate" title={booking.operationalLocation.addressLine}>
+            {booking.operationalLocation.addressLine}
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="text-sm max-w-[200px] truncate" title={booking.pickup.addressLine}>
+            {booking.pickup.addressLine}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {booking.pickupAt ? formatDateTime(booking.pickupAt) : '—'}
+          </div>
+        </TableCell>
+        <TableCell>
+          <div className="text-sm max-w-[200px] truncate" title={booking.dropoff.addressLine}>
+            {booking.dropoff.addressLine}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {booking.dropAt ? formatDateTime(booking.dropAt) : '—'}
+          </div>
+        </TableCell>
+        <TableCell>
+          <Badge className={cn(statusClass)}>
+            {booking.status}
+          </Badge>
+        </TableCell>
+        <TableCell>
+          <Badge variant="outline">{booking.paidStatus}</Badge>
+        </TableCell>
+        <TableCell className="text-right">
+          <div className="font-semibold">
+            {formatCurrency(booking.totals.grandTotal, booking.currency)}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Sub: {formatCurrency(booking.totals.subTotal, booking.currency)}
+          </div>
+        </TableCell>
+        <TableCell className="text-center">
+          {(canCancel || canComplete) ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {canComplete && (
+                  <DropdownMenuItem
+                    onClick={() => setShowCompleteDialog(true)}
+                    className="text-green-600 focus:text-green-600"
                   >
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                  {showActions && (
-                    <div className="absolute right-0 top-8 z-10 w-48 rounded-md border bg-background shadow-lg">
-                      <div className="p-1 space-y-1">
-                        {canComplete && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowCompleteDialog(true);
-                              setShowActions(false);
-                            }}
-                            className="w-full justify-start text-green-600 hover:bg-green-50"
-                          >
-                            <CheckCircle className="mr-2 h-4 w-4" />
-                            Complete Booking
-                          </Button>
-                        )}
-                        {canCancel && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowCancelDialog(true);
-                              setShowActions(false);
-                            }}
-                            className="w-full justify-start text-destructive hover:bg-destructive/10"
-                          >
-                            <X className="mr-2 h-4 w-4" />
-                            Cancel Booking
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      <div className="booking-card-content">
-        <div className="booking-card-info-grid">
-          <div>
-            <p className="booking-card-info-label">Location</p>
-            <p className="booking-card-info-value">{booking.operationalLocation.city}</p>
-            <p className="booking-card-info-secondary">{booking.operationalLocation.addressLine}</p>
-          </div>
-          <div>
-            <p className="booking-card-info-label">Vehicle</p>
-            <p className="booking-card-info-value">{booking.car.make} {booking.car.model}</p>
-            <p className="booking-card-info-secondary">{booking.car.passengers} passengers • {booking.car.doors} doors</p>
-          </div>
-        </div>
-
-        <div className="booking-card-info-grid">
-          <div>
-            <p className="booking-card-info-label">Pickup</p>
-            <p className="booking-card-address">{booking.pickup.addressLine}</p>
-            <p className="booking-card-info-secondary">{formatDateTime(booking.pickupAt)}</p>
-          </div>
-          <div>
-            <p className="booking-card-info-label">Drop-off</p>
-            <p className="booking-card-address">{booking.dropoff.addressLine}</p>
-            <p className="booking-card-info-secondary">{formatDateTime(booking.dropAt)}</p>
-          </div>
-        </div>
-
-        <div className="booking-card-total-section">
-          <div className="booking-card-total-wrapper">
-            <div>
-              <p className="booking-card-info-label">Total Amount</p>
-              <p className="booking-card-total-amount">
-                {formatCurrency(booking.totals.grandTotal, booking.currency)}
-              </p>
-            </div>
-            <div className="booking-card-breakdown">
-              <p className="booking-card-breakdown-item">Subtotal: {formatCurrency(booking.totals.subTotal, booking.currency)}</p>
-              <p className="booking-card-breakdown-item">Tax: {formatCurrency(booking.totals.taxTotal, booking.currency)}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-      </div>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Complete Booking
+                  </DropdownMenuItem>
+                )}
+                {canCancel && (
+                  <DropdownMenuItem
+                    onClick={() => setShowCancelDialog(true)}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Cancel Booking
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <span className="text-muted-foreground text-xs">—</span>
+          )}
+        </TableCell>
+      </TableRow>
 
       <CancellationDialog
         open={showCancelDialog}

@@ -6,7 +6,7 @@ import { CalendarDays, LineChart, Ban, Car, Percent } from 'lucide-react';
 
 const RATE_TABS = [
   { label: 'Rates', path: '', icon: <CalendarDays className="w-4 h-4 mr-1" /> },
-  { label: 'Rate Planner', path: 'planner', icon: <LineChart className="w-4 h-4 mr-1" /> },
+  // { label: 'Rate Planner', path: 'planner', icon: <LineChart className="w-4 h-4 mr-1" /> },
   { label: 'Blackouts', path: 'blackouts', icon: <Ban className="w-4 h-4 mr-1" /> },
   { label: 'Car Classes', path: 'car-classes', icon: <Car className="w-4 h-4 mr-1" /> },
   { label: 'Taxes', path: 'taxes', icon: <Percent className="w-4 h-4 mr-1" /> },
