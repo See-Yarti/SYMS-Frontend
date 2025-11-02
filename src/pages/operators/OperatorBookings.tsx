@@ -556,12 +556,10 @@ const OperatorBookings: React.FC = () => {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/70">
-                      <TableHead className="font-semibold">Booking ID</TableHead>
+                      <TableHead className="font-semibold">Booking Code</TableHead>
                       <TableHead className="font-semibold">Created</TableHead>
                       <TableHead className="font-semibold">Car</TableHead>
                       <TableHead className="font-semibold">Location</TableHead>
-                      <TableHead className="font-semibold">Pickup</TableHead>
-                      <TableHead className="font-semibold">Drop-off</TableHead>
                       <TableHead className="font-semibold">Status</TableHead>
                       <TableHead className="font-semibold">Payment</TableHead>
                       <TableHead className="text-right font-semibold">Total</TableHead>
@@ -620,39 +618,23 @@ const BookingTableRow: React.FC<{ booking: Booking; companyId: string; onRefetch
     <>
       <TableRow className="hover:bg-muted/50">
         <TableCell className="font-mono text-sm">
-          #{booking.id.slice(0, 8)}
+          {booking.bookingCode || `#${booking.id.slice(0, 8)}`}
         </TableCell>
         <TableCell className="text-sm">
           {formatDateTime(booking.createdAt)}
         </TableCell>
         <TableCell>
           <div className="font-medium">
-            {booking.car.make} {booking.car.model}
+            {booking.car?.make || '—'} {booking.car?.model || ''}
           </div>
           <div className="text-xs text-muted-foreground">
-            {booking.car.passengers} passengers • {booking.car.doors} doors
+            {booking.car?.passengers ? `${booking.car.passengers} passengers • ${booking.car.doors} doors` : '—'}
           </div>
         </TableCell>
         <TableCell>
-          <div className="font-medium">{booking.operationalLocation.city}</div>
-          <div className="text-xs text-muted-foreground max-w-[200px] truncate" title={booking.operationalLocation.addressLine}>
-            {booking.operationalLocation.addressLine}
-          </div>
-        </TableCell>
-        <TableCell>
-          <div className="text-sm max-w-[200px] truncate" title={booking.pickup.addressLine}>
-            {booking.pickup.addressLine}
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {booking.pickupAt ? formatDateTime(booking.pickupAt) : '—'}
-          </div>
-        </TableCell>
-        <TableCell>
-          <div className="text-sm max-w-[200px] truncate" title={booking.dropoff.addressLine}>
-            {booking.dropoff.addressLine}
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {booking.dropAt ? formatDateTime(booking.dropAt) : '—'}
+          <div className="font-medium">{booking.operationalLocation?.city || '—'}</div>
+          <div className="text-xs text-muted-foreground max-w-[200px] truncate" title={booking.operationalLocation?.addressLine || ''}>
+            {booking.operationalLocation?.addressLine || '—'}
           </div>
         </TableCell>
         <TableCell>
@@ -665,10 +647,10 @@ const BookingTableRow: React.FC<{ booking: Booking; companyId: string; onRefetch
         </TableCell>
         <TableCell className="text-right">
           <div className="font-semibold">
-            {formatCurrency(booking.totals.grandTotal, booking.currency)}
+            {formatCurrency(booking.totals?.grandTotal, booking.currency)}
           </div>
           <div className="text-xs text-muted-foreground">
-            Sub: {formatCurrency(booking.totals.subTotal, booking.currency)}
+            Sub: {formatCurrency(booking.totals?.subTotal, booking.currency)}
           </div>
         </TableCell>
         <TableCell className="text-center">

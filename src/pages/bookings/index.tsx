@@ -31,6 +31,7 @@ import {
 import { cn } from '@/lib/utils';
 import { InlineLoader, PageLoadingSkeleton } from '@/components/ui/loading';
 import { useAllBookings } from '@/hooks/useAllBookings';
+import { useGetCompanies } from '@/hooks/useCompanyApi';
 import { Booking } from '@/types/booking';
 
 const statusStyles: Record<string, string> = {
@@ -83,8 +84,17 @@ const AllBookings: React.FC = () => {
   const [page, setPage] = React.useState(1);
   const [dateFromInput, setDateFromInput] = React.useState('');
   const [dateToInput, setDateToInput] = React.useState('');
+  const [selectedCompanyId, setSelectedCompanyId] = React.useState<string>('all');
 
   const [debouncedSearch] = useDebounce(searchTerm, 400);
+
+  // Fetch companies for dropdown
+  const { data: companiesData } = useGetCompanies({
+    limit: 1000, // Get all companies
+    page: 1,
+  });
+
+  const companies = companiesData?.data?.companies ?? [];
 
   const dateFromIso = React.useMemo(() => {
     if (!dateFromInput) return undefined;
@@ -102,13 +112,14 @@ const AllBookings: React.FC = () => {
       sortDir,
       dateFrom: dateFromIso,
       dateTo: dateToIso,
+      companyId: selectedCompanyId && selectedCompanyId !== 'all' ? selectedCompanyId : undefined,
       page,
       limit,
     });
 
   React.useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, sortDir, dateFromIso, dateToIso, limit]);
+  }, [debouncedSearch, sortDir, dateFromIso, dateToIso, selectedCompanyId, limit]);
 
   const bookings = data?.bookings ?? [];
   const meta = data?.meta ?? { ok: true, page: 1, limit, total: 0 };
@@ -136,6 +147,7 @@ const AllBookings: React.FC = () => {
     setPage(1);
     setDateFromInput('');
     setDateToInput('');
+    setSelectedCompanyId('all');
   };
 
   const canGoBack = page > 1;
@@ -205,6 +217,25 @@ const AllBookings: React.FC = () => {
             </Select>
           </div>
           <div>
+            <Label>Company</Label>
+            <Select
+              value={selectedCompanyId}
+              onValueChange={setSelectedCompanyId}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="All companies" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All companies</SelectItem>
+                {companies.map((company) => (
+                  <SelectItem key={company.id} value={company.id}>
+                    {company.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
             <Label>Per page</Label>
             <Select
               value={String(limit)}
@@ -253,7 +284,8 @@ const AllBookings: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/70">
-                    <TableHead className="font-semibold">Booking ID</TableHead>
+                    <TableHead className="font-semibold">Booking Code</TableHead>
+                    <TableHead className="font-semibold">Company</TableHead>
                     <TableHead className="font-semibold">Created</TableHead>
                     <TableHead className="font-semibold">Car</TableHead>
                     <TableHead className="font-semibold">Location</TableHead>
@@ -271,17 +303,20 @@ const AllBookings: React.FC = () => {
                     return (
                       <TableRow key={booking.id} className="hover:bg-muted/50">
                         <TableCell className="font-mono text-sm">
-                          #{booking.id.slice(0, 8)}
+                          {booking.bookingCode || `#${booking.id.slice(0, 8)}`}
+                        </TableCell>
+                        <TableCell>
+                          {booking.company?.name || '—'}
                         </TableCell>
                         <TableCell className="text-sm">
                           {formatDateTime(booking.createdAt)}
                         </TableCell>
                         <TableCell>
                           <div className="font-medium">
-                            {booking.car.make} {booking.car.model}
+                            {booking.car?.make || '—'} {booking.car?.model || ''}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {booking.car.passengers} passengers
+                            {booking.car?.passengers ? `${booking.car.passengers} passengers` : '—'}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -299,7 +334,7 @@ const AllBookings: React.FC = () => {
                           <Badge variant="outline">{booking.paidStatus}</Badge>
                         </TableCell>
                         <TableCell className="text-right font-semibold">
-                          {formatCurrency(booking.totals.grandTotal, booking.currency)}
+                          {formatCurrency(booking.totals?.grandTotal, booking.currency)}
                         </TableCell>
                       </TableRow>
                     );

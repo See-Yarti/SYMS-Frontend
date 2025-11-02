@@ -40,8 +40,15 @@ export type LocationPoint = {
   lng: number;
 };
 
+export type BookingCompany = {
+  id: string;
+  name: string;
+  logo: string | null;
+};
+
 export type Booking = {
   id: string;
+  bookingCode?: string;
   status: BookingStatus;
   paidStatus: PaidStatus;
   pickupAt: string;
@@ -50,8 +57,9 @@ export type Booking = {
   totals: BookingTotals;
   operationalLocation: OperationalLocation;
   car: Car;
-  pickup: LocationPoint;
-  dropoff: LocationPoint;
+  company?: BookingCompany;
+  pickup?: LocationPoint;
+  dropoff?: LocationPoint;
   createdAt: string;
 };
 

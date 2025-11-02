@@ -7,6 +7,7 @@ export type AllBookingQueryParams = {
   sortDir?: 'ASC' | 'DESC';
   dateFrom?: string;
   dateTo?: string;
+  companyId?: string;
   page?: number;
   limit?: number;
 };
@@ -45,17 +46,19 @@ export const useAllBookings = ({
   sortDir = 'DESC',
   dateFrom,
   dateTo,
+  companyId,
   page = 1,
   limit = 10,
 }: AllBookingQueryParams) => {
   return useQuery<BookingApiResult>({
-    queryKey: ['all-bookings', search ?? '', sortDir, dateFrom ?? '', dateTo ?? '', page, limit],
+    queryKey: ['all-bookings', search ?? '', sortDir, dateFrom ?? '', dateTo ?? '', companyId ?? '', page, limit],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (search) params.append('q', search.trim());
       if (sortDir) params.append('sortDir', sortDir);
       if (dateFrom) params.append('dateFrom', dateFrom);
       if (dateTo) params.append('dateTo', dateTo);
+      if (companyId) params.append('companyId', companyId);
       if (page) params.append('page', String(page));
       if (limit) params.append('limit', String(limit));
 
