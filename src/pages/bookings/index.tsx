@@ -1,5 +1,6 @@
 import React from 'react';
 import { useDebounce } from 'use-debounce';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -78,6 +79,7 @@ const formatDateTime = (value?: string | null) => {
 };
 
 const AllBookings: React.FC = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [sortDir, setSortDir] = React.useState<'ASC' | 'DESC'>('DESC');
   const [limit, setLimit] = React.useState(10);
@@ -303,7 +305,12 @@ const AllBookings: React.FC = () => {
                     return (
                       <TableRow key={booking.id} className="hover:bg-muted/50">
                         <TableCell className="font-mono text-sm">
-                          {booking.bookingCode || `#${booking.id.slice(0, 8)}`}
+                          <button
+                            onClick={() => navigate(`/all-bookings/${booking.id}`)}
+                            className="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300 transition-colors cursor-pointer"
+                          >
+                            {booking.bookingCode || `#${booking.id.slice(0, 8)}`}
+                          </button>
                         </TableCell>
                         <TableCell>
                           {booking.company?.name || '—'}

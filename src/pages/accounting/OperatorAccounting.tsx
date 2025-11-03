@@ -1,13 +1,21 @@
 // src/pages/accounting/OperatorAccounting.tsx
 import React, { useState, useMemo } from 'react';
 import { useAppSelector } from '@/store';
-import { useOperatorAccounting } from '@/hooks/useAccounting';
+import { useOperatorAccounting, fetchInvoice } from '@/hooks/useAccounting';
+import { useGetActiveLocations } from '@/hooks/useLocationApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { 
   Calculator, 
   DollarSign, 
@@ -17,7 +25,9 @@ import {
   Calendar,
   Building2,
   Receipt,
-  Briefcase
+  Briefcase,
+  Download,
+  MapPin
 } from 'lucide-react';
 import { AccountingItem, AccountingType } from '@/types/accounting';
 import { cn } from '@/lib/utils';
@@ -92,6 +102,28 @@ const OperatorAccounting: React.FC = () => {
     limit: 20,
   });
 
+  // Invoice generation state
+  const [selectedLocationId, setSelectedLocationId] = useState<string>('all');
+  const [invoiceDateFrom, setInvoiceDateFrom] = useState(() => {
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    return firstDay.toISOString().split('T')[0];
+  });
+  const [invoiceDateTo, setInvoiceDateTo] = useState(() => {
+    const today = new Date();
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    return lastDay.toISOString().split('T')[0];
+  });
+
+  const [invoiceData, setInvoiceData] = useState<any>(null);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [invoiceError, setInvoiceError] = useState<Error | null>(null);
+
+  // Fetch active locations for the company
+  const { data: activeLocationsData } = useGetActiveLocations(companyId);
+  // Active locations API returns data directly as array
+  const allLocations = Array.isArray(activeLocationsData?.data) ? activeLocationsData.data : [];
+
   const params = useMemo(() => ({
     dateFrom: appliedFilters.dateFrom || undefined,
     dateTo: appliedFilters.dateTo || undefined,
@@ -131,6 +163,109 @@ const OperatorAccounting: React.FC = () => {
 
   const handleExport = () => {
     toast.info('Export functionality will be implemented soon');
+  };
+
+  const handleGenerateInvoice = async () => {
+    if (!companyId) {
+      toast.error('Company ID not found');
+      return;
+    }
+    if (!selectedLocationId || selectedLocationId === 'all') {
+      toast.error('Please select an operational location');
+      return;
+    }
+    if (!invoiceDateFrom || !invoiceDateTo) {
+      toast.error('Please select date range');
+      return;
+    }
+    
+    setInvoiceLoading(true);
+    setInvoiceError(null);
+    setInvoiceData(null);
+    
+    try {
+      const data = await fetchInvoice(
+        companyId,
+        selectedLocationId,
+        {
+          from: invoiceDateFrom,
+          to: invoiceDateTo,
+        }
+      );
+      setInvoiceData(data);
+      toast.success('Invoice generated successfully');
+    } catch (error: any) {
+      setInvoiceError(error);
+      
+      // Extract error message from response - check multiple locations
+      let errorMessage = 'Failed to generate invoice';
+      
+      // First check error.response.data.message (most common for backend errors)
+      if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      // Then check error.response.data.error
+      else if (error?.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+      // Then check error.message (the Error object's message)
+      else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      // Show user-friendly error message via toast
+      if (error?.response?.status === 500) {
+        if (errorMessage.includes('puppeteer') || errorMessage.includes('browser process')) {
+          toast.error('Server error: PDF generation service is temporarily unavailable. Please contact support.');
+        } else {
+          // Show the actual backend error message (without "Server error:" prefix)
+          toast.error(errorMessage);
+        }
+      } else if (error?.response?.status === 404) {
+        toast.error(errorMessage || 'Invoice endpoint not found. Please verify the API endpoint is available.');
+      } else {
+        toast.error(errorMessage);
+      }
+    } finally {
+      setInvoiceLoading(false);
+    }
+  };
+
+  const handleDownloadInvoice = () => {
+    if (!invoiceData) {
+      toast.error('No invoice data available');
+      return;
+    }
+    
+    // If invoice data has a download method (from blob response)
+    if (invoiceData.type === 'pdf' && invoiceData.download) {
+      try {
+        invoiceData.download();
+        toast.success('Invoice downloaded successfully');
+      } catch {
+        toast.error('Failed to download invoice');
+      }
+      return;
+    }
+    
+    // Fallback: try to create download from blob
+    if (invoiceData.blob) {
+      try {
+        const url = window.URL.createObjectURL(invoiceData.blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `invoice-${companyId}-${selectedLocationId}-${invoiceDateFrom}-${invoiceDateTo}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        toast.success('Invoice downloaded successfully');
+      } catch {
+        toast.error('Failed to download invoice');
+      }
+    } else {
+      toast.error('Invoice data format not supported');
+    }
   };
 
   if (isLoading) {
@@ -217,6 +352,109 @@ const OperatorAccounting: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Invoice Generation Section */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Receipt className="h-5 w-5 text-muted-foreground" />
+            <CardTitle className="text-lg">Generate Invoice</CardTitle>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Generate PDF invoice for a specific operational location.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Operational Location Select */}
+            <div className="space-y-2">
+              <Label htmlFor="invoice-location">Operational Location</Label>
+              <Select 
+                value={selectedLocationId} 
+                onValueChange={setSelectedLocationId}
+                disabled={!companyId}
+              >
+                <SelectTrigger id="invoice-location">
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Select location</SelectItem>
+                  {allLocations.map((location: any) => (
+                    <SelectItem key={location.id} value={location.id}>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span>{location.title || location.city}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Date From */}
+            <div className="space-y-2">
+              <Label htmlFor="invoice-date-from">Date From</Label>
+              <Input
+                id="invoice-date-from"
+                type="date"
+                value={invoiceDateFrom}
+                max={invoiceDateTo || undefined}
+                onChange={(e) => setInvoiceDateFrom(e.target.value)}
+              />
+            </div>
+
+            {/* Date To */}
+            <div className="space-y-2">
+              <Label htmlFor="invoice-date-to">Date To</Label>
+              <Input
+                id="invoice-date-to"
+                type="date"
+                value={invoiceDateTo}
+                min={invoiceDateFrom || undefined}
+                onChange={(e) => setInvoiceDateTo(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-4">
+            <Button
+              onClick={handleGenerateInvoice}
+              disabled={!companyId || !selectedLocationId || selectedLocationId === 'all' || !invoiceDateFrom || !invoiceDateTo || invoiceLoading}
+            >
+              {invoiceLoading ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Receipt className="mr-2 h-4 w-4" />
+                  Generate Invoice
+                </>
+              )}
+            </Button>
+            {invoiceData && (
+              <Button onClick={handleDownloadInvoice} variant="outline">
+                <Download className="mr-2 h-4 w-4" />
+                Download Invoice
+              </Button>
+            )}
+          </div>
+
+          {/* Success Message */}
+          {invoiceData && invoiceData.type === 'pdf' && !invoiceError && (
+            <div className="mt-4 rounded-lg border border-green-200 bg-green-50 dark:bg-green-900/10 dark:border-green-800 p-4 text-green-800 dark:text-green-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Receipt className="h-4 w-4" />
+                <span className="font-medium">Invoice Generated Successfully</span>
+              </div>
+              <p className="text-sm">
+                PDF invoice has been generated. Click "Download Invoice" to save it.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Filters */}
       <Card>

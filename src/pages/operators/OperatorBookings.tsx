@@ -1,6 +1,7 @@
 // src/pages/operators/OperatorBookings.tsx
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useBookings } from '@/hooks/useBookings';
 import { useAppSelector } from '@/store';
 import { useDebounce } from 'use-debounce';
@@ -603,6 +604,7 @@ const OperatorBookings: React.FC = () => {
 };
 
 const BookingTableRow: React.FC<{ booking: Booking; companyId: string; onRefetch: () => void }> = ({ booking, companyId, onRefetch }) => {
+  const navigate = useNavigate();
   const statusKey = booking.status?.toUpperCase() ?? 'PENDING';
   const statusClass = statusStyles[statusKey] ?? 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200';
   const [showCancelDialog, setShowCancelDialog] = React.useState(false);
@@ -618,7 +620,12 @@ const BookingTableRow: React.FC<{ booking: Booking; companyId: string; onRefetch
     <>
       <TableRow className="hover:bg-muted/50">
         <TableCell className="font-mono text-sm">
-          {booking.bookingCode || `#${booking.id.slice(0, 8)}`}
+          <button
+            onClick={() => navigate(`/all-bookings/${booking.id}`)}
+            className="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300 transition-colors cursor-pointer"
+          >
+            {booking.bookingCode || `#${booking.id.slice(0, 8)}`}
+          </button>
         </TableCell>
         <TableCell className="text-sm">
           {formatDateTime(booking.createdAt)}

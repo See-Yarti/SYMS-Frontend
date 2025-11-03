@@ -817,7 +817,7 @@ const CompanyDetail = () => {
       )}
 
       {/* Plans & Commission — SIMPLE + CLEAR */}
-      <div className="border rounded-lg p-4">
+      {/* <div className="border rounded-lg p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">Plans & Commission</h2>
           <div className="flex flex-wrap items-center gap-2">
@@ -843,7 +843,6 @@ const CompanyDetail = () => {
         <Separator className="my-4" />
 
         <div className="grid gap-6 md:grid-cols-2">
-          {/* LEFT: Tier + Duration + Mode */}
           <div className="space-y-4">
             <div className="space-y-2">
               <Label className="text-sm">Choose Tier</Label>
@@ -955,7 +954,6 @@ const CompanyDetail = () => {
               {planLoading && <span className="text-xs text-muted-foreground">Loading plans…</span>}
             </div>
 
-            {/* NEW: Manage current subscription (end early) */}
             <div className="mt-4 space-y-2 rounded-md border p-3">
               <p className="text-sm font-medium">Current Subscription — End Early</p>
 
@@ -1004,7 +1002,6 @@ const CompanyDetail = () => {
             </div>
           </div>
 
-          {/* RIGHT: Override */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-medium">Commission Override</h3>
@@ -1073,7 +1070,6 @@ const CompanyDetail = () => {
                 Save Override
               </Button>
 
-              {/* Expire now -> uses DELETE API */}
               <Button
                 variant="outline"
                 type="button"
@@ -1110,7 +1106,7 @@ const CompanyDetail = () => {
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Verification */}
       <div className="flex gap-2">

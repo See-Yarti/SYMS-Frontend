@@ -2,7 +2,7 @@
 
 import { axiosInstance } from '@/lib/API';
 import { useAppSelector } from '@/store';
-import { Booking, BookingApiResult, BookingMeta } from '@/types/booking';
+import { Booking, BookingApiResult, BookingMeta, BookingDetail } from '@/types/booking';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 
 export type BookingQueryParams = {
@@ -106,5 +106,30 @@ const normalizeResponse = (data: unknown, fallbackMeta: BookingMeta) => {
 		staleTime: 60 * 1000,
 		refetchOnWindowFocus: false,
 		refetchOnReconnect: false,
+	});
+};
+
+// Hook to fetch booking by ID
+export const useBookingById = (bookingId: string | undefined) => {
+	return useQuery<BookingDetail>({
+		queryKey: ['booking', bookingId],
+		queryFn: async () => {
+			if (!bookingId) {
+				throw new Error('Booking ID is required');
+			}
+
+			const endpoint = `/booking/get-booking-by-id/${bookingId}`;
+			const { data } = await axiosInstance.get(endpoint);
+
+			// Extract the data from response.data.data
+			if (data?.success && data?.data) {
+				return data.data;
+			}
+
+			throw new Error('Failed to fetch booking details');
+		},
+		enabled: !!bookingId,
+		retry: false,
+		staleTime: 60 * 1000,
 	});
 };

@@ -161,7 +161,7 @@ const Home: React.FC = () => {
         </div>
 
         {/* Tier + Effective summary (hidden from admins) */}
-        {canSeeTierSummary && (
+        {/* {canSeeTierSummary && (
           <div className="mt-2 rounded-lg border bg-card p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -183,7 +183,7 @@ const Home: React.FC = () => {
               </div>
             </div>
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );
