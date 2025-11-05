@@ -8,7 +8,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
     User, Building2, FileText, Mail, MapPin, Phone,
-    Info, Check, Lock, Search,
+    Info, Check, Lock, Search, Eye, EyeOff,
     ShieldCheck, FileDigit, FileSignature, Calendar as CalendarIcon,
 } from 'lucide-react';
 import { Icons } from '@/components/icons';
@@ -199,6 +199,8 @@ const RegisterForm: React.FC = () => {
         message: any; success: boolean
     }>('/company/create');
     const [uploadProgress, setUploadProgress] = useState(0);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const countryList: CountryType[] = Country.getAllCountries();
 
     const {
@@ -208,6 +210,7 @@ const RegisterForm: React.FC = () => {
         formState: { errors, isValid },
         watch,
         setValue,
+        getValues,
     } = useForm<RegisterFormValues>({
         resolver: zodResolver(registerSchema),
         mode: 'onChange',
@@ -225,7 +228,29 @@ const RegisterForm: React.FC = () => {
     const selectedCountry = watch('companyAddress.country');
     const selectedState = watch('companyAddress.state');
 
- 
+    // Auto-set city to state name when no cities are available
+    useEffect(() => {
+        if (selectedCountry && selectedState) {
+            const cities = City.getCitiesOfState(selectedCountry, selectedState);
+            if (cities.length === 0) {
+                // No cities available, use state name as city
+                const states = State.getStatesOfCountry(selectedCountry);
+                const currentState = states.find(s => s.isoCode === selectedState);
+                if (currentState) {
+                    setValue('companyAddress.city', currentState.name, { shouldValidate: true });
+                }
+            } else {
+                // Cities are available - clear city if it was set to a state name
+                const states = State.getStatesOfCountry(selectedCountry);
+                const stateNames = states.map(s => s.name);
+                const currentCity = getValues('companyAddress.city');
+                if (currentCity && stateNames.includes(currentCity) && !cities.find(c => c.name === currentCity)) {
+                    // Current city is a state name, not a valid city - clear it
+                    setValue('companyAddress.city', '', { shouldValidate: false });
+                }
+            }
+        }
+    }, [selectedCountry, selectedState, setValue, getValues]);
 
     const handleAddressSelect = (place: any) => {
         if (!place.geometry || !place.address_components) return;
@@ -426,12 +451,24 @@ const RegisterForm: React.FC = () => {
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     id="password"
-                                    type="password"
+                                    type={showPassword ? "text" : "password"}
                                     placeholder="admin1122@"
                                     disabled={isPending}
                                     {...register('password')}
-                                    className="pl-10"
+                                    className="pl-10 pr-10"
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                    tabIndex={-1}
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                        <Eye className="h-4 w-4" />
+                                    )}
+                                </button>
                             </div>
                             {errors.password ? (
                                 <p className="text-sm text-destructive">{errors.password.message}</p>
@@ -452,12 +489,24 @@ const RegisterForm: React.FC = () => {
                                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     id="confirmPassword"
-                                    type="password"
+                                    type={showConfirmPassword ? "text" : "password"}
                                     placeholder="Confirm your password"
                                     disabled={isPending}
                                     {...register('confirmPassword')}
-                                    className="pl-10"
+                                    className="pl-10 pr-10"
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                    tabIndex={-1}
+                                >
+                                    {showConfirmPassword ? (
+                                        <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                        <Eye className="h-4 w-4" />
+                                    )}
+                                </button>
                             </div>
                             {errors.confirmPassword && (
                                 <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
@@ -632,11 +681,24 @@ const RegisterForm: React.FC = () => {
                                         control={control}
                                         render={({ field }) => {
                                             const cities = City.getCitiesOfState(selectedCountry, selectedState);
+                                            // If no cities available, show read-only input with state name
+                                            if (cities.length === 0) {
+                                                const states = State.getStatesOfCountry(selectedCountry);
+                                                const currentState = states.find(s => s.isoCode === selectedState);
+                                                return (
+                                                    <Input
+                                                        value={currentState?.name || field.value || ''}
+                                                        disabled
+                                                        readOnly
+                                                        className="bg-muted"
+                                                    />
+                                                );
+                                            }
+                                            // If cities are available, show select dropdown
                                             return (
                                                 <Select
                                                     onValueChange={field.onChange}
                                                     value={field.value}
-                                                    disabled={!cities.length}
                                                 >
                                                     <SelectTrigger>
                                                         <SelectValue placeholder="Select city" />
