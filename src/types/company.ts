@@ -67,6 +67,9 @@ export interface CompaniesResponse {
   success: boolean;
   data: {
     companies: Company[];
+    total?: number;
+    page?: number;
+    limit?: number;
   };
   timestamp: string;
 }

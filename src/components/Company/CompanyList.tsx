@@ -1,6 +1,6 @@
 // src/pages/company/CompaniesList.tsx
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import {
     Loader2, ChevronsUpDown, ChevronUp, ChevronDown, Eye, Copy, CheckCircle2, XCircle,
 } from 'lucide-react';
@@ -29,6 +30,19 @@ const getInitials = (name?: string) => {
     if (!name) return '—';
     const parts = name.trim().split(/\s+/);
     return (parts[0]?.[0] || '') + (parts[1]?.[0] || '');
+};
+
+const formatDateTime = (value?: string | null) => {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(date);
 };
 
 export default function CompaniesList() {
@@ -54,7 +68,19 @@ export default function CompaniesList() {
         () => (data?.data?.companies ?? []),
         [data]
     );
-    const total = companies.length;
+    
+    // Pagination metadata
+    const total = data?.data?.total ?? (companies.length === limit ? limit * page : companies.length);
+    const currentPage = data?.data?.page ?? page;
+    const currentLimit = data?.data?.limit ?? limit;
+    const totalPages = Math.ceil(total / currentLimit) || 1;
+    const canGoBack = currentPage > 1;
+    const canGoForward = companies.length === limit || currentPage < totalPages;
+
+    // Reset page to 1 when filters change
+    useEffect(() => {
+        setPage(1);
+    }, [search, isVerified, sortBy, sortOrder]);
 
     // Mutations
     const verifyCompany = useVerifyCompany();
@@ -195,6 +221,16 @@ export default function CompaniesList() {
                                         ? (sortOrder === 'ASC' ? <ChevronUp className="inline w-4 h-4" /> : <ChevronDown className="inline w-4 h-4" />)
                                         : <ChevronsUpDown className="inline w-4 h-4 text-muted-foreground" />}
                                 </th>
+                                <th
+                                    className="px-4 py-3 text-left font-semibold cursor-pointer select-none"
+                                    onClick={() => handleSort('createdAt')}
+                                >
+                                    Created At
+                                    {' '}
+                                    {sortBy === 'createdAt'
+                                        ? (sortOrder === 'ASC' ? <ChevronUp className="inline w-4 h-4" /> : <ChevronDown className="inline w-4 h-4" />)
+                                        : <ChevronsUpDown className="inline w-4 h-4 text-muted-foreground" />}
+                                </th>
                                 <th className="px-4 py-3 text-left font-semibold">Actions</th>
                             </tr>
                         </thead>
@@ -259,6 +295,11 @@ export default function CompaniesList() {
                                         )}
                                     </td>
 
+                                    {/* Created At */}
+                                    <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                                        {formatDateTime(company.createdAt)}
+                                    </td>
+
                                     {/* Actions */}
                                     <td className="px-4 py-3 whitespace-nowrap">
                                         <div className="flex flex-wrap gap-2">
@@ -305,14 +346,35 @@ export default function CompaniesList() {
                 )}
             </div>
 
-            {/* (Optional) Pagination: shown only if you later wire total pages from API
-      {total > limit && (
-        <div className="flex justify-between items-center mt-6">
-          <Button onClick={() => setPage(page - 1)} disabled={page === 1} variant="outline">Prev</Button>
-          <span className="text-sm">Page {page} of {Math.ceil(total / limit)}</span>
-          <Button onClick={() => setPage(page + 1)} disabled={page >= Math.ceil(total / limit)} variant="outline">Next</Button>
-        </div>
-      )} */}
+            {/* Pagination */}
+            {(totalPages > 1 || companies.length === limit || currentPage > 1) && (
+                <>
+                    <Separator />
+                    <div className="flex items-center justify-between px-1">
+                        <p className="text-sm text-muted-foreground">
+                            Page {currentPage} {totalPages > 1 ? `of ${totalPages}` : ''} {data?.data?.total ? `(${total} total companies)` : companies.length === limit ? '(More pages available)' : ''}
+                        </p>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={!canGoBack}
+                                onClick={() => setPage(Math.max(1, currentPage - 1))}
+                            >
+                                Previous
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={!canGoForward && companies.length < limit}
+                                onClick={() => setPage(currentPage + 1)}
+                            >
+                                Next
+                            </Button>
+                        </div>
+                    </div>
+                </>
+            )}
 
             {/* Unverify Dialog */}
             <Dialog open={!!selectedCompanyId} onOpenChange={(o) => !o && setSelectedCompanyId(null)}>
