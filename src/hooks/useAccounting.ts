@@ -87,11 +87,11 @@ interface InvoiceParams {
 
 export const fetchInvoice = async (
   companyId: string,
-  operationalLocationId: string,
+  operationalLocationId: string | null,
   params: InvoiceParams
 ) => {
-  if (!companyId || !operationalLocationId) {
-    throw new Error('Company ID and Operational Location ID are required');
+  if (!companyId) {
+    throw new Error('Company ID is required');
   }
 
   if (!params.from || !params.to) {
@@ -103,12 +103,18 @@ export const fetchInvoice = async (
   if (params.to) searchParams.append('to', params.to);
 
   const queryString = searchParams.toString();
-  const endpoint = `accounting/invoice/${companyId}/${operationalLocationId}/pdf${queryString ? `?${queryString}` : ''}`;
+  
+  // Use multi-location endpoint if no location is provided, otherwise use single location endpoint
+  const endpoint = operationalLocationId
+    ? `accounting/invoice/${companyId}/${operationalLocationId}/pdf${queryString ? `?${queryString}` : ''}`
+    : `accounting/invoice/multi-location/${companyId}/pdf${queryString ? `?${queryString}` : ''}`;
 
   console.log('Invoice API Call:', {
-    endpoint: `accounting/invoice/${companyId}/${operationalLocationId}/pdf?from=${params.from}&to=${params.to}`,
+    endpoint: operationalLocationId
+      ? `accounting/invoice/${companyId}/${operationalLocationId}/pdf?from=${params.from}&to=${params.to}`
+      : `accounting/invoice/multi-location/${companyId}/pdf?from=${params.from}&to=${params.to}`,
     companyId,
-    operationalLocationId,
+    operationalLocationId: operationalLocationId || 'all locations',
     params,
   });
 
@@ -169,7 +175,9 @@ export const fetchInvoice = async (
         download: () => {
           const link = document.createElement('a');
           link.href = url;
-          link.download = `invoice-${companyId}-${operationalLocationId}-${params.from}-${params.to}.pdf`;
+          link.download = operationalLocationId
+            ? `invoice-${companyId}-${operationalLocationId}-${params.from}-${params.to}.pdf`
+            : `invoice-${companyId}-all-locations-${params.from}-${params.to}.pdf`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
@@ -198,5 +206,48 @@ export const fetchInvoice = async (
 
     // Handle unexpected errors (network, etc.)
     throw new Error(error?.message || 'Failed to generate invoice. Please try again.');
+  }
+};
+
+// Fetch invoice JSON data for Excel export
+export const fetchInvoiceJson = async (
+  companyId: string,
+  operationalLocationId: string | null,
+  params: InvoiceParams
+) => {
+  if (!companyId) {
+    throw new Error('Company ID is required');
+  }
+
+  if (!params.from || !params.to) {
+    throw new Error('Date range (from and to) is required');
+  }
+
+  const searchParams = new URLSearchParams();
+  if (params.from) searchParams.append('from', params.from);
+  if (params.to) searchParams.append('to', params.to);
+
+  const queryString = searchParams.toString();
+  
+  // Use multi-location endpoint if no location is provided, otherwise use single location endpoint
+  const endpoint = operationalLocationId
+    ? `accounting/invoice/${companyId}/${operationalLocationId}/json${queryString ? `?${queryString}` : ''}`
+    : `accounting/invoice/multi-location/${companyId}/json${queryString ? `?${queryString}` : ''}`;
+
+  console.log('Invoice JSON API Call:', {
+    endpoint: operationalLocationId
+      ? `accounting/invoice/${companyId}/${operationalLocationId}/json?from=${params.from}&to=${params.to}`
+      : `accounting/invoice/multi-location/${companyId}/json?from=${params.from}&to=${params.to}`,
+    companyId,
+    operationalLocationId: operationalLocationId || 'all locations',
+    params,
+  });
+
+  try {
+    const { data } = await axiosInstance.get(endpoint);
+    return data;
+  } catch (error: any) {
+    const errorMessage = error?.response?.data?.message || error?.message || 'Failed to fetch invoice data';
+    throw new Error(errorMessage);
   }
 };

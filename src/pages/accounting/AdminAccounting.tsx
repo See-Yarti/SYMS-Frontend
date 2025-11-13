@@ -1,6 +1,6 @@
 // src/pages/accounting/AdminAccounting.tsx
 import React, { useState, useMemo } from 'react';
-import { useAdminAccounting, fetchInvoice } from '@/hooks/useAccounting';
+import { useAdminAccounting, fetchInvoice, fetchInvoiceJson } from '@/hooks/useAccounting';
 import { useGetCompanies } from '@/hooks/useCompanyApi';
 import { useGetLocations } from '@/hooks/useLocationApi';
 import { Button } from '@/components/ui/button';
@@ -27,8 +27,10 @@ import {
   Receipt,
   Users,
   Download,
-  MapPin
+  MapPin,
+  FileSpreadsheet
 } from 'lucide-react';
+import { exportInvoiceToExcel } from '@/utils/excelExport';
 import { AccountingItem, AccountingType } from '@/types/accounting';
 import { cn } from '@/lib/utils';
 import { PageLoadingSkeleton } from '@/components/ui/loading';
@@ -99,6 +101,7 @@ const AdminAccounting: React.FC = () => {
   });
 
   // Invoice generation state
+  const [invoiceMode, setInvoiceMode] = useState<'company-only' | 'company-location'>('company-only');
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('all');
   const [selectedLocationId, setSelectedLocationId] = useState<string>('all');
   const [invoiceDateFrom, setInvoiceDateFrom] = useState(() => {
@@ -128,10 +131,10 @@ const AdminAccounting: React.FC = () => {
   const locations = locationsData?.data || { activeLocations: [], inactiveLocations: [] };
   const allLocations = [...(locations.activeLocations || []), ...(locations.inactiveLocations || [])];
 
-  // Reset location when company changes
+  // Reset location when company changes or mode changes
   React.useEffect(() => {
     setSelectedLocationId('all');
-  }, [selectedCompanyId]);
+  }, [selectedCompanyId, invoiceMode]);
 
   const params = useMemo(() => ({
     dateFrom: appliedFilters.dateFrom || undefined,
@@ -178,10 +181,13 @@ const AdminAccounting: React.FC = () => {
       toast.error('Please select a company');
       return;
     }
-    if (!selectedLocationId || selectedLocationId === 'all') {
+    
+    // Only require location if mode is company-location
+    if (invoiceMode === 'company-location' && (!selectedLocationId || selectedLocationId === 'all')) {
       toast.error('Please select an operational location');
       return;
     }
+    
     if (!invoiceDateFrom || !invoiceDateTo) {
       toast.error('Please select date range');
       return;
@@ -192,9 +198,11 @@ const AdminAccounting: React.FC = () => {
     setInvoiceData(null);
     
     try {
+      // Pass null for locationId if company-only mode
+      const locationId = invoiceMode === 'company-location' ? selectedLocationId : null;
       const data = await fetchInvoice(
         selectedCompanyId,
-        selectedLocationId,
+        locationId,
         {
           from: invoiceDateFrom,
           to: invoiceDateTo,
@@ -271,7 +279,10 @@ const AdminAccounting: React.FC = () => {
         const url = window.URL.createObjectURL(invoiceData.blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `invoice-${selectedCompanyId}-${selectedLocationId}-${invoiceDateFrom}-${invoiceDateTo}.pdf`;
+        const locationId = invoiceMode === 'company-location' ? selectedLocationId : null;
+        link.download = locationId
+          ? `invoice-${selectedCompanyId}-${locationId}-${invoiceDateFrom}-${invoiceDateTo}.pdf`
+          : `invoice-${selectedCompanyId}-all-locations-${invoiceDateFrom}-${invoiceDateTo}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -282,6 +293,46 @@ const AdminAccounting: React.FC = () => {
       }
     } else {
       toast.error('Invoice data format not supported');
+    }
+  };
+
+  const handleExportToExcel = async () => {
+    if (!selectedCompanyId || selectedCompanyId === 'all') {
+      toast.error('Please select a company');
+      return;
+    }
+    
+    // Only require location if mode is company-location
+    if (invoiceMode === 'company-location' && (!selectedLocationId || selectedLocationId === 'all')) {
+      toast.error('Please select an operational location');
+      return;
+    }
+    
+    if (!invoiceDateFrom || !invoiceDateTo) {
+      toast.error('Please select date range');
+      return;
+    }
+    
+    try {
+      const locationId = invoiceMode === 'company-location' ? selectedLocationId : null;
+      const jsonData = await fetchInvoiceJson(
+        selectedCompanyId,
+        locationId,
+        {
+          from: invoiceDateFrom,
+          to: invoiceDateTo,
+        }
+      );
+      
+      const filename = locationId
+        ? `invoice-${selectedCompanyId}-${locationId}-${invoiceDateFrom}-${invoiceDateTo}.xlsx`
+        : `invoice-${selectedCompanyId}-all-locations-${invoiceDateFrom}-${invoiceDateTo}.xlsx`;
+      
+      await exportInvoiceToExcel(jsonData, filename);
+      toast.success('Excel file exported successfully');
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Failed to export Excel file';
+      toast.error(errorMessage);
     }
   };
 
@@ -378,14 +429,43 @@ const AdminAccounting: React.FC = () => {
             <CardTitle className="text-lg">Generate Invoice</CardTitle>
           </div>
           <p className="text-sm text-muted-foreground">
-            Generate PDF invoice for a specific company and operational location.
+            Generate PDF invoice for a company. You can select all locations or a specific location.
           </p>
         </CardHeader>
         <CardContent>
+          {/* Invoice Mode Selection */}
+          <div className="mb-4 space-y-2">
+            <Label>Invoice Type</Label>
+            <div className="flex gap-4">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="invoice-mode"
+                  value="company-only"
+                  checked={invoiceMode === 'company-only'}
+                  onChange={(e) => setInvoiceMode(e.target.value as 'company-only' | 'company-location')}
+                  className="h-4 w-4"
+                />
+                <span className="text-sm">Company Only (All Locations)</span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="invoice-mode"
+                  value="company-location"
+                  checked={invoiceMode === 'company-location'}
+                  onChange={(e) => setInvoiceMode(e.target.value as 'company-only' | 'company-location')}
+                  className="h-4 w-4"
+                />
+                <span className="text-sm">Company + Single Location</span>
+              </label>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Company Select */}
             <div className="space-y-2">
-              <Label htmlFor="invoice-company">Company</Label>
+              <Label htmlFor="invoice-company">Company *</Label>
               <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
                 <SelectTrigger id="invoice-company">
                   <SelectValue placeholder="Select company" />
@@ -401,30 +481,32 @@ const AdminAccounting: React.FC = () => {
               </Select>
             </div>
 
-            {/* Operational Location Select */}
-            <div className="space-y-2">
-              <Label htmlFor="invoice-location">Operational Location</Label>
-              <Select 
-                value={selectedLocationId} 
-                onValueChange={setSelectedLocationId}
-                disabled={!selectedCompanyId || selectedCompanyId === 'all'}
-              >
-                <SelectTrigger id="invoice-location">
-                  <SelectValue placeholder="Select location" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Select location</SelectItem>
-                  {allLocations.map((location: any) => (
-                    <SelectItem key={location.id} value={location.id}>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span>{location.title || location.city}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Operational Location Select - Only shown when mode is company-location */}
+            {invoiceMode === 'company-location' && (
+              <div className="space-y-2">
+                <Label htmlFor="invoice-location">Operational Location *</Label>
+                <Select 
+                  value={selectedLocationId} 
+                  onValueChange={setSelectedLocationId}
+                  disabled={!selectedCompanyId || selectedCompanyId === 'all'}
+                >
+                  <SelectTrigger id="invoice-location">
+                    <SelectValue placeholder="Select location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Select location</SelectItem>
+                    {allLocations.map((location: any) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span>{location.title || location.city}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Date From */}
             <div className="space-y-2">
@@ -454,7 +536,14 @@ const AdminAccounting: React.FC = () => {
           <div className="flex justify-end gap-2 mt-4">
             <Button
               onClick={handleGenerateInvoice}
-              disabled={!selectedCompanyId || selectedCompanyId === 'all' || !selectedLocationId || selectedLocationId === 'all' || !invoiceDateFrom || !invoiceDateTo || invoiceLoading}
+              disabled={
+                !selectedCompanyId || 
+                selectedCompanyId === 'all' || 
+                (invoiceMode === 'company-location' && (!selectedLocationId || selectedLocationId === 'all')) ||
+                !invoiceDateFrom || 
+                !invoiceDateTo || 
+                invoiceLoading
+              }
             >
               {invoiceLoading ? (
                 <>
@@ -471,9 +560,23 @@ const AdminAccounting: React.FC = () => {
             {invoiceData && (
               <Button onClick={handleDownloadInvoice} variant="outline">
                 <Download className="mr-2 h-4 w-4" />
-                Download Invoice
+                Download PDF
               </Button>
             )}
+            <Button
+              onClick={handleExportToExcel}
+              variant="outline"
+              disabled={
+                !selectedCompanyId || 
+                selectedCompanyId === 'all' || 
+                (invoiceMode === 'company-location' && (!selectedLocationId || selectedLocationId === 'all')) ||
+                !invoiceDateFrom || 
+                !invoiceDateTo
+              }
+            >
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Export to Excel
+            </Button>
           </div>
 
           {/* Success Message */}

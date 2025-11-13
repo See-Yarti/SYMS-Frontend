@@ -37,8 +37,12 @@ import {
   Gem,
   Diamond as DiamondIcon,
   Medal,
+  Key,
+  Sparkles,
+  Info,
+  Check,
 } from 'lucide-react';
-import { useGetLocations, useCreateLocation, useUpdateLocation, useToggleLocation } from '@/hooks/useLocationApi';
+import { useGetLocations, useCreateLocation, useUpdateLocation, useToggleLocation, useCheckLocationKey, useSuggestLocationKeys } from '@/hooks/useLocationApi';
 import { format } from 'date-fns';
 import { Switch } from '@/components/ui/switch';
 import { Country, State, City } from 'country-state-city';
@@ -199,6 +203,7 @@ const CompanyDetail = () => {
   const createLocation = useCreateLocation();
   const updateLocation = useUpdateLocation();
   const toggleLocation = useToggleLocation();
+  const { mutate: getLocationSuggestions, isPending: isSuggestingLocation } = useSuggestLocationKeys();
 
   const [isUnverifyDialogOpen, setIsUnverifyDialogOpen] = useState(false);
   const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
@@ -207,6 +212,8 @@ const CompanyDetail = () => {
   const [unverifiedReason, setUnverifiedReason] = useState('');
   const [unverifiedReasonDescription, setUnverifiedReasonDescription] = useState('');
   const [, setGoogleMapsLoaded] = useState(false);
+  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
+  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
   const countryList = Country.getAllCountries();
 
   // Stable id before company fetch resolves
@@ -274,7 +281,13 @@ const CompanyDetail = () => {
     longitude: 25.2048,
     latitude: 55.2708,
     isAirportZone: false,
+    locationKey: '',
   });
+
+  // Check location key availability
+  const { data: locationKeyCheckData, isLoading: isCheckingLocationKey } = useCheckLocationKey(
+    locationForm.locationKey.length >= 2 && locationForm.locationKey.length <= 3 ? locationForm.locationKey : ''
+  );
 
   // Load Google Maps API
   useEffect(() => {
@@ -406,11 +419,86 @@ const CompanyDetail = () => {
     !!settingsRes?.data.settings.overrideEndsAt &&
     new Date(settingsRes.data.settings.overrideEndsAt).getTime() > Date.now();
 
+  // Handle location key input with auto-capitalization
+  const handleLocationKeyChange = (value: string) => {
+    // Remove non-alphabetic characters and convert to uppercase
+    const cleaned = value.replace(/[^A-Za-z]/g, '').toUpperCase();
+    // Limit to 3 characters
+    const limited = cleaned.slice(0, 3);
+    setLocationForm({ ...locationForm, locationKey: limited });
+  };
+
+  // Get suggestions for location key
+  const handleGetLocationSuggestions = () => {
+    if (showLocationSuggestions && locationSuggestions.length > 0) {
+      setShowLocationSuggestions(false);
+      return;
+    }
+    
+    if (!companyId) {
+      toast.error('Company ID is required');
+      return;
+    }
+    
+    if (!locationForm.title || locationForm.title.trim().length === 0) {
+      toast.error('Please enter a location title first');
+      return;
+    }
+    
+    getLocationSuggestions({ 
+      locationName: locationForm.title.trim(),
+      companyId: companyId 
+    }, {
+      onSuccess: (response) => {
+        setLocationSuggestions(response.suggestions || []);
+        setShowLocationSuggestions(true);
+      },
+      onError: (error: any) => {
+        const errorMessage = error?.response?.data?.message || error?.message || 'Failed to get suggestions';
+        toast.error(errorMessage);
+      }
+    });
+  };
+
+  // Select a location suggestion
+  const handleSelectLocationSuggestion = (suggestion: string) => {
+    setLocationForm({ ...locationForm, locationKey: suggestion });
+    setShowLocationSuggestions(false);
+  };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.location-key-suggestions') && 
+          !target.closest('#locationKey') &&
+          !target.closest('button[type="button"]')?.closest('.relative')) {
+        setShowLocationSuggestions(false);
+      }
+    };
+    if (showLocationSuggestions) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showLocationSuggestions]);
+
   const handleCreateLocation = () => {
     if (!companyId) return;
+    
+    // Validate location key
+    if (!locationForm.locationKey || locationForm.locationKey.length < 2 || locationForm.locationKey.length > 3) {
+      toast.error('Location key must be 2-3 uppercase letters');
+      return;
+    }
+    
+    if (locationKeyCheckData?.available === false) {
+      toast.error('Please choose an available location key');
+      return;
+    }
+    
     const countryName = Country.getCountryByCode(locationForm.country)?.name || locationForm.country;
     createLocation.mutate(
-      { companyId, payload: { ...locationForm, country: countryName } },
+      { companyId, payload: { ...locationForm, country: countryName, locationKey: locationForm.locationKey.toUpperCase() } },
       {
         onSuccess: () => {
           toast.success('Location created successfully');
@@ -424,10 +512,16 @@ const CompanyDetail = () => {
             longitude: 25.2048,
             latitude: 55.2708,
             isAirportZone: false,
+            locationKey: '',
           });
+          setShowLocationSuggestions(false);
+          setLocationSuggestions([]);
           refetchLocations();
         },
-        onError: (err) => toast.error('Failed to create location', { description: (err as any).message }),
+        onError: (err: any) => {
+          const errorMessage = err?.response?.data?.message || err?.message || 'Failed to create location';
+          toast.error(errorMessage);
+        },
       }
     );
   };
@@ -452,10 +546,16 @@ const CompanyDetail = () => {
             longitude: 25.2048,
             latitude: 55.2708,
             isAirportZone: false,
+            locationKey: '',
           });
+          setShowLocationSuggestions(false);
+          setLocationSuggestions([]);
           refetchLocations();
         },
-        onError: (err) => toast.error('Failed to update location', { description: (err as any).message }),
+        onError: (err: any) => {
+          const errorMessage = err?.response?.data?.message || err?.message || 'Failed to update location';
+          toast.error(errorMessage);
+        },
       }
     );
   };
@@ -482,6 +582,7 @@ const CompanyDetail = () => {
       longitude: parseFloat(location.longitude),
       latitude: parseFloat(location.latitude),
       isAirportZone: location.isAirportZone,
+      locationKey: (location as any).locationKey || '',
     });
     setIsEditLocationDialogOpen(true);
   };
@@ -1186,33 +1287,7 @@ const CompanyDetail = () => {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <div>
-              <Label htmlFor="title">Title *</Label>
-              <Input
-                id="title"
-                value={locationForm.title}
-                onChange={(e) => setLocationForm({ ...locationForm, title: e.target.value })}
-                placeholder={
-                  locationForm.city || locationForm.state || locationForm.country
-                    ? `e.g., ${locationForm.city || locationForm.state || Country.getCountryByCode(locationForm.country)?.name}`
-                    : 'e.g., Main Office, Warehouse'
-                }
-              />
-            </div>
-
-            <div>
-              <Label>Address *</Label>
-              <LocationAutocomplete
-                id="addressLine"
-                value={locationForm.addressLine}
-                onChange={(value) => setLocationForm({ ...locationForm, addressLine: value })}
-                onPlaceSelected={handleAddressSelect}
-                placeholder="Enter full address"
-                countryCode={locationForm.country}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label>Country *</Label>
                 <Select
@@ -1296,6 +1371,120 @@ const CompanyDetail = () => {
               </div>
             </div>
 
+            <div>
+              <Label>Address *</Label>
+              <LocationAutocomplete
+                id="addressLine"
+                value={locationForm.addressLine}
+                onChange={(value) => setLocationForm({ ...locationForm, addressLine: value })}
+                onPlaceSelected={handleAddressSelect}
+                placeholder="Enter full address"
+                countryCode={locationForm.country}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="title">Title *</Label>
+              <Input
+                id="title"
+                value={locationForm.title}
+                onChange={(e) => setLocationForm({ ...locationForm, title: e.target.value })}
+                placeholder={
+                  locationForm.city || locationForm.state || locationForm.country
+                    ? `e.g., ${locationForm.city || locationForm.state || Country.getCountryByCode(locationForm.country)?.name}`
+                    : 'e.g., Main Office, Warehouse'
+                }
+              />
+            </div>
+
+            {/* Location Key */}
+            <div className="space-y-2 relative">
+              <Label htmlFor="locationKey" className="flex items-center gap-1">
+                <Key className="h-4 w-4" />
+                Location Key
+                <span className="text-destructive">*</span>
+                <div className="flex items-center gap-1">
+                  <div className="relative">
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-popover border rounded text-xs whitespace-nowrap opacity-0 hover:opacity-100 pointer-events-none">
+                      2-3 uppercase letters (e.g., ABC, XY)
+                    </div>
+                  </div>
+                </div>
+              </Label>
+              <div className="relative">
+                <Input
+                  id="locationKey"
+                  type="text"
+                  placeholder="ABC"
+                  value={locationForm.locationKey}
+                  onChange={(e) => handleLocationKeyChange(e.target.value)}
+                  className="pl-10 pr-20 uppercase"
+                  maxLength={3}
+                  autoComplete="off"
+                />
+                <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 px-2 text-xs"
+                  onClick={handleGetLocationSuggestions}
+                  disabled={!locationForm.title || locationForm.title.trim().length === 0 || isSuggestingLocation}
+                  title={!locationForm.title || locationForm.title.trim().length === 0 ? 'Enter location title first' : 'Get suggestions'}
+                >
+                  {isSuggestingLocation ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3 w-3" />
+                  )}
+                </Button>
+              </div>
+              {locationForm.locationKey.length >= 2 && locationForm.locationKey.length <= 3 && (
+                <div className="flex items-center gap-2">
+                  {isCheckingLocationKey ? (
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Checking availability...
+                    </span>
+                  ) : locationKeyCheckData?.available === false ? (
+                    <span className="text-xs text-destructive flex items-center gap-1">
+                      <Info className="h-3 w-3" />
+                      This key is already taken
+                    </span>
+                  ) : locationKeyCheckData?.available === true ? (
+                    <span className="text-xs text-green-600 flex items-center gap-1">
+                      <Check className="h-3 w-3" />
+                      Available
+                    </span>
+                  ) : null}
+                </div>
+              )}
+              {showLocationSuggestions && locationSuggestions.length > 0 && (
+                <div className="location-key-suggestions absolute z-50 top-full mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-auto">
+                  <div className="p-2">
+                    <p className="text-xs text-muted-foreground mb-2 px-2">Suggestions:</p>
+                    {locationSuggestions.map((suggestion) => (
+                      <div
+                        key={suggestion}
+                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer rounded flex items-center justify-between"
+                        onMouseDown={() => handleSelectLocationSuggestion(suggestion)}
+                      >
+                        <span className="font-medium uppercase">{suggestion}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectLocationSuggestion(suggestion)}
+                          className="text-xs text-primary hover:underline"
+                        >
+                          Use
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="longitude">Longitude *</Label>
@@ -1362,33 +1551,8 @@ const CompanyDetail = () => {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <div>
-              <Label htmlFor="edit-title">Title *</Label>
-              <Input
-                id="edit-title"
-                value={locationForm.title}
-                onChange={(e) => setLocationForm({ ...locationForm, title: e.target.value })}
-                placeholder={
-                  locationForm.city || locationForm.state || locationForm.country
-                    ? `e.g., ${locationForm.city || locationForm.state || Country.getCountryByCode(locationForm.country)?.name}`
-                    : 'e.g., Main Office, Warehouse'
-                }
-              />
-            </div>
-
-            <div>
-              <Label>Address *</Label>
-              <LocationAutocomplete
-                id="edit-addressLine"
-                value={locationForm.addressLine}
-                onChange={(value) => setLocationForm({ ...locationForm, addressLine: value })}
-                onPlaceSelected={handleAddressSelect}
-                placeholder="Enter full address"
-                countryCode={locationForm.country}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label>Country *</Label>
                 <Select value={locationForm.country} onValueChange={handleCountryChange}>
@@ -1437,6 +1601,31 @@ const CompanyDetail = () => {
                 </Select>
               </div>
             </div>
+            <div>
+              <Label>Address *</Label>
+              <LocationAutocomplete
+                id="edit-addressLine"
+                value={locationForm.addressLine}
+                onChange={(value) => setLocationForm({ ...locationForm, addressLine: value })}
+                onPlaceSelected={handleAddressSelect}
+                placeholder="Enter full address"
+                countryCode={locationForm.country}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-title">Title *</Label>
+              <Input
+                id="edit-title"
+                value={locationForm.title}
+                onChange={(e) => setLocationForm({ ...locationForm, title: e.target.value })}
+                placeholder={
+                  locationForm.city || locationForm.state || locationForm.country
+                    ? `e.g., ${locationForm.city || locationForm.state || Country.getCountryByCode(locationForm.country)?.name}`
+                    : 'e.g., Main Office, Warehouse'
+                }
+              />
+            </div>
+           
 
             <div className="grid grid-cols-2 gap-4">
               <div>

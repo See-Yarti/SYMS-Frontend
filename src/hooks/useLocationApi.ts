@@ -92,3 +92,42 @@ export const useToggleLocation = () => {
     retry: false,
   });
 };
+
+// Check if location key is available
+export interface CheckLocationKeyResponse {
+  available: boolean;
+  message?: string;
+}
+
+export const useCheckLocationKey = (locationKey: string) => {
+  return useQuery<CheckLocationKeyResponse, Error>({
+    queryKey: ['location-key-check', locationKey],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get(`/operator/locations/check-key/${locationKey}`);
+      return data;
+    },
+    enabled: !!locationKey && locationKey.length >= 2 && locationKey.length <= 3 && /^[A-Z]+$/.test(locationKey),
+    ...defaultQueryOptions,
+    staleTime: 0, // Always check fresh
+  });
+};
+
+// Get location key suggestions
+export interface SuggestLocationKeysResponse {
+  suggestions: string[];
+}
+
+export interface SuggestLocationKeysRequest {
+  locationName: string;
+  companyId: string;
+}
+
+export const useSuggestLocationKeys = () => {
+  return useMutation<SuggestLocationKeysResponse, Error, SuggestLocationKeysRequest>({
+    mutationFn: async (payload) => {
+      const { data } = await axiosInstance.post('/operator/locations/suggest-keys', payload);
+      return data.data;
+    },
+    retry: false,
+  });
+};

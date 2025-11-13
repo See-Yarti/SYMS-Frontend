@@ -1,5 +1,5 @@
 // src/pages/company/CompanyForm.tsx
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,8 +8,9 @@ import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
     User, Building2, FileText, Mail, MapPin, Phone,
-    Info, Check, Lock, Search, Eye, EyeOff,
+    Info, Check, Lock, Eye, EyeOff,
     ShieldCheck, FileDigit, FileSignature, Calendar as CalendarIcon,
+    Key, Sparkles,
 } from 'lucide-react';
 import { Icons } from '@/components/icons';
 import { toast } from 'sonner';
@@ -25,6 +26,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { useUploadFile } from '@/hooks/useApi';
+import { useCheckCompanyKey, useSuggestCompanyKeys } from '@/hooks/useCompanyApi';
 import {
     Card,
     CardHeader,
@@ -59,6 +61,10 @@ const registerSchema = z.object({
     companyName: z.string()
         .min(1, { message: 'Company name is required' })
         .max(100, { message: 'Company name must be less than 100 characters' }),
+    companyKey: z.string()
+        .min(2, { message: 'Company key must be at least 2 characters' })
+        .max(3, { message: 'Company key must be at most 3 characters' })
+        .regex(/^[A-Z]+$/, { message: 'Company key must contain only uppercase letters' }),
     companyAddress: z.object({
         addressLabel: z.string().default('Head Office'),
         street: z.string().min(1, { message: 'Street address is required' }),
@@ -87,112 +93,6 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>;
 type CountryType = ReturnType<typeof Country.getAllCountries>[number];
 
-interface LocationAutocompleteProps {
-    id: string;
-    value: string;
-    onChange: (value: string) => void;
-    onPlaceSelected: (place: any) => void;
-    countryCode: string; // <--- NEW
-    placeholder?: string;
-    className?: string;
-}
-
-
-const LocationAutocomplete = React.forwardRef<HTMLInputElement, LocationAutocompleteProps>(
-    ({ id, value, onChange, onPlaceSelected, placeholder, className, countryCode }, ref) => {
-        const [suggestions, setSuggestions] = useState<any[]>([]);
-        const [showSuggestions, setShowSuggestions] = useState(false);
-        const autocompleteService = useRef<any>(null);
-
-        useEffect(() => {
-            if (!window.google || !window.google.maps || !window.google.maps.places) {
-                return;
-            }
-
-            autocompleteService.current = new window.google.maps.places.AutocompleteService();
-
-            return () => {
-                autocompleteService.current = null;
-            };
-        }, []);
-
-        const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-            const inputValue = e.target.value;
-            onChange(inputValue);
-
-            if (inputValue.length > 2) {
-                autocompleteService.current?.getPlacePredictions(
-                    { input: inputValue, componentRestrictions: { country: countryCode } },
-                    (predictions: any[], status: string) => {
-                        if (status === window.google.maps.places.PlacesServiceStatus.OK) {
-                            setSuggestions(predictions);
-                            setShowSuggestions(true);
-                        } else {
-                            setSuggestions([]);
-                            setShowSuggestions(false);
-                        }
-                    }
-                );
-            } else {
-                setSuggestions([]);
-                setShowSuggestions(false);
-            }
-        };
-
-        const handleSelectSuggestion = (place: any) => {
-            const placesService = new window.google.maps.places.PlacesService(document.createElement('div'));
-
-            placesService.getDetails({ placeId: place.place_id }, (result: any, status: string) => {
-                if (status === window.google.maps.places.PlacesServiceStatus.OK) {
-                    onChange(result.name || result.formatted_address);
-                    onPlaceSelected(result);
-                    setShowSuggestions(false);
-                }
-            });
-        };
-
-      
-
-        return (
-            <div className="relative w-full">
-                <div className="relative">
-                    <Input
-                        id={id}
-                        type="text"
-                        ref={ref}
-                        value={value}
-                        onChange={handleInputChange}
-                        placeholder={placeholder}
-                        className={`pl-10 ${className}`}
-                        autoComplete="off"
-                        onFocus={() => value.length > 2 && setShowSuggestions(true)}
-                        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                    />
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                </div>
-
-                {showSuggestions && suggestions.length > 0 && (
-                    <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                        {suggestions.map((suggestion) => (
-                            <li
-                                key={suggestion.place_id}
-                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                                onMouseDown={() => handleSelectSuggestion(suggestion)}
-                            >
-                                <div className="font-medium">{suggestion.structured_formatting.main_text}</div>
-                                <div className="text-sm text-muted-foreground">
-                                    {suggestion.structured_formatting.secondary_text}
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
-        );
-    }
-);
-LocationAutocomplete.displayName = "LocationAutocomplete";
-
 const RegisterForm: React.FC = () => {
     const navigate = useNavigate();
     const { mutate: uploadFile, isPending } = useUploadFile<{
@@ -201,7 +101,10 @@ const RegisterForm: React.FC = () => {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [suggestions, setSuggestions] = useState<string[]>([]);
     const countryList: CountryType[] = Country.getAllCountries();
+    const { mutate: getSuggestions, isPending: isSuggesting } = useSuggestCompanyKeys();
 
     const {
         register,
@@ -216,9 +119,6 @@ const RegisterForm: React.FC = () => {
         mode: 'onChange',
         defaultValues: {
             companyAddress: {
-                country: 'AE',
-                state: 'DU',
-                city: 'Dubai',
                 addressLabel: 'Head Office'
             },
             companyTradeLicenseExpiryDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1))
@@ -227,8 +127,32 @@ const RegisterForm: React.FC = () => {
 
     const selectedCountry = watch('companyAddress.country');
     const selectedState = watch('companyAddress.state');
+    const companyKey = watch('companyKey') || '';
+    const companyName = watch('companyName') || '';
+    
+    // Check company key availability
+    const { data: keyCheckData, isLoading: isCheckingKey } = useCheckCompanyKey(
+        companyKey.length >= 2 && companyKey.length <= 3 ? companyKey : ''
+    );
 
-    // Auto-set city to state name when no cities are available
+    // Clear state and city when country changes
+    useEffect(() => {
+        if (selectedCountry) {
+            const states = State.getStatesOfCountry(selectedCountry);
+            const currentState = getValues('companyAddress.state');
+            // If current state is not in the new country's states, clear it
+            if (currentState && !states.find(s => s.isoCode === currentState)) {
+                setValue('companyAddress.state', '', { shouldValidate: false });
+                setValue('companyAddress.city', '', { shouldValidate: false });
+            }
+        } else {
+            // If no country selected, clear state and city
+            setValue('companyAddress.state', '', { shouldValidate: false });
+            setValue('companyAddress.city', '', { shouldValidate: false });
+        }
+    }, [selectedCountry, setValue, getValues]);
+
+    // Auto-set city to state name when no cities are available, or clear when state changes
     useEffect(() => {
         if (selectedCountry && selectedState) {
             const cities = City.getCitiesOfState(selectedCountry, selectedState);
@@ -249,34 +173,70 @@ const RegisterForm: React.FC = () => {
                     setValue('companyAddress.city', '', { shouldValidate: false });
                 }
             }
+        } else if (selectedCountry && !selectedState) {
+            // If state is cleared, clear city too
+            setValue('companyAddress.city', '', { shouldValidate: false });
         }
     }, [selectedCountry, selectedState, setValue, getValues]);
 
-    const handleAddressSelect = (place: any) => {
-        if (!place.geometry || !place.address_components) return;
 
-        let streetNumber = '';
-        let route = '';
-        let city = '';
-        let state = '';
-        let country = '';
-        let postalCode = '';
-
-        place.address_components.forEach((comp: any) => {
-            if (comp.types.includes('street_number')) streetNumber = comp.long_name;
-            if (comp.types.includes('route')) route = comp.long_name;
-            if (comp.types.includes('locality')) city = comp.long_name;
-            if (comp.types.includes('administrative_area_level_1')) state = comp.long_name;
-            if (comp.types.includes('country')) country = comp.short_name;
-            if (comp.types.includes('postal_code')) postalCode = comp.long_name;
-        });
-
-        setValue('companyAddress.street', `${streetNumber} ${route}`.trim());
-        if (city) setValue('companyAddress.city', city);
-        if (state) setValue('companyAddress.state', state);
-        if (country) setValue('companyAddress.country', country);
-        if (postalCode) setValue('companyAddress.postalCode', postalCode);
+    // Handle company key input with auto-capitalization
+    const handleCompanyKeyChange = (value: string) => {
+        // Remove non-alphabetic characters and convert to uppercase
+        const cleaned = value.replace(/[^A-Za-z]/g, '').toUpperCase();
+        // Limit to 3 characters
+        const limited = cleaned.slice(0, 3);
+        setValue('companyKey', limited, { shouldValidate: true });
     };
+
+    // Get suggestions for company key
+    const handleGetSuggestions = () => {
+        if (showSuggestions && suggestions.length > 0) {
+            // Toggle off if already showing
+            setShowSuggestions(false);
+            return;
+        }
+        
+        // Check if company name is provided
+        if (!companyName || companyName.trim().length === 0) {
+            toast.error('Please enter a company name first');
+            return;
+        }
+        
+        getSuggestions({ name: companyName.trim() }, {
+            onSuccess: (response) => {
+                setSuggestions(response.suggestions || []);
+                setShowSuggestions(true);
+            },
+            onError: (error: any) => {
+                const errorMessage = error?.response?.data?.message || error?.message || 'Failed to get suggestions';
+                toast.error(errorMessage);
+            }
+        });
+    };
+
+    // Select a suggestion
+    const handleSelectSuggestion = (suggestion: string) => {
+        setValue('companyKey', suggestion, { shouldValidate: true });
+        setShowSuggestions(false);
+    };
+
+    // Close suggestions when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as HTMLElement;
+            // Don't close if clicking on suggestions dropdown, input field, or suggestions button
+            if (!target.closest('.company-key-suggestions') && 
+                !target.closest('#companyKey') &&
+                !target.closest('button[type="button"]')?.closest('.relative')) {
+                setShowSuggestions(false);
+            }
+        };
+        if (showSuggestions) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [showSuggestions]);
 
     // File drop handlers
     const onTaxFileDrop = useCallback((acceptedFiles: File[]) => {
@@ -314,8 +274,38 @@ const RegisterForm: React.FC = () => {
         });
 
     const handleRegister = (data: RegisterFormValues) => {
+        // Check if company key is available before submitting (only if key is valid and API was called)
+        const isValidKey = companyKey.length >= 2 && companyKey.length <= 3 && /^[A-Z]+$/.test(companyKey);
+        
+        if (isValidKey) {
+            // Only check if API call was made (keyCheckData exists)
+            if (keyCheckData !== undefined) {
+                if (isCheckingKey) {
+                    toast.error('Please wait while we check the availability of your company key');
+                    return;
+                }
+                if (keyCheckData.available === false) {
+                    toast.error('Please choose an available company key');
+                    return;
+                }
+                // If available is true, allow submission
+            }
+            // If keyCheckData is undefined (API not called yet), allow form to submit
+            // Backend will validate the key
+        }
 
         const formData = new FormData();
+
+        // Validate required fields before sending
+        if (!data.companyAddress.country || !data.companyAddress.state || !data.companyAddress.city) {
+            toast.error('Please complete the company address (Country, State, and City are required)');
+            return;
+        }
+
+        if (!data.companyTaxFile || !data.companyTradeLicenseFile) {
+            toast.error('Please upload both tax file and trade license file');
+            return;
+        }
 
         // Basic fields
         formData.append('operatorName', data.operatorName);
@@ -323,6 +313,7 @@ const RegisterForm: React.FC = () => {
         formData.append('password', data.password);
         formData.append('phoneNumber', data.phoneNumber);
         formData.append('companyName', data.companyName);
+        formData.append('companyKey', data.companyKey);
         formData.append('companyDescription', data.companyDescription);
         formData.append('companyTaxNumber', data.companyTaxNumber);
         formData.append('companyTradeLicenseIssueNumber', data.companyTradeLicenseIssueNumber);
@@ -333,8 +324,18 @@ const RegisterForm: React.FC = () => {
             data.companyTradeLicenseExpiryDate.toISOString()
         );
 
-        // Address (as JSON string)
-        formData.append('companyAddress', JSON.stringify(data.companyAddress));
+        // Address (as JSON string) - ensure all required fields are present
+        const addressData = {
+            addressLabel: data.companyAddress.addressLabel || 'Head Office',
+            street: data.companyAddress.street,
+            apartment: data.companyAddress.apartment || '',
+            city: data.companyAddress.city,
+            state: data.companyAddress.state,
+            country: data.companyAddress.country,
+            postalCode: data.companyAddress.postalCode || '',
+            additionalInfo: data.companyAddress.additionalInfo || '',
+        };
+        formData.append('companyAddress', JSON.stringify(addressData));
 
         // File uploads
         formData.append('companyTaxFile', data.companyTaxFile);
@@ -356,24 +357,38 @@ const RegisterForm: React.FC = () => {
                 clearInterval(interval);
                 setUploadProgress(100);
                 setTimeout(() => {
-                    if (response.success) {
-                        toast.success('Company registered successfully!');
-                        navigate('/operators');
-                    } else {
-                        if (response.message) {
-                            toast.error(response.message, {
-                                description: 'Please check your input and try again'
-                            });
-                        } else {
-                            toast.error('Registration failed. Please try again.');
-                        }
-                    }
+                    // Since we're in onSuccess callback, API call was successful (201 Created)
+                    // Show success toast with the message from API or default message
+                    const successMessage = response.message || 'Company registered successfully!';
+                    toast.success(successMessage);
+                    navigate('/companies/list');
                 }, 500);
             },
             onError: (error: any) => {
                 clearInterval(interval);
                 setUploadProgress(0);
-                toast.error(error.message || 'Registration failed. Please try again.');
+                
+                // Extract error message from backend response
+                let errorMessage = 'Registration failed. Please try again.';
+                
+                // Check error.response.data.message (most common for backend errors)
+                if (error?.response?.data?.message) {
+                    errorMessage = error.response.data.message;
+                }
+                // Check error.response.data.error
+                else if (error?.response?.data?.error) {
+                    errorMessage = error.response.data.error;
+                }
+                // Check error.response.data.errors (validation errors array)
+                else if (error?.response?.data?.errors && Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
+                    errorMessage = error.response.data.errors.map((err: any) => err.message || err).join(', ');
+                }
+                // Check error.message (the Error object's message)
+                else if (error?.message) {
+                    errorMessage = error.message;
+                }
+                
+                toast.error(errorMessage);
             }
         });
     };
@@ -578,6 +593,109 @@ const RegisterForm: React.FC = () => {
                                 )}
                             </div>
 
+                            {/* Company Key */}
+                            <div className="space-y-2 relative">
+                                <Label htmlFor="companyKey" className="flex items-center gap-1">
+                                    <Key className="h-4 w-4" />
+                                    Company Key
+                                    <span className="text-destructive">*</span>
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger>
+                                                <Info className="h-4 w-4 text-muted-foreground" />
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>2-3 uppercase letters (e.g., ABC, XY)</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                </Label>
+                                <div className="relative">
+                                    <Controller
+                                        name="companyKey"
+                                        control={control}
+                                        render={({ field }) => (
+                                            <>
+                                                <Input
+                                                    id="companyKey"
+                                                    type="text"
+                                                    placeholder="ABC"
+                                                    disabled={isPending}
+                                                    value={field.value || ''}
+                                                    onChange={(e) => handleCompanyKeyChange(e.target.value)}
+                                                    onBlur={field.onBlur}
+                                                    className="pl-10 pr-20 uppercase"
+                                                    maxLength={3}
+                                                    autoComplete="off"
+                                                />
+                                                <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 px-2 text-xs"
+                                                    onClick={handleGetSuggestions}
+                                                    disabled={isPending || isSuggesting || !companyName || companyName.trim().length === 0}
+                                                    title={!companyName || companyName.trim().length === 0 ? 'Enter company name first' : 'Get suggestions'}
+                                                >
+                                                    {isSuggesting ? (
+                                                        <Icons.spinner className="h-3 w-3 animate-spin" />
+                                                    ) : (
+                                                        <Sparkles className="h-3 w-3" />
+                                                    )}
+                                                </Button>
+                                            </>
+                                        )}
+                                    />
+                                </div>
+                                {errors.companyKey && (
+                                    <p className="text-sm text-destructive">{errors.companyKey.message}</p>
+                                )}
+                                {companyKey.length >= 2 && companyKey.length <= 3 && !errors.companyKey && (
+                                    <div className="flex items-center gap-2">
+                                        {isCheckingKey ? (
+                                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                                <Icons.spinner className="h-3 w-3 animate-spin" />
+                                                Checking availability...
+                                            </span>
+                                        ) : keyCheckData?.available === false ? (
+                                            <span className="text-xs text-destructive flex items-center gap-1">
+                                                <Info className="h-3 w-3" />
+                                                This key is already taken
+                                            </span>
+                                        ) : keyCheckData?.available === true ? (
+                                            <span className="text-xs text-green-600 flex items-center gap-1">
+                                                <Check className="h-3 w-3" />
+                                                Available
+                                            </span>
+                                        ) : null}
+                                    </div>
+                                )}
+                                {showSuggestions && suggestions.length > 0 && (
+                                    <div className="company-key-suggestions absolute z-50 top-full mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-auto">
+                                        <div className="p-2">
+                                            <p className="text-xs text-muted-foreground mb-2 px-2">Suggestions:</p>
+                                            {suggestions.map((suggestion) => (
+                                                <div
+                                                    key={suggestion}
+                                                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer rounded flex items-center justify-between"
+                                                    onMouseDown={() => handleSelectSuggestion(suggestion)}
+                                                >
+                                                    <span className="font-medium uppercase">{suggestion}</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleSelectSuggestion(suggestion)}
+                                                        className="text-xs text-primary hover:underline"
+                                                    >
+                                                        Use
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Company Description */}
                             <div className="space-y-2 md:col-span-2">
                                 <Label htmlFor="companyDescription" className="flex items-center gap-1">
@@ -649,10 +767,10 @@ const RegisterForm: React.FC = () => {
                                                 <Select
                                                     onValueChange={field.onChange}
                                                     value={field.value}
-                                                    disabled={!states.length}
+                                                    disabled={!selectedCountry || !states.length}
                                                 >
                                                     <SelectTrigger>
-                                                        <SelectValue placeholder="Select state" />
+                                                        <SelectValue placeholder={!selectedCountry ? "Select country first" : "Select state"} />
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         {states.map((s) => (
@@ -688,7 +806,7 @@ const RegisterForm: React.FC = () => {
                                                 return (
                                                     <Input
                                                         value={currentState?.name || field.value || ''}
-                                                        disabled
+                                                        disabled={!selectedCountry || !selectedState}
                                                         readOnly
                                                         className="bg-muted"
                                                     />
@@ -699,9 +817,10 @@ const RegisterForm: React.FC = () => {
                                                 <Select
                                                     onValueChange={field.onChange}
                                                     value={field.value}
+                                                    disabled={!selectedCountry || !selectedState}
                                                 >
                                                     <SelectTrigger>
-                                                        <SelectValue placeholder="Select city" />
+                                                        <SelectValue placeholder={!selectedState ? "Select state first" : "Select city"} />
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         {cities.map((ct) => (
@@ -719,26 +838,18 @@ const RegisterForm: React.FC = () => {
                                     )}
                                 </div>
 
-                                {/* Street with Google Maps Autocomplete */}
+                                {/* Street Address */}
                                 <div className="space-y-2">
                                     <Label htmlFor="companyAddress.street" className="flex items-center gap-1">
                                         Street Address
                                         <span className="text-destructive">*</span>
                                     </Label>
-                                    <Controller
-                                        name="companyAddress.street"
-                                        control={control}
-                                        render={({ field }) => (
-                                            <LocationAutocomplete
-                                                id="companyAddress.street"
-                                                value={field.value}
-                                                onChange={field.onChange}
-                                                onPlaceSelected={handleAddressSelect}
-                                                placeholder="LDA Avenue I, Block C, plot#1088"
-                                                countryCode={(selectedCountry || 'AE').toUpperCase()}
-                                            />
-
-                                        )}
+                                    <Input
+                                        id="companyAddress.street"
+                                        type="text"
+                                        placeholder="LDA Avenue I, Block C, plot#1088"
+                                        disabled={isPending}
+                                        {...register('companyAddress.street')}
                                     />
                                     {errors.companyAddress?.street && (
                                         <p className="text-sm text-destructive">{errors.companyAddress.street.message}</p>

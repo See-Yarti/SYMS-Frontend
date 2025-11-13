@@ -5,18 +5,28 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { useVerifyCompany, useUnverifyCompany, useGetCompanies } from '@/hooks/useCompanyApi';
+import { useVerifyCompany, useUnverifyCompany, useGetCompanies, useDeleteCompany, useUpdateCompany } from '@/hooks/useCompanyApi';
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
+import {
+    AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+    AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+    DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
-    Loader2, ChevronsUpDown, ChevronUp, ChevronDown, Eye, Copy, CheckCircle2, XCircle,
+    Loader2, ChevronsUpDown, ChevronUp, ChevronDown, Eye, Copy, CheckCircle2, XCircle, Trash2, MoreVertical, Pencil,
 } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 type SortOrder = 'ASC' | 'DESC';
 
@@ -25,6 +35,15 @@ const statusOptions = [
     { value: 'true', label: 'Verified' },
     { value: 'false', label: 'Not Verified' },
 ];
+
+// Update company schema
+const updateCompanySchema = z.object({
+    name: z.string().min(1, { message: 'Company name is required' }).max(100, { message: 'Company name must be less than 100 characters' }),
+    description: z.string().min(10, { message: 'Description must be at least 10 characters' }).max(500, { message: 'Description must be less than 500 characters' }),
+    tradeLicenseExpiryDate: z.string().min(1, { message: 'Expiry date is required' }),
+});
+
+type UpdateCompanyFormValues = z.infer<typeof updateCompanySchema>;
 
 const getInitials = (name?: string) => {
     if (!name) return '—';
@@ -85,11 +104,38 @@ export default function CompaniesList() {
     // Mutations
     const verifyCompany = useVerifyCompany();
     const unverifyCompany = useUnverifyCompany();
+    const deleteCompany = useDeleteCompany();
+    const updateCompany = useUpdateCompany();
 
     // Unverify dialog
     const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
     const [unverifiedReason, setUnverifiedReason] = useState('');
     const [unverifiedReasonDescription, setUnverifiedReasonDescription] = useState('');
+
+    // Delete dialog
+    const [deleteCompanyId, setDeleteCompanyId] = useState<string | null>(null);
+
+    // Update dialog
+    const [updateCompanyId, setUpdateCompanyId] = useState<string | null>(null);
+    const [updateCompanyData, setUpdateCompanyData] = useState<any>(null);
+    const {
+        register,
+        handleSubmit,
+        formState: { errors },
+        reset,
+        setValue,
+    } = useForm<UpdateCompanyFormValues>({
+        resolver: zodResolver(updateCompanySchema),
+    });
+
+    // Load company data when update dialog opens
+    useEffect(() => {
+        if (updateCompanyId && updateCompanyData) {
+            setValue('name', updateCompanyData.name || '');
+            setValue('description', updateCompanyData.description || '');
+            setValue('tradeLicenseExpiryDate', updateCompanyData.tradeLicenseExpiryDate ? new Date(updateCompanyData.tradeLicenseExpiryDate).toISOString().split('T')[0] : '');
+        }
+    }, [updateCompanyId, updateCompanyData, setValue]);
 
     // Sorting
     const handleSort = (field: string) => {
@@ -302,14 +348,7 @@ export default function CompaniesList() {
 
                                     {/* Actions */}
                                     <td className="px-4 py-3 whitespace-nowrap">
-                                        <div className="flex flex-wrap gap-2">
-                                            <Button asChild variant="outline" size="sm" className="rounded-lg">
-                                                <Link to={`/companies/${company.id}`}>
-                                                    <Eye className="mr-2 h-4 w-4" />
-                                                    View
-                                                </Link>
-                                            </Button>
-
+                                        <div className="flex flex-wrap gap-2 items-center">
                                             {company.isVerified ? (
                                                 <Button
                                                     variant="outline"
@@ -337,6 +376,39 @@ export default function CompaniesList() {
                                                     Verify
                                                 </Button>
                                             )}
+
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="outline" size="sm" className="rounded-lg">
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem asChild>
+                                                        <Link to={`/companies/${company.id}`} className="flex items-center cursor-pointer">
+                                                            <Eye className="mr-2 h-4 w-4" />
+                                                            View
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => {
+                                                            setUpdateCompanyId(company.id);
+                                                            setUpdateCompanyData(company);
+                                                        }}
+                                                        className="cursor-pointer"
+                                                    >
+                                                        <Pencil className="mr-2 h-4 w-4" />
+                                                        Update
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() => setDeleteCompanyId(company.id)}
+                                                        className="cursor-pointer text-destructive focus:text-destructive"
+                                                    >
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        Delete
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                     </td>
                                 </tr>
@@ -451,6 +523,145 @@ export default function CompaniesList() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Update Company Dialog */}
+            <Dialog open={!!updateCompanyId} onOpenChange={(open) => {
+                if (!open) {
+                    setUpdateCompanyId(null);
+                    setUpdateCompanyData(null);
+                    reset();
+                }
+            }}>
+                <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Update Company</DialogTitle>
+                        <DialogDescription>
+                            Update company information. All fields are required.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleSubmit((data) => {
+                        if (!updateCompanyId) return;
+                        updateCompany.mutate(
+                            {
+                                companyId: updateCompanyId,
+                                payload: {
+                                    name: data.name,
+                                    description: data.description,
+                                    tradeLicenseExpiryDate: new Date(data.tradeLicenseExpiryDate).toISOString(),
+                                },
+                            },
+                            {
+                                onSuccess: () => {
+                                    toast.success('Company updated successfully');
+                                    setUpdateCompanyId(null);
+                                    setUpdateCompanyData(null);
+                                    reset();
+                                    refetch();
+                                },
+                                onError: (e: any) => {
+                                    const errorMessage = e?.response?.data?.message || e?.message || 'Failed to update company';
+                                    toast.error(errorMessage);
+                                },
+                            }
+                        );
+                    })} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="update-name">Company Name *</Label>
+                            <Input
+                                id="update-name"
+                                {...register('name')}
+                                placeholder="Company Name"
+                                disabled={updateCompany.isPending}
+                            />
+                            {errors.name && (
+                                <p className="text-sm text-destructive">{errors.name.message}</p>
+                            )}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="update-description">Description *</Label>
+                            <Textarea
+                                id="update-description"
+                                {...register('description')}
+                                placeholder="Company description..."
+                                disabled={updateCompany.isPending}
+                                rows={4}
+                            />
+                            {errors.description && (
+                                <p className="text-sm text-destructive">{errors.description.message}</p>
+                            )}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="update-expiryDate">License Expiry Date *</Label>
+                            <Input
+                                id="update-expiryDate"
+                                type="date"
+                                {...register('tradeLicenseExpiryDate')}
+                                disabled={updateCompany.isPending}
+                            />
+                            {errors.tradeLicenseExpiryDate && (
+                                <p className="text-sm text-destructive">{errors.tradeLicenseExpiryDate.message}</p>
+                            )}
+                        </div>
+
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                    setUpdateCompanyId(null);
+                                    setUpdateCompanyData(null);
+                                    reset();
+                                }}
+                                disabled={updateCompany.isPending}
+                            >
+                                Cancel
+                            </Button>
+                            <Button type="submit" disabled={updateCompany.isPending}>
+                                {updateCompany.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Update Company
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={!!deleteCompanyId} onOpenChange={(open) => !open && setDeleteCompanyId(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Company</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to delete this company? This action will soft delete the company and cannot be undone easily.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={deleteCompany.isPending}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => {
+                                if (!deleteCompanyId) return;
+                                deleteCompany.mutate(deleteCompanyId, {
+                                    onSuccess: () => {
+                                        toast.success('Company deleted successfully');
+                                        setDeleteCompanyId(null);
+                                        refetch();
+                                    },
+                                    onError: (e: any) => {
+                                        const errorMessage = e?.response?.data?.message || e?.message || 'Failed to delete company';
+                                        toast.error(errorMessage);
+                                    },
+                                });
+                            }}
+                            disabled={deleteCompany.isPending}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            {deleteCompany.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

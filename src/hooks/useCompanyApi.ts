@@ -118,3 +118,92 @@ export const useGetCompanies = ({
     ...defaultQueryOptions,
   });
 };
+
+// Check if company key is available
+export interface CheckCompanyKeyResponse {
+  available: boolean;
+  message?: string;
+}
+
+export const useCheckCompanyKey = (companyKey: string) => {
+  return useQuery<CheckCompanyKeyResponse, Error>({
+    queryKey: ['company-key-check', companyKey],
+    queryFn: async () => {
+      const { data } = await axiosInstance.get(`/company/check-key/${companyKey}`);
+      return data;
+    },
+    enabled: !!companyKey && companyKey.length >= 2 && companyKey.length <= 3 && /^[A-Z]+$/.test(companyKey),
+    ...defaultQueryOptions,
+    staleTime: 0, // Always check fresh
+  });
+};
+
+// Get company key suggestions
+export interface SuggestKeysResponse {
+  suggestions: string[];
+}
+
+export interface SuggestKeysRequest {
+  name: string;
+}
+
+export const useSuggestCompanyKeys = () => {
+  return useMutation<SuggestKeysResponse, Error, SuggestKeysRequest>({
+    mutationFn: async (payload) => {
+      const { data } = await axiosInstance.post('/company/suggest-keys', payload);
+      return data.data;
+    },
+    retry: false,
+  });
+};
+
+// Soft delete company
+export interface DeleteCompanyResponse {
+  success: boolean;
+  message?: string;
+}
+
+export const useDeleteCompany = () => {
+  return useMutation<DeleteCompanyResponse, Error, string>({
+    mutationFn: async (companyId: string) => {
+      const { data } = await axiosInstance.delete(`/company/soft-delete/${companyId}`);
+      return data;
+    },
+    onSuccess: (_data, companyId) => {
+      // Invalidate companies list and this specific company's details
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      queryClient.invalidateQueries({ queryKey: ['company', companyId] });
+    },
+    retry: false,
+  });
+};
+
+// Update company
+export interface UpdateCompanyPayload {
+  name?: string;
+  description?: string;
+  taxNumber?: string;
+  tradeLicenseIssueNumber?: string;
+  tradeLicenseExpiryDate?: string;
+}
+
+export interface UpdateCompanyResponse {
+  success: boolean;
+  message?: string;
+  data?: any;
+}
+
+export const useUpdateCompany = () => {
+  return useMutation<UpdateCompanyResponse, Error, { companyId: string; payload: UpdateCompanyPayload }>({
+    mutationFn: async ({ companyId, payload }) => {
+      const { data } = await axiosInstance.patch(`/company/update/${companyId}`, payload);
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      // Invalidate companies list and this specific company's details
+      queryClient.invalidateQueries({ queryKey: ['companies'] });
+      queryClient.invalidateQueries({ queryKey: ['company', variables.companyId] });
+    },
+    retry: false,
+  });
+};

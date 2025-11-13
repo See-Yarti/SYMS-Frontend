@@ -1,7 +1,7 @@
 // src/pages/accounting/OperatorAccounting.tsx
 import React, { useState, useMemo } from 'react';
 import { useAppSelector } from '@/store';
-import { useOperatorAccounting, fetchInvoice } from '@/hooks/useAccounting';
+import { useOperatorAccounting, fetchInvoice, fetchInvoiceJson } from '@/hooks/useAccounting';
 import { useGetActiveLocations } from '@/hooks/useLocationApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,8 +27,10 @@ import {
   Receipt,
   Briefcase,
   Download,
-  MapPin
+  MapPin,
+  FileSpreadsheet
 } from 'lucide-react';
+import { exportInvoiceToExcel } from '@/utils/excelExport';
 import { AccountingItem, AccountingType } from '@/types/accounting';
 import { cn } from '@/lib/utils';
 import { PageLoadingSkeleton } from '@/components/ui/loading';
@@ -103,6 +105,7 @@ const OperatorAccounting: React.FC = () => {
   });
 
   // Invoice generation state
+  const [invoiceMode, setInvoiceMode] = useState<'company-only' | 'company-location'>('company-only');
   const [selectedLocationId, setSelectedLocationId] = useState<string>('all');
   const [invoiceDateFrom, setInvoiceDateFrom] = useState(() => {
     const today = new Date();
@@ -170,10 +173,13 @@ const OperatorAccounting: React.FC = () => {
       toast.error('Company ID not found');
       return;
     }
-    if (!selectedLocationId || selectedLocationId === 'all') {
+    
+    // Only require location if mode is company-location
+    if (invoiceMode === 'company-location' && (!selectedLocationId || selectedLocationId === 'all')) {
       toast.error('Please select an operational location');
       return;
     }
+    
     if (!invoiceDateFrom || !invoiceDateTo) {
       toast.error('Please select date range');
       return;
@@ -184,9 +190,11 @@ const OperatorAccounting: React.FC = () => {
     setInvoiceData(null);
     
     try {
+      // Pass null for locationId if company-only mode
+      const locationId = invoiceMode === 'company-location' ? selectedLocationId : null;
       const data = await fetchInvoice(
         companyId,
-        selectedLocationId,
+        locationId,
         {
           from: invoiceDateFrom,
           to: invoiceDateTo,
@@ -254,7 +262,9 @@ const OperatorAccounting: React.FC = () => {
         const url = window.URL.createObjectURL(invoiceData.blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `invoice-${companyId}-${selectedLocationId}-${invoiceDateFrom}-${invoiceDateTo}.pdf`;
+        link.download = invoiceMode === 'company-location' && selectedLocationId !== 'all'
+          ? `invoice-${companyId}-${selectedLocationId}-${invoiceDateFrom}-${invoiceDateTo}.pdf`
+          : `invoice-${companyId}-all-locations-${invoiceDateFrom}-${invoiceDateTo}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -265,6 +275,46 @@ const OperatorAccounting: React.FC = () => {
       }
     } else {
       toast.error('Invoice data format not supported');
+    }
+  };
+
+  const handleExportToExcel = async () => {
+    if (!companyId) {
+      toast.error('Company ID not found');
+      return;
+    }
+    
+    // Only require location if mode is company-location
+    if (invoiceMode === 'company-location' && (!selectedLocationId || selectedLocationId === 'all')) {
+      toast.error('Please select an operational location');
+      return;
+    }
+    
+    if (!invoiceDateFrom || !invoiceDateTo) {
+      toast.error('Please select date range');
+      return;
+    }
+    
+    try {
+      const locationId = invoiceMode === 'company-location' ? selectedLocationId : null;
+      const jsonData = await fetchInvoiceJson(
+        companyId,
+        locationId,
+        {
+          from: invoiceDateFrom,
+          to: invoiceDateTo,
+        }
+      );
+      
+      const filename = locationId
+        ? `invoice-${companyId}-${locationId}-${invoiceDateFrom}-${invoiceDateTo}.xlsx`
+        : `invoice-${companyId}-all-locations-${invoiceDateFrom}-${invoiceDateTo}.xlsx`;
+      
+      await exportInvoiceToExcel(jsonData, filename);
+      toast.success('Excel file exported successfully');
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Failed to export Excel file';
+      toast.error(errorMessage);
     }
   };
 
@@ -361,35 +411,66 @@ const OperatorAccounting: React.FC = () => {
             <CardTitle className="text-lg">Generate Invoice</CardTitle>
           </div>
           <p className="text-sm text-muted-foreground">
-            Generate PDF invoice for a specific operational location.
+            Generate PDF invoice for your company. You can select all locations or a specific location.
           </p>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Operational Location Select */}
-            <div className="space-y-2">
-              <Label htmlFor="invoice-location">Operational Location</Label>
-              <Select 
-                value={selectedLocationId} 
-                onValueChange={setSelectedLocationId}
-                disabled={!companyId}
-              >
-                <SelectTrigger id="invoice-location">
-                  <SelectValue placeholder="Select location" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Select location</SelectItem>
-                  {allLocations.map((location: any) => (
-                    <SelectItem key={location.id} value={location.id}>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span>{location.title || location.city}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* Invoice Mode Selection */}
+          <div className="mb-4 space-y-2">
+            <Label>Invoice Type</Label>
+            <div className="flex gap-4">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="invoice-mode"
+                  value="company-only"
+                  checked={invoiceMode === 'company-only'}
+                  onChange={(e) => setInvoiceMode(e.target.value as 'company-only' | 'company-location')}
+                  className="h-4 w-4"
+                />
+                <span className="text-sm">Company Only (All Locations)</span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="invoice-mode"
+                  value="company-location"
+                  checked={invoiceMode === 'company-location'}
+                  onChange={(e) => setInvoiceMode(e.target.value as 'company-only' | 'company-location')}
+                  className="h-4 w-4"
+                />
+                <span className="text-sm">Company + Single Location</span>
+              </label>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Operational Location Select - Only shown when mode is company-location */}
+            {invoiceMode === 'company-location' && (
+              <div className="space-y-2">
+                <Label htmlFor="invoice-location">Operational Location *</Label>
+                <Select 
+                  value={selectedLocationId} 
+                  onValueChange={setSelectedLocationId}
+                  disabled={!companyId}
+                >
+                  <SelectTrigger id="invoice-location">
+                    <SelectValue placeholder="Select location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Select location</SelectItem>
+                    {allLocations.map((location: any) => (
+                      <SelectItem key={location.id} value={location.id}>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span>{location.title || location.city}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Date From */}
             <div className="space-y-2">
@@ -419,7 +500,13 @@ const OperatorAccounting: React.FC = () => {
           <div className="flex justify-end gap-2 mt-4">
             <Button
               onClick={handleGenerateInvoice}
-              disabled={!companyId || !selectedLocationId || selectedLocationId === 'all' || !invoiceDateFrom || !invoiceDateTo || invoiceLoading}
+              disabled={
+                !companyId || 
+                (invoiceMode === 'company-location' && (!selectedLocationId || selectedLocationId === 'all')) ||
+                !invoiceDateFrom || 
+                !invoiceDateTo || 
+                invoiceLoading
+              }
             >
               {invoiceLoading ? (
                 <>
@@ -436,9 +523,22 @@ const OperatorAccounting: React.FC = () => {
             {invoiceData && (
               <Button onClick={handleDownloadInvoice} variant="outline">
                 <Download className="mr-2 h-4 w-4" />
-                Download Invoice
+                Download PDF
               </Button>
             )}
+            <Button
+              onClick={handleExportToExcel}
+              variant="outline"
+              disabled={
+                !companyId || 
+                (invoiceMode === 'company-location' && (!selectedLocationId || selectedLocationId === 'all')) ||
+                !invoiceDateFrom || 
+                !invoiceDateTo
+              }
+            >
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Export to Excel
+            </Button>
           </div>
 
           {/* Success Message */}
