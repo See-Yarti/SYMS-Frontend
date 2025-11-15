@@ -22,7 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
-    Loader2, ChevronsUpDown, ChevronUp, ChevronDown, Eye, Copy, CheckCircle2, XCircle, Trash2, MoreVertical, Pencil,
+    Loader2, ChevronsUpDown, ChevronUp, ChevronDown, Eye, CheckCircle2, XCircle, Trash2, MoreVertical, Pencil,
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -148,16 +148,6 @@ export default function CompaniesList() {
         setPage(1);
     };
 
-    // Copy ID
-    const copyId = async (id: string) => {
-        try {
-            await navigator.clipboard.writeText(id);
-            toast.success('Company ID copied');
-        } catch {
-            toast.error('Failed to copy ID');
-        }
-    };
-
     return (
         <div className="max-w-7xl mx-auto px-2 md:px-6 py-8 space-y-8">
             {/* Fancy banner */}
@@ -246,7 +236,6 @@ export default function CompaniesList() {
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="bg-muted/70 sticky top-0 z-10">
-                                <th className="px-4 py-3 text-left font-semibold">Company ID</th>
                                 <th
                                     className="px-4 py-3 text-left font-semibold cursor-pointer select-none"
                                     onClick={() => handleSort('name')}
@@ -286,23 +275,6 @@ export default function CompaniesList() {
                                     key={company.id}
                                     className={`transition-colors duration-150 ${idx % 2 === 0 ? 'bg-muted/30' : 'bg-background'}`}
                                 >
-                                    {/* Company ID with copy */}
-                                    <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">
-                                        <div className="flex items-center gap-2">
-                                            <span className="truncate max-w-[220px]" title={company.id}>{company.id}</span>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-7 w-7 hover:bg-primary/15"
-                                                onClick={() => copyId(company.id)}
-                                                aria-label="Copy ID"
-                                                title="Copy ID"
-                                            >
-                                                <Copy className="h-4 w-4" />
-                                            </Button>
-                                        </div>
-                                    </td>
-
                                     {/* Name with “logo”/initials */}
                                     <td className="px-4 py-3 whitespace-nowrap">
                                         <div className="flex items-center gap-3">

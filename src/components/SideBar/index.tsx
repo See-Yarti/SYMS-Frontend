@@ -31,8 +31,8 @@ const SideBar = () => {
     <div>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset className="flex">
-          <header className="sticky top-0 flex h-14 shrink-0 items-center gap-2 bg-background">
+        <SidebarInset className="flex flex-col">
+          <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 bg-background border-b border-border/40 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex flex-1 items-center gap-2 px-3">
                   <SidebarTrigger />
               <Label className="line-clamp-1">{firstIndex}</Label>

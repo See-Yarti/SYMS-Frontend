@@ -672,16 +672,16 @@ const RegisterForm: React.FC = () => {
                                     </div>
                                 )}
                                 {showSuggestions && suggestions.length > 0 && (
-                                    <div className="company-key-suggestions absolute z-50 top-full mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-auto">
+                                    <div className="company-key-suggestions absolute z-50 top-full mt-1 w-full bg-popover border border-border rounded-md shadow-lg max-h-40 overflow-auto">
                                         <div className="p-2">
                                             <p className="text-xs text-muted-foreground mb-2 px-2">Suggestions:</p>
                                             {suggestions.map((suggestion) => (
                                                 <div
                                                     key={suggestion}
-                                                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer rounded flex items-center justify-between"
+                                                    className="px-3 py-2 hover:bg-accent cursor-pointer rounded flex items-center justify-between transition-colors"
                                                     onMouseDown={() => handleSelectSuggestion(suggestion)}
                                                 >
-                                                    <span className="font-medium uppercase">{suggestion}</span>
+                                                    <span className="font-medium uppercase text-foreground">{suggestion}</span>
                                                     <button
                                                         type="button"
                                                         onClick={() => handleSelectSuggestion(suggestion)}

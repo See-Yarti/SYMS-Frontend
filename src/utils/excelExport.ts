@@ -91,54 +91,150 @@ const formatCurrency = (amount: number | string) => {
   }).format(num);
 };
 
+// Helper function to add table headers
+const addTableHeaders = (worksheet: ExcelJS.Worksheet, currentRow: number) => {
+  const tableHeaderRow = worksheet.getRow(currentRow);
+  const headers = [
+    'Booking ID',
+    'Booking Code',
+    'Traveller Name',
+    'Pickup Date',
+    'Drop Date',
+    'Location Address',
+    'Car Model',
+    'Grand Total',
+    'Commission',
+    'Commission %',
+    'Tax Total',
+    'Net Amount',
+    'Status'
+  ];
+
+  headers.forEach((header, index) => {
+    const cell = tableHeaderRow.getCell(index + 1);
+    cell.value = header;
+    cell.font = { bold: true, color: { argb: 'FF2C3E50' } };
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFBDC3C7' } // Light blue-gray background
+    };
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    cell.border = {
+      top: { style: 'thin', color: { argb: 'FF95A5A6' } },
+      left: { style: 'thin', color: { argb: 'FF95A5A6' } },
+      bottom: { style: 'thin', color: { argb: 'FF95A5A6' } },
+      right: { style: 'thin', color: { argb: 'FF95A5A6' } }
+    };
+  });
+  tableHeaderRow.height = 25;
+};
+
+// Helper function to add booking row
+const addBookingRow = (worksheet: ExcelJS.Worksheet, booking: Booking, currentRow: number, index: number) => {
+  const row = worksheet.getRow(currentRow);
+  row.getCell(1).value = booking.bookingId;
+  row.getCell(2).value = booking.bookingCode;
+  row.getCell(3).value = booking.travellerName;
+  row.getCell(4).value = formatDate(booking.pickupAt);
+  row.getCell(5).value = formatDate(booking.dropAt);
+  row.getCell(6).value = booking.location;
+  row.getCell(7).value = booking.carModel;
+  row.getCell(8).value = booking.grandTotal;
+  row.getCell(8).numFmt = '$#,##0.00';
+  row.getCell(9).value = booking.commission;
+  row.getCell(9).numFmt = '$#,##0.00';
+  row.getCell(10).value = `${booking.commissionPercentage}%`;
+  row.getCell(11).value = booking.taxTotal;
+  row.getCell(11).numFmt = '$#,##0.00';
+  row.getCell(12).value = booking.netAmount;
+  row.getCell(12).numFmt = '$#,##0.00';
+  row.getCell(13).value = booking.status;
+
+  // Alternate row colors
+  if (index % 2 === 0) {
+    for (let i = 1; i <= 13; i++) {
+      row.getCell(i).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFF8F9FA' } // Very light gray
+      };
+    }
+  }
+
+  // Add borders
+  for (let i = 1; i <= 13; i++) {
+    row.getCell(i).border = {
+      top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+      left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+      bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+      right: { style: 'thin', color: { argb: 'FFE0E0E0' } }
+    };
+  }
+
+  row.height = 20;
+};
+
+// Helper function to add location totals row
+const addLocationTotalsRow = (worksheet: ExcelJS.Worksheet, currentRow: number, totals: {
+  grandTotal: number;
+  commission: number;
+  tax: number;
+  netAmount: number;
+  count: number;
+}) => {
+  const totalsRow = worksheet.getRow(currentRow);
+  totalsRow.getCell(1).value = `TOTAL (${totals.count} bookings)`;
+  totalsRow.getCell(1).font = { bold: true, size: 11 };
+  totalsRow.getCell(8).value = totals.grandTotal;
+  totalsRow.getCell(8).numFmt = '$#,##0.00';
+  totalsRow.getCell(8).font = { bold: true };
+  totalsRow.getCell(9).value = totals.commission;
+  totalsRow.getCell(9).numFmt = '$#,##0.00';
+  totalsRow.getCell(9).font = { bold: true };
+  totalsRow.getCell(11).value = totals.tax;
+  totalsRow.getCell(11).numFmt = '$#,##0.00';
+  totalsRow.getCell(11).font = { bold: true };
+  totalsRow.getCell(12).value = totals.netAmount;
+  totalsRow.getCell(12).numFmt = '$#,##0.00';
+  totalsRow.getCell(12).font = { bold: true };
+
+  // Style totals row
+  totalsRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFE8F5E9' } // Light green background for location totals
+  };
+
+  for (let i = 1; i <= 13; i++) {
+    totalsRow.getCell(i).border = {
+      top: { style: 'medium', color: { argb: 'FF4CAF50' } },
+      left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+      bottom: { style: 'medium', color: { argb: 'FF4CAF50' } },
+      right: { style: 'thin', color: { argb: 'FFE0E0E0' } }
+    };
+  }
+
+  totalsRow.height = 22;
+};
+
 export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) => {
-  // Handle both single location (rows) and multi-location (groupedBookings) responses
-  let allBookings: Array<Booking & { companyLocationName?: string; locationId?: string }> = [];
-  
-  if (data?.data?.rows && data.data.rows.length > 0) {
-    // Single location response - use rows directly
-    const locationName = data.data.operationalLocation?.title || 
-                        `${data.data.company.name} - ${data.data.operationalLocation?.city || ''}`;
-    allBookings = data.data.rows.map((booking) => ({
-      ...booking,
-      companyLocationName: locationName,
-      locationId: data.data.operationalLocation?.id || '',
-    }));
-  } else if (data?.data?.groupedBookings && data.data.groupedBookings.length > 0) {
-    // Multi-location response - flatten groupedBookings
-    data.data.groupedBookings.forEach((group) => {
-      group.bookings.forEach((booking) => {
-        allBookings.push({
-          ...booking,
-          companyLocationName: group.CompanyLocationName,
-          locationId: group.locationId,
-        });
-      });
-    });
-  } else {
+  const isMultiLocation = data?.data?.groupedBookings && data.data.groupedBookings.length > 0;
+  const isSingleLocation = data?.data?.rows && data.data.rows.length > 0;
+
+  if (!isMultiLocation && !isSingleLocation) {
     throw new Error('No data available to export');
   }
-
-  if (allBookings.length === 0) {
-    throw new Error('No bookings available to export');
-  }
-
-  // Calculate totals
-  const totalGrandTotal = allBookings.reduce((sum, b) => sum + (b.grandTotal || 0), 0);
-  const totalCommission = allBookings.reduce((sum, b) => sum + (b.commission || 0), 0);
-  const totalTax = allBookings.reduce((sum, b) => sum + (b.taxTotal || 0), 0);
-  const totalNetAmount = allBookings.reduce((sum, b) => sum + (b.netAmount || 0), 0);
 
   // Create workbook
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Invoice Report');
 
-  // Set default column widths
+  // Set default column widths (removed Company Location column for multi-location)
   worksheet.columns = [
     { width: 36 }, // Booking ID
     { width: 15 }, // Booking Code
     { width: 20 }, // Traveller Name
-    { width: 40 }, // Company Location
     { width: 12 }, // Pickup Date
     { width: 12 }, // Drop Date
     { width: 50 }, // Location Address
@@ -163,7 +259,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
     fgColor: { argb: 'FF2C3E50' } // Dark blue-gray background (lighter than black)
   };
   headerRow1.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
-  worksheet.mergeCells(currentRow, 1, currentRow, 14);
+  worksheet.mergeCells(currentRow, 1, currentRow, 13);
   headerRow1.height = 30;
   currentRow++;
 
@@ -171,7 +267,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
   headerRow2.getCell(1).value = 'INVOICE REPORT';
   headerRow2.getCell(1).font = { size: 18, bold: true, color: { argb: 'FF34495E' } };
   headerRow2.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
-  worksheet.mergeCells(currentRow, 1, currentRow, 14);
+  worksheet.mergeCells(currentRow, 1, currentRow, 13);
   headerRow2.height = 25;
   currentRow++;
 
@@ -188,7 +284,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
     fgColor: { argb: 'FFECF0F1' } // Light gray background
   };
   companyInfoHeader.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
-  worksheet.mergeCells(currentRow, 1, currentRow, 14);
+  worksheet.mergeCells(currentRow, 1, currentRow, 13);
   companyInfoHeader.height = 20;
   currentRow++;
 
@@ -210,8 +306,8 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
   // Empty row
   currentRow++;
 
-  // Location Information (if available)
-  if (data.data.operationalLocation?.title) {
+  // Location Information (only for single location)
+  if (!isMultiLocation && data.data.operationalLocation?.title) {
     const locationInfoHeader = worksheet.getRow(currentRow);
     locationInfoHeader.getCell(1).value = 'LOCATION INFORMATION';
     locationInfoHeader.getCell(1).font = { size: 14, bold: true, color: { argb: 'FF2C3E50' } };
@@ -221,7 +317,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
       fgColor: { argb: 'FFECF0F1' } // Light gray background
     };
     locationInfoHeader.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
-    worksheet.mergeCells(currentRow, 1, currentRow, 14);
+    worksheet.mergeCells(currentRow, 1, currentRow, 13);
     locationInfoHeader.height = 20;
     currentRow++;
 
@@ -254,7 +350,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
     fgColor: { argb: 'FFECF0F1' } // Light gray background
   };
   periodInfoHeader.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
-  worksheet.mergeCells(currentRow, 1, currentRow, 14);
+  worksheet.mergeCells(currentRow, 1, currentRow, 13);
   periodInfoHeader.height = 20;
   currentRow++;
 
@@ -291,7 +387,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
     fgColor: { argb: 'FFECF0F1' } // Light gray background
   };
   summaryHeader.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
-  worksheet.mergeCells(currentRow, 1, currentRow, 14);
+  worksheet.mergeCells(currentRow, 1, currentRow, 13);
   summaryHeader.height = 20;
   currentRow++;
 
@@ -328,146 +424,211 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
   currentRow++;
   currentRow++;
 
-  // Table Header Section
-  const bookingDetailsHeader = worksheet.getRow(currentRow);
-  bookingDetailsHeader.getCell(1).value = 'BOOKING DETAILS';
-  bookingDetailsHeader.getCell(1).font = { size: 14, bold: true, color: { argb: 'FF2C3E50' } };
-  bookingDetailsHeader.getCell(1).fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FFECF0F1' } // Light gray background
-  };
-  bookingDetailsHeader.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
-  worksheet.mergeCells(currentRow, 1, currentRow, 14);
-  bookingDetailsHeader.height = 20;
-  currentRow++;
+  // Handle multi-location vs single location differently
+  if (isMultiLocation) {
+    // Multi-location: Create sections for each location
+    const overallTotals = {
+      grandTotal: 0,
+      commission: 0,
+      tax: 0,
+      netAmount: 0,
+      count: 0
+    };
 
-  // Empty row
-  currentRow++;
+    data.data.groupedBookings!.forEach((locationGroup, locationIndex) => {
+      // Location Header
+      const locationHeader = worksheet.getRow(currentRow);
+      locationHeader.getCell(1).value = `LOCATION: ${locationGroup.CompanyLocationName}`;
+      locationHeader.getCell(1).font = { size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
+      locationHeader.getCell(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF3498DB' } // Blue background
+      };
+      locationHeader.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+      worksheet.mergeCells(currentRow, 1, currentRow, 13);
+      locationHeader.height = 22;
+      currentRow++;
 
-  // Table Headers
-  const tableHeaderRow = worksheet.getRow(currentRow);
-  const headers = [
-    'Booking ID',
-    'Booking Code',
-    'Traveller Name',
-    'Company Location',
-    'Pickup Date',
-    'Drop Date',
-    'Location Address',
-    'Car Model',
-    'Grand Total',
-    'Commission',
-    'Commission %',
-    'Tax Total',
-    'Net Amount',
-    'Status'
-  ];
+      // Empty row
+      currentRow++;
 
-  headers.forEach((header, index) => {
-    const cell = tableHeaderRow.getCell(index + 1);
-    cell.value = header;
-    cell.font = { bold: true, color: { argb: 'FF2C3E50' } };
-    cell.fill = {
+      // Table Headers for this location
+      addTableHeaders(worksheet, currentRow);
+      currentRow++;
+
+      // Location bookings
+      const locationTotals = {
+        grandTotal: 0,
+        commission: 0,
+        tax: 0,
+        netAmount: 0,
+        count: locationGroup.bookings.length
+      };
+
+      locationGroup.bookings.forEach((booking, bookingIndex) => {
+        addBookingRow(worksheet, booking, currentRow, bookingIndex);
+        
+        locationTotals.grandTotal += booking.grandTotal || 0;
+        locationTotals.commission += booking.commission || 0;
+        locationTotals.tax += booking.taxTotal || 0;
+        locationTotals.netAmount += booking.netAmount || 0;
+        
+        currentRow++;
+      });
+
+      // Location Totals Row
+      addLocationTotalsRow(worksheet, currentRow, locationTotals);
+      currentRow++;
+
+      // Add to overall totals
+      overallTotals.grandTotal += locationTotals.grandTotal;
+      overallTotals.commission += locationTotals.commission;
+      overallTotals.tax += locationTotals.tax;
+      overallTotals.netAmount += locationTotals.netAmount;
+      overallTotals.count += locationTotals.count;
+
+      // Empty rows between locations (except last)
+      if (locationIndex < data.data.groupedBookings!.length - 1) {
+        currentRow++;
+        currentRow++;
+      }
+    });
+
+    // Empty rows before overall totals
+    currentRow++;
+    currentRow++;
+
+    // Overall Totals Section
+    const overallTotalsHeader = worksheet.getRow(currentRow);
+    overallTotalsHeader.getCell(1).value = 'OVERALL TOTALS (ALL LOCATIONS)';
+    overallTotalsHeader.getCell(1).font = { size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
+    overallTotalsHeader.getCell(1).fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FFBDC3C7' } // Light blue-gray background
+      fgColor: { argb: 'FF2C3E50' } // Dark blue-gray background
     };
-    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-    cell.border = {
-      top: { style: 'thin', color: { argb: 'FF95A5A6' } },
-      left: { style: 'thin', color: { argb: 'FF95A5A6' } },
-      bottom: { style: 'thin', color: { argb: 'FF95A5A6' } },
-      right: { style: 'thin', color: { argb: 'FF95A5A6' } }
+    overallTotalsHeader.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+    worksheet.mergeCells(currentRow, 1, currentRow, 13);
+    overallTotalsHeader.height = 22;
+    currentRow++;
+
+    // Empty row
+    currentRow++;
+
+    // Overall totals row
+    const overallTotalsRow = worksheet.getRow(currentRow);
+    overallTotalsRow.getCell(1).value = `GRAND TOTAL (${overallTotals.count} bookings across ${data.data.groupedBookings!.length} locations)`;
+    overallTotalsRow.getCell(1).font = { bold: true, size: 12 };
+    overallTotalsRow.getCell(8).value = overallTotals.grandTotal;
+    overallTotalsRow.getCell(8).numFmt = '$#,##0.00';
+    overallTotalsRow.getCell(8).font = { bold: true };
+    overallTotalsRow.getCell(9).value = overallTotals.commission;
+    overallTotalsRow.getCell(9).numFmt = '$#,##0.00';
+    overallTotalsRow.getCell(9).font = { bold: true };
+    overallTotalsRow.getCell(11).value = overallTotals.tax;
+    overallTotalsRow.getCell(11).numFmt = '$#,##0.00';
+    overallTotalsRow.getCell(11).font = { bold: true };
+    overallTotalsRow.getCell(12).value = overallTotals.netAmount;
+    overallTotalsRow.getCell(12).numFmt = '$#,##0.00';
+    overallTotalsRow.getCell(12).font = { bold: true };
+
+    // Style overall totals row
+    overallTotalsRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFFF4E6' } // Very light orange/cream
     };
-  });
-  tableHeaderRow.height = 25;
-  currentRow++;
 
-  // Table Data
-  allBookings.forEach((booking, index) => {
-    const row = worksheet.getRow(currentRow);
-    row.getCell(1).value = booking.bookingId;
-    row.getCell(2).value = booking.bookingCode;
-    row.getCell(3).value = booking.travellerName;
-    row.getCell(4).value = booking.companyLocationName || 'N/A';
-    row.getCell(5).value = formatDate(booking.pickupAt);
-    row.getCell(6).value = formatDate(booking.dropAt);
-    row.getCell(7).value = booking.location;
-    row.getCell(8).value = booking.carModel;
-    row.getCell(9).value = booking.grandTotal;
-    row.getCell(9).numFmt = '$#,##0.00';
-    row.getCell(10).value = booking.commission;
-    row.getCell(10).numFmt = '$#,##0.00';
-    row.getCell(11).value = `${booking.commissionPercentage}%`;
-    row.getCell(12).value = booking.taxTotal;
-    row.getCell(12).numFmt = '$#,##0.00';
-    row.getCell(13).value = booking.netAmount;
-    row.getCell(13).numFmt = '$#,##0.00';
-    row.getCell(14).value = booking.status;
-
-    // Alternate row colors
-    if (index % 2 === 0) {
-      for (let i = 1; i <= 14; i++) {
-        row.getCell(i).fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FFF8F9FA' } // Very light gray
-        };
-      }
-    }
-
-    // Add borders
-    for (let i = 1; i <= 14; i++) {
-      row.getCell(i).border = {
-        top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+    for (let i = 1; i <= 13; i++) {
+      overallTotalsRow.getCell(i).border = {
+        top: { style: 'medium', color: { argb: 'FFD5A6BD' } },
         left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
-        bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+        bottom: { style: 'medium', color: { argb: 'FFD5A6BD' } },
         right: { style: 'thin', color: { argb: 'FFE0E0E0' } }
       };
     }
 
-    row.height = 20;
-    currentRow++;
-  });
+    overallTotalsRow.height = 25;
 
-  // Empty row
-  currentRow++;
-
-  // Totals Row
-  const totalsRow = worksheet.getRow(currentRow);
-  totalsRow.getCell(1).value = 'TOTAL';
-  totalsRow.getCell(1).font = { bold: true, size: 12 };
-  totalsRow.getCell(9).value = totalGrandTotal;
-  totalsRow.getCell(9).numFmt = '$#,##0.00';
-  totalsRow.getCell(9).font = { bold: true };
-  totalsRow.getCell(10).value = totalCommission;
-  totalsRow.getCell(10).numFmt = '$#,##0.00';
-  totalsRow.getCell(10).font = { bold: true };
-  totalsRow.getCell(12).value = totalTax;
-  totalsRow.getCell(12).numFmt = '$#,##0.00';
-  totalsRow.getCell(12).font = { bold: true };
-  totalsRow.getCell(13).value = totalNetAmount;
-  totalsRow.getCell(13).numFmt = '$#,##0.00';
-  totalsRow.getCell(13).font = { bold: true };
-
-  // Style totals row
-  totalsRow.fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FFFFF4E6' } // Very light orange/cream
-  };
-
-  for (let i = 1; i <= 14; i++) {
-    totalsRow.getCell(i).border = {
-      top: { style: 'medium', color: { argb: 'FFD5A6BD' } },
-      left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
-      bottom: { style: 'medium', color: { argb: 'FFD5A6BD' } },
-      right: { style: 'thin', color: { argb: 'FFE0E0E0' } }
+  } else {
+    // Single location: Use original format
+    const bookingDetailsHeader = worksheet.getRow(currentRow);
+    bookingDetailsHeader.getCell(1).value = 'BOOKING DETAILS';
+    bookingDetailsHeader.getCell(1).font = { size: 14, bold: true, color: { argb: 'FF2C3E50' } };
+    bookingDetailsHeader.getCell(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFECF0F1' } // Light gray background
     };
-  }
+    bookingDetailsHeader.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
+    worksheet.mergeCells(currentRow, 1, currentRow, 13);
+    bookingDetailsHeader.height = 20;
+    currentRow++;
 
-  totalsRow.height = 25;
+    // Empty row
+    currentRow++;
+
+    // Table Headers
+    addTableHeaders(worksheet, currentRow);
+    currentRow++;
+
+    // Table Data
+    const allBookings = data.data.rows!;
+    let totalGrandTotal = 0;
+    let totalCommission = 0;
+    let totalTax = 0;
+    let totalNetAmount = 0;
+
+    allBookings.forEach((booking, index) => {
+      addBookingRow(worksheet, booking, currentRow, index);
+      
+      totalGrandTotal += booking.grandTotal || 0;
+      totalCommission += booking.commission || 0;
+      totalTax += booking.taxTotal || 0;
+      totalNetAmount += booking.netAmount || 0;
+      
+      currentRow++;
+    });
+
+    // Empty row
+    currentRow++;
+
+    // Totals Row
+    const totalsRow = worksheet.getRow(currentRow);
+    totalsRow.getCell(1).value = 'TOTAL';
+    totalsRow.getCell(1).font = { bold: true, size: 12 };
+    totalsRow.getCell(8).value = totalGrandTotal;
+    totalsRow.getCell(8).numFmt = '$#,##0.00';
+    totalsRow.getCell(8).font = { bold: true };
+    totalsRow.getCell(9).value = totalCommission;
+    totalsRow.getCell(9).numFmt = '$#,##0.00';
+    totalsRow.getCell(9).font = { bold: true };
+    totalsRow.getCell(11).value = totalTax;
+    totalsRow.getCell(11).numFmt = '$#,##0.00';
+    totalsRow.getCell(11).font = { bold: true };
+    totalsRow.getCell(12).value = totalNetAmount;
+    totalsRow.getCell(12).numFmt = '$#,##0.00';
+    totalsRow.getCell(12).font = { bold: true };
+
+    // Style totals row
+    totalsRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFFF4E6' } // Very light orange/cream
+    };
+
+    for (let i = 1; i <= 13; i++) {
+      totalsRow.getCell(i).border = {
+        top: { style: 'medium', color: { argb: 'FFD5A6BD' } },
+        left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+        bottom: { style: 'medium', color: { argb: 'FFD5A6BD' } },
+        right: { style: 'thin', color: { argb: 'FFE0E0E0' } }
+      };
+    }
+
+    totalsRow.height = 25;
+  }
 
   // Generate buffer and download
   const buffer = await workbook.xlsx.writeBuffer();

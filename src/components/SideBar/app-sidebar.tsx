@@ -74,7 +74,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         ];
       } else if (locationData && locationData.success && Array.isArray(locationData.data) && locationData.data.length > 0) {
         rateDropdown.items = locationData.data.map((loc: any) => ({
-          title: loc.city,
+          title: loc.title || loc.city,
           slug: `rate-${loc.id}`,
           url: `/rate/${loc.id}`,
           type: 'routed',

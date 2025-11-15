@@ -175,14 +175,14 @@ const LocationAutocomplete = React.forwardRef<HTMLInputElement, LocationAutocomp
         </div>
 
         {showSuggestions && suggestions.length > 0 && (
-          <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+          <ul className="absolute z-10 w-full mt-1 bg-popover border border-border rounded-md shadow-lg max-h-60 overflow-auto">
             {suggestions.map((suggestion) => (
               <li
                 key={suggestion.place_id}
-                className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                className="px-4 py-2 hover:bg-accent cursor-pointer transition-colors"
                 onMouseDown={() => handleSelectSuggestion(suggestion)}
               >
-                <div className="font-medium">{suggestion.structured_formatting.main_text}</div>
+                <div className="font-medium text-foreground">{suggestion.structured_formatting.main_text}</div>
                 <div className="text-sm text-muted-foreground">{suggestion.structured_formatting.secondary_text}</div>
               </li>
             ))}
@@ -341,10 +341,17 @@ const CompanyDetail = () => {
       if (addressParts.length > 1) city = addressParts[addressParts.length - 2].trim();
     }
 
+    // Build address line: prefer street_number + route, fallback to formatted_address or name
+    let addressLine = `${streetNumber} ${route}`.trim();
+    if (!addressLine || addressLine.length === 0) {
+      // If no street number/route, use formatted_address or name as fallback
+      addressLine = place.formatted_address || place.name || '';
+    }
+
     setLocationForm((prev) => ({
       ...prev,
       title: title || prev.title,
-      addressLine: `${streetNumber} ${route}`.trim(),
+      addressLine: addressLine || prev.addressLine,
       city: city || prev.city,
       state: state || prev.state,
       country: country || prev.country,
@@ -1281,7 +1288,7 @@ const CompanyDetail = () => {
       {/* Add Location Dialog */}
       <Dialog open={isLocationDialogOpen} onOpenChange={setIsLocationDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="sticky top-0 bg-background">
+          <DialogHeader>
             <DialogTitle>Add New Location</DialogTitle>
             <DialogDescription>Note: Select the country first, then type the address—fields will auto-fill.</DialogDescription>
           </DialogHeader>
@@ -1461,16 +1468,16 @@ const CompanyDetail = () => {
                 </div>
               )}
               {showLocationSuggestions && locationSuggestions.length > 0 && (
-                <div className="location-key-suggestions absolute z-50 top-full mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-40 overflow-auto">
+                <div className="location-key-suggestions absolute z-50 top-full mt-1 w-full bg-popover border border-border rounded-md shadow-lg max-h-40 overflow-auto">
                   <div className="p-2">
                     <p className="text-xs text-muted-foreground mb-2 px-2">Suggestions:</p>
                     {locationSuggestions.map((suggestion) => (
                       <div
                         key={suggestion}
-                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer rounded flex items-center justify-between"
+                        className="px-3 py-2 hover:bg-accent cursor-pointer rounded flex items-center justify-between transition-colors"
                         onMouseDown={() => handleSelectLocationSuggestion(suggestion)}
                       >
-                        <span className="font-medium uppercase">{suggestion}</span>
+                        <span className="font-medium uppercase text-foreground">{suggestion}</span>
                         <button
                           type="button"
                           onClick={() => handleSelectLocationSuggestion(suggestion)}
@@ -1530,7 +1537,7 @@ const CompanyDetail = () => {
             </div>
           </div>
 
-          <DialogFooter className="sticky bottom-0 bg-background pt-4 border-t">
+          <DialogFooter className="pt-4 border-t">
             <Button variant="outline" onClick={() => setIsLocationDialogOpen(false)}>
               Cancel
             </Button>
@@ -1545,7 +1552,7 @@ const CompanyDetail = () => {
       {/* Edit Location Dialog */}
       <Dialog open={isEditLocationDialogOpen} onOpenChange={setIsEditLocationDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="sticky top-0 bg-background">
+          <DialogHeader>
             <DialogTitle>Edit Location</DialogTitle>
             <DialogDescription>Update the details for this location</DialogDescription>
           </DialogHeader>
@@ -1672,7 +1679,7 @@ const CompanyDetail = () => {
             </div>
           </div>
 
-          <DialogFooter className="sticky bottom-0 bg-background pt-4 border-t">
+          <DialogFooter className="pt-4 border-t">
             <Button variant="outline" onClick={() => setIsEditLocationDialogOpen(false)}>
               Cancel
             </Button>
