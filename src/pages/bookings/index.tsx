@@ -24,16 +24,14 @@ import {
 import {
   CalendarClock,
   CalendarRange,
-  Filter,
   RefreshCw,
   Search,
   UserCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { InlineLoader, PageLoadingSkeleton } from '@/components/ui/loading';
+import { PageLoadingSkeleton } from '@/components/ui/loading';
 import { useAllBookings } from '@/hooks/useAllBookings';
 import { useGetCompanies } from '@/hooks/useCompanyApi';
-import { Booking } from '@/types/booking';
 
 const statusStyles: Record<string, string> = {
   PENDING:
@@ -47,21 +45,17 @@ const statusStyles: Record<string, string> = {
   SCHEDULED: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300',
 };
 
-const formatCurrency = (
-  value?: string | number | null,
-  currency?: string | null,
-) => {
-  if (!value) return '—';
+const formatCurrency = (value: string | number) => {
   const numValue = typeof value === 'string' ? parseFloat(value) : value;
   if (isNaN(numValue)) return '—';
   try {
-    return new Intl.NumberFormat(undefined, {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: currency ?? 'USD',
+      currency: 'USD',
       minimumFractionDigits: 2,
     }).format(numValue);
   } catch {
-    return `${numValue.toFixed(2)} ${currency ?? ''}`.trim();
+    return `$${numValue.toFixed(2)}`;
   }
 };
 
@@ -108,7 +102,7 @@ const AllBookings: React.FC = () => {
     return new Date(`${dateToInput}T23:59:59.999Z`).toISOString();
   }, [dateToInput]);
 
-  const { data, isLoading, isError, error, isFetching, refetch } =
+  const { data, isLoading, isError, error, refetch } =
     useAllBookings({
       search: debouncedSearch || undefined,
       sortDir,
@@ -341,7 +335,7 @@ const AllBookings: React.FC = () => {
                           <Badge variant="outline">{booking.paidStatus}</Badge>
                         </TableCell>
                         <TableCell className="text-right font-semibold">
-                          {formatCurrency(booking.totals?.grandTotal, booking.currency)}
+                          {formatCurrency(booking.totals?.grandTotal)}
                         </TableCell>
                       </TableRow>
                     );

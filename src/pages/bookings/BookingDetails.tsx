@@ -18,17 +18,17 @@ const statusStyles: Record<string, string> = {
   SCHEDULED: 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300',
 };
 
-const formatCurrency = (value: string | number, currency?: string) => {
+const formatCurrency = (value: string | number) => {
   const numValue = typeof value === 'string' ? parseFloat(value) : value;
   if (isNaN(numValue)) return '—';
   try {
-    return new Intl.NumberFormat(undefined, {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: currency ?? 'USD',
+      currency: 'USD',
       minimumFractionDigits: 2,
     }).format(numValue);
   } catch {
-    return `${numValue.toFixed(2)} ${currency ?? ''}`.trim();
+    return `$${numValue.toFixed(2)}`;
   }
 };
 
@@ -41,16 +41,6 @@ const formatDateTime = (value: string) => {
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  }).format(date);
-};
-
-const formatDate = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
   }).format(date);
 };
 
@@ -347,15 +337,15 @@ const BookingDetails: React.FC = () => {
             <CardContent className="space-y-3">
               <div className="flex justify-between">
                 <p className="text-sm text-muted-foreground">Subtotal</p>
-                <p className="font-semibold">{formatCurrency(booking.subTotal, booking.currency)}</p>
+                <p className="font-semibold">{formatCurrency(booking.subTotal)}</p>
               </div>
               <div className="flex justify-between">
                 <p className="text-sm text-muted-foreground">Tax</p>
-                <p className="font-semibold">{formatCurrency(booking.taxTotal, booking.currency)}</p>
+                <p className="font-semibold">{formatCurrency(booking.taxTotal)}</p>
               </div>
               <div className="border-t pt-3 flex justify-between">
                 <p className="text-lg font-semibold">Total</p>
-                <p className="text-lg font-bold">{formatCurrency(booking.grandTotal, booking.currency)}</p>
+                <p className="text-lg font-bold">{formatCurrency(booking.grandTotal)}</p>
               </div>
             </CardContent>
           </Card>
