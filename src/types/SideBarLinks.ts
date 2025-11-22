@@ -1,8 +1,8 @@
 // src/types/SideBarLinks.ts
 import {
-  Box,
-  Layers2,
-  Layers3,
+  // Box,
+  // Layers2,
+  // Layers3,
   LucideIcon,
   NotebookTabs,
   PanelLeftDashed,
@@ -86,14 +86,14 @@ export const sideBarLinks: SideBarItem[] = [
     icon: UsersRound,
     roles: ['admin'],
   },
-  {
-    title: 'Operators',
-    type: 'routed',
-    url: '/operators',
-    slug: 'operators',
-    icon: UsersRound,
-    roles: ['admin', 'adminOperator'],
-  },
+  // {
+  //   title: 'Operators',
+  //   type: 'routed',
+  //   url: '/operators',
+  //   slug: 'operators',
+  //   icon: UsersRound,
+  //   roles: ['admin', 'adminOperator'],
+  // },
   {
     title: 'Products',
     type: 'routed',
@@ -197,16 +197,16 @@ export const sideBarLinks: SideBarItem[] = [
   //     },
   //   ],
   // },
-  {
-    type: 'separation',
-    title: 'Settings & Support',
-  },
-  {
-    title: 'Settings',
-    type: 'routed',
-    url: '/settings',
-    slug: 'settings',
-    icon: Box,
-    roles: ['admin', 'adminOperator', 'managerOperator', 'salesOperator'],
-  },
+  // {
+  //   type: 'separation',
+  //   title: 'Settings & Support',
+  // },
+  // {
+  //   title: 'Settings',
+  //   type: 'routed',
+  //   url: '/settings',
+  //   slug: 'settings',
+  //   icon: Box,
+  //   roles: ['admin', 'adminOperator', 'managerOperator', 'salesOperator'],
+  // },
 ];
