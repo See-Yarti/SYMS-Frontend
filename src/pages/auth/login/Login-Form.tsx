@@ -80,13 +80,13 @@ const LoginForm = () => {
             placeholder="*********"
             type={showPassword ? 'text' : 'password'}
             disabled={isSubmitting || isLoading}
-            className="h-10 sm:h-11 rounded-md bg-[#F9FAFB] border-[#E5E7EB] focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 pr-10 text-sm sm:text-base"
+            className="h-10 sm:h-11 rounded-md bg-[#F9FAFB] border-[#E5E7EB] focus:ring-1 focus:ring-yellow-400 focus:border-yellow-400 pr-10 text-sm sm:text-base"
           />
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+            className="absolute right-0 top-0 h-full px-3 py-3 hover:bg-transparent"
             onClick={() => setShowPassword((prev) => !prev)}
           >
             {showPassword ? (

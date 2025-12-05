@@ -9,6 +9,11 @@ import {
   Box,
   Command,
   Calculator,
+  Car,
+  Building2,
+  Settings,
+  Calendar,
+  FileText,
 } from 'lucide-react';
 
 export function getSidebarIcon(name: string) {
@@ -20,16 +25,16 @@ export function getSidebarIcon(name: string) {
       return PanelRightDashed;
     case 'carclasses':
     case 'carclass':
-      return Box;
+      return Car;
     case 'addresses':
       return PanelRightDashed;
     case 'companies':
-      return UsersRound;
+      return Building2;
     case 'operators':
       return UsersRound;
     case 'bookings':
     case 'operatorbookings':
-      return NotebookTabs;
+      return Calendar;
     case 'products':
       return Package;
     case 'orders':
@@ -44,11 +49,11 @@ export function getSidebarIcon(name: string) {
     case 'usermanagement':
       return UsersRound;
     case 'settings':
-      return Box;
+      return Settings;
     case 'accounting':
     case 'adminaccounting':
     case 'operatoraccounting':
-      return Calculator;
+      return FileText;
     default:
       return Command; // fallback icon
   }

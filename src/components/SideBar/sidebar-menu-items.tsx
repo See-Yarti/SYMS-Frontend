@@ -4,8 +4,6 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import { SidebarMenuSubItem, SidebarMenuButton } from '@/components/ui/sidebar';
-import { Label } from '../ui/label';
-import { Separator } from '../ui/separator';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
 import { SideBarItem } from '@/types/SideBarLinks';
@@ -69,24 +67,9 @@ export function SidebarMenuItems({
   );
 }
 
-function SidebarSeparationItem({ item }: { item: SideBarItem }) {
-  return (
-    <React.Fragment>
-      {item.isHorizontal && item.position === 'top' && (
-        <div className="flex justify-center items-center">
-          <Separator className="mr-2 h-[1.5px] w-1/2" />
-        </div>
-      )}
-      <Label className="text-xs text-muted-foreground dark:text-gray-50 font-medium px-2 py-1">
-        {item.title}
-      </Label>
-      {item.isHorizontal && item.position === 'bottom' && (
-        <div className="flex justify-center items-center">
-          <Separator className="mr-2 h-[1.5px] w-1/2" />
-        </div>
-      )}
-    </React.Fragment>
-  );
+function SidebarSeparationItem({ item: _item }: { item: SideBarItem }) {
+  // Hide separation labels to match the design
+  return null;
 }
 
 
@@ -101,22 +84,32 @@ function SidebarRoutedItem({
   const Icon = getSidebarIcon(item.title);
 
   return (
-    <SidebarMenuSubItem className="px-1">
+    <SidebarMenuSubItem>
       <SidebarMenuButton
         tooltip={item.title}
         className={cn(
-          'text-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-          isActive && 'bg-sidebar-accent text-sidebar-accent-foreground font-medium'
+          'text-sm relative rounded-lg transition-colors py-2.5 px-3',
+          isActive 
+            ? 'bg-[#FEDE35]/15 text-[#FEDE35] font-bold' 
+            : 'text-[#4B5563] hover:bg-gray-50'
         )}
       >
-        <Link to={item.url || '#'} className="flex w-full items-center gap-2">
+        {isActive && (
+          <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#FEDE35] rounded-r" />
+        )}
+        <Link to={item.url || '#'} className="flex w-full items-center gap-3">
           <Icon
             className={cn(
-              'w-4 h-4',
-              isActive ? 'text-primary' : 'text-muted-foreground'
+              'w-5 h-5 flex-shrink-0',
+              isActive ? 'text-[#FEDE35]' : 'text-gray-400'
             )}
           />
-          <span>{item.title}</span>
+          <span className={cn(
+            'text-sm',
+            isActive ? 'text-[#FEDE35] font-bold' : 'text-[#4B5563]'
+          )}>
+            {item.title}
+          </span>
           {item.badge && (
             <Badge variant="secondary" className="ml-auto">
               {item.badge}
@@ -157,30 +150,42 @@ function SidebarDropdownItem({
   }
 
   return (
-    <SidebarMenuSubItem className="px-1">
+    <SidebarMenuSubItem>
       <SidebarMenuButton
         tooltip={item.title}
         onClick={handleDropdownClick}
         className={cn(
-          'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-          isActive && 'text-sidebar-accent-foreground font-medium'
+          'text-sm relative rounded-lg transition-colors py-2.5 px-3',
+          isActive 
+            ? 'bg-[#FEDE35]/15 text-[#FEDE35] font-bold' 
+            : 'text-[#4B5563] hover:bg-gray-50'
         )}
       >
-        <Icon className={cn(
-          'w-4 h-4',
-          isActive ? 'text-primary' : 'text-muted-foreground'
-        )} />
-        <span>{item.title}</span>
-        {item.badge && (
-          <Badge variant="secondary" className="ml-auto">
-            {item.badge}
-          </Badge>
+        {isActive && (
+          <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#FEDE35] rounded-r" />
         )}
-        {isOpen ? (
-          <ChevronDown className="ml-auto w-4 h-4 transition-transform" />
-        ) : (
-          <ChevronRight className="ml-auto w-4 h-4 transition-transform" />
-        )}
+        <div className="flex w-full items-center gap-3">
+          <Icon className={cn(
+            'w-5 h-5 flex-shrink-0',
+            isActive ? 'text-[#FEDE35]' : 'text-gray-400'
+          )} />
+          <span className={cn(
+            'text-sm',
+            isActive ? 'text-[#FEDE35] font-bold' : 'text-[#4B5563]'
+          )}>
+            {item.title}
+          </span>
+          {item.badge && (
+            <Badge variant="secondary" className="ml-auto">
+              {item.badge}
+            </Badge>
+          )}
+          {isOpen ? (
+            <ChevronDown className="ml-auto w-4 h-4 transition-transform text-gray-400" />
+          ) : (
+            <ChevronRight className="ml-auto w-4 h-4 transition-transform text-gray-400" />
+          )}
+        </div>
       </SidebarMenuButton>
     </SidebarMenuSubItem>
   );

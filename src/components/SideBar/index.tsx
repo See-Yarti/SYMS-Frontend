@@ -32,13 +32,12 @@ const SideBar = () => {
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset className="flex flex-col">
-          <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 bg-background border-b border-border/40 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 ">
             <div className="flex flex-1 items-center gap-2 px-3">
                   <SidebarTrigger />
               <Label className="line-clamp-1">{firstIndex}</Label>
             </div>
             <div className="flex items-center gap-2.5 px-3 ">
-              <Separator orientation="vertical" className="ml-2 h-4" />
               {/* <NotificationsSheet /> */}
               <Button
                 variant="ghost"

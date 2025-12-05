@@ -4,8 +4,6 @@ import {
   Settings,
   UserPen,
 } from 'lucide-react';
-
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,7 +30,7 @@ export function NavUser() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  const { user: reduxUser } = useAppSelector((state) => state.auth);
+  const { user: reduxUser, otherInfo } = useAppSelector((state) => state.auth);
   const email = reduxUser?.email || '';
 
   // Fetch latest user info from API
@@ -40,6 +38,25 @@ export function NavUser() {
   // Use API user if available, fallback to Redux user
   const apiUser = data?.data?.user;
   const user = apiUser || reduxUser;
+
+  // Get role for display
+  const getUserRole = () => {
+    if (!user) return '';
+    const roleRaw = user.role === 'operator' && otherInfo?.operatorRole
+      ? otherInfo.operatorRole
+      : user.role;
+    
+    // Format role: camelCase -> "Camel Case" or "Administrator" for admin
+    if (roleRaw === 'admin') return 'Administrator';
+    if (!roleRaw) return '';
+    
+    return roleRaw
+      .split(/(?=[A-Z])/)
+      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  const displayRole = getUserRole();
 
   const handleLogout = async () => {
     try {
@@ -60,24 +77,24 @@ export function NavUser() {
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              <Avatar>
-                <AvatarImage src={user.avatar || "/images/logo.svg"} alt={user.name} />
-                <AvatarFallback>
-                  {user.name?.charAt(0)?.toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">
-                  {isLoading && !apiUser ? "Loading..." : user.name}
-                </span>
-                <span className="truncate text-xs">{user.email}</span>
+            <div className="w-full px-3 py-2 bg-[#F9FAFB] rounded-lg cursor-pointer hover:bg-gray-100/50 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#FEDE35] text-black font-semibold text-sm flex-shrink-0">
+                  {isLoading && !apiUser ? '...' : (user.name?.charAt(0)?.toUpperCase() || 'U')}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-black truncate">
+                    {isLoading && !apiUser ? "Loading..." : user.name}
+                  </div>
+                  {displayRole && (
+                    <div className="text-xs text-gray-500 truncate">
+                      {displayRole}
+                    </div>
+                  )}
+                </div>
+                <ChevronsUpDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
               </div>
-              <ChevronsUpDown className="ml-auto size-4" />
-            </SidebarMenuButton>
+            </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
@@ -87,17 +104,14 @@ export function NavUser() {
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar>
-                  <AvatarImage src={user.avatar || "/images/logo.svg"} alt={user.name} />
-                  <AvatarFallback>
-                    {user.name?.charAt(0)?.toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[#FEDE35] text-black font-semibold text-xs">
+                  {isLoading && !apiUser ? '...' : (user.name?.charAt(0)?.toUpperCase() || 'U')}
+                </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">
                     {isLoading && !apiUser ? "Loading..." : user.name}
                   </span>
-                  <span className="truncate text-xs">{user.email}</span>
+                  <span className="truncate text-xs text-gray-500">{user.email}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
