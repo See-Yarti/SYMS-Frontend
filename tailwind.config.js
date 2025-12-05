@@ -4,6 +4,9 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
   	extend: {
+  		fontFamily: {
+  			montserrat: ['Montserrat', 'sans-serif'],
+  		},
   		backgroundImage: {
   			'custom-gradient': 'linear-gradient(17deg, rgba(207,217,223,1) 6%, rgba(226,235,240,1) 70%)',
   			'custom-gradient-reverse': 'linear-gradient(to top left,#1488CC,#2B32B2)',

@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { LoginFormValues, loginSchema } from '@/types/auth';
-import { EyeIcon, EyeOffIcon, Key, User } from 'lucide-react';
+import { EyeIcon, EyeOffIcon } from 'lucide-react';
 import { Icons } from '@/components/icons';
 import { toast } from 'sonner';
 import { useAppDispatch } from '@/store';
@@ -21,7 +21,7 @@ const LoginForm = () => {
   const navigate = useNavigate();
   const queryParams = useQueryParams();
   const redirectURL = queryParams.get('redirect') || '/';
-   const {
+  const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
@@ -51,38 +51,36 @@ const LoginForm = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
       onSubmit={handleSubmit(HandleCredentialLogin)}
-      className="grid gap-6"
+      className="grid gap-4 sm:gap-6"
     >
-      <div className="grid gap-3">
-        <Label htmlFor="email" className="text-gray-700 text-sm flex items-center">
-          <User className="h-4 w-4 mr-2 text-gray-600" /> Email
+      <div className="grid gap-2">
+        <Label htmlFor="email" className="text-gray-700 text-xs sm:text-sm font-medium">
+          Email Address
         </Label>
         <Input
           id="email"
           type="email"
-          placeholder="user@gmail.com"
+          placeholder="usman@gmail.com"
           disabled={isSubmitting || isLoading}
           {...register('email')}
-          className="focus:ring-2 focus:ring-purple-500 pl-6"
+          className="h-10 sm:h-11 rounded-md bg-[#F9FAFB] border-[#E5E7EB] focus:ring-yellow-400 focus:border-yellow-400 text-sm sm:text-base"
         />
         {errors.email && (
-          <span className="text-red-500 text-sm">{errors.email.message}</span>
+          <span className="text-red-500 text-xs sm:text-sm">{errors.email.message}</span>
         )}
       </div>
-      <div className="grid gap-3">
-        <div className="flex items-center">
-          <Label htmlFor="password" className="text-gray-700 text-sm flex items-center">
-            <Key className="h-4 w-4 mr-2 text-gray-600" /> Password
-          </Label>
-        </div>
+      <div className="grid gap-2">
+        <Label htmlFor="password" className="text-gray-700 text-xs sm:text-sm font-medium">
+          Password
+        </Label>
         <div className="relative">
           <Input
             id="password"
             {...register('password')}
-            placeholder="******"
+            placeholder="*********"
             type={showPassword ? 'text' : 'password'}
             disabled={isSubmitting || isLoading}
-            className="focus:ring-2 focus:ring-purple-500 pl-6"
+            className="h-10 sm:h-11 rounded-md bg-[#F9FAFB] border-[#E5E7EB] focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 pr-10 text-sm sm:text-base"
           />
           <Button
             type="button"
@@ -102,17 +100,17 @@ const LoginForm = () => {
           </Button>
         </div>
         {errors.password && (
-          <span className="text-red-500 text-sm">{errors.password.message}</span>
+          <span className="text-red-500 text-xs sm:text-sm">{errors.password.message}</span>
         )}
       </div>
       <Button
         type="submit"
         disabled={isSubmitting || isLoading}
-        className="w-full bg-gradient-to-r from-gray-600 to-gray-800 hover:from-gray-700 hover:to-gray-900 text-white font-semibold py-2 rounded-lg transition-all duration-300 flex items-center justify-center"
-        size={'sm'}
+        className="w-full bg-[#FEDE35] hover:bg-yellow-400 text-gray-900 font-semibold py-2.5 rounded-lg transition-all duration-300 flex items-center justify-center h-10 sm:h-11 text-sm sm:text-base"
+        size={'default'}
       >
         {isLoading && <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />}
-        Login
+        Log In
       </Button>
     </motion.form>
   );
