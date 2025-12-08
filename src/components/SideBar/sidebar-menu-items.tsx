@@ -23,6 +23,12 @@ export function SidebarMenuItems({
 }: SidebarMenuItemsProps) {
   const location = useLocation();
 
+  const isPathActive = (url: string | undefined) => {
+    if (!url) return false;
+    if (url === '/') return location.pathname === '/';
+    return location.pathname === url || location.pathname.startsWith(url + '/');
+  };
+
   return (
     <>
       {currentMenu.map((item, index) => {
@@ -35,7 +41,7 @@ export function SidebarMenuItems({
             <SidebarRoutedItem
               key={`${item.title}-${index}`}
               item={item}
-              isActive={location.pathname === item.url}
+              isActive={isPathActive(item.url)}
             />
           );
         }
@@ -52,10 +58,9 @@ export function SidebarMenuItems({
                 !!item.items?.some(
                   subItem =>
                     subItem.type === 'routed' &&
-                    location.pathname === subItem.url
+                    isPathActive(subItem.url)
                 )
               }
-              // Only Rate gets refetch!
               onDropdownOpen={item.slug === 'rate' ? onRateDropdownOpen : undefined}
             />
           );
@@ -68,11 +73,8 @@ export function SidebarMenuItems({
 }
 
 function SidebarSeparationItem({ item: _item }: { item: SideBarItem }) {
-  // Hide separation labels to match the design
   return null;
 }
-
-
 
 function SidebarRoutedItem({
   item,
@@ -88,39 +90,68 @@ function SidebarRoutedItem({
       <SidebarMenuButton
         tooltip={item.title}
         className={cn(
-          'text-sm relative rounded-lg transition-colors py-2.5 px-3',
-          isActive 
-            ? 'bg-[#FEDE35]/15 text-[#FEDE35] font-bold' 
-            : 'text-[#4B5563] hover:bg-gray-50'
+          'text-sm relative rounded-xl transition-colors py-2.5 px-3 overflow-hidden',
+          isActive
+            ? 'bg-[#FFF7ED] text-[#F97316] font-medium'
+            : 'text-[#4B5563] '
         )}
       >
+        {/* Animated vertical strip */}
         {isActive && (
-          <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#FEDE35] rounded-r" />
-        )}
-        <Link to={item.url || '#'} className="flex w-full items-center gap-3">
-          <Icon
-            className={cn(
-              'w-5 h-5 flex-shrink-0',
-              isActive ? 'text-[#FEDE35]' : 'text-gray-400'
-            )}
+          <div
+            className="absolute left-0 top-0 bottom-0 w-1 bg-[#F97316] rounded-r origin-left"
+            style={{
+              transform: 'translateX(-4px)',
+              opacity: 0,
+              transition: 'transform 200ms ease-in-out, opacity 200ms ease-in-out',
+            }}
+            aria-hidden="true"
           />
-          <span className={cn(
-            'text-sm',
-            isActive ? 'text-[#FEDE35] font-bold' : 'text-[#4B5563]'
-          )}>
-            {item.title}
-          </span>
-          {item.badge && (
-            <Badge variant="secondary" className="ml-auto">
-              {item.badge}
-            </Badge>
-          )}
+        )}
+        {isActive && (
+          <div
+            className="absolute left-0 top-0 bottom-0 w-1 bg-[#F97316] rounded-r"
+            style={{
+              transform: 'translateX(0)',
+              opacity: 1,
+              transition: 'transform 200ms ease-in-out, opacity 200ms ease-in-out',
+            }}
+            aria-hidden="true"
+          />
+        )}
+
+        <Link to={item.url || '#'} className="flex w-full">
+          <div
+            className={cn(
+              'flex items-center gap-3 transition-transform duration-200 ease-in-out',
+              isActive ? 'translate-x-1' : ''
+            )}
+          >
+            <Icon
+              className={cn(
+                'w-5 h-5 flex-shrink-0',
+                isActive ? 'text-[#F97316]' : 'text-gray-400'
+              )}
+            />
+            <span
+              className={cn(
+                'text-sm',
+                isActive ? 'text-[#F97316] font-medium' : 'text-[#4B5563]'
+              )}
+            >
+              {item.title}
+            </span>
+            {item.badge && (
+              <Badge variant="secondary" className="ml-auto">
+                {item.badge}
+              </Badge>
+            )}
+          </div>
         </Link>
       </SidebarMenuButton>
     </SidebarMenuSubItem>
   );
 }
-
 
 function SidebarDropdownItem({
   item,
@@ -143,9 +174,7 @@ function SidebarDropdownItem({
   function handleDropdownClick() {
     if (onDropdownOpen) onDropdownOpen();
     setSelectedPath(
-      isOpen
-        ? selectedPath.filter(i => i !== index)
-        : [...selectedPath, index]
+      isOpen ? selectedPath.filter(i => i !== index) : [...selectedPath, index]
     );
   }
 
@@ -155,36 +184,68 @@ function SidebarDropdownItem({
         tooltip={item.title}
         onClick={handleDropdownClick}
         className={cn(
-          'text-sm relative rounded-lg transition-colors py-2.5 px-3',
-          isActive 
-            ? 'bg-[#FEDE35]/15 text-[#FEDE35] font-bold' 
-            : 'text-[#4B5563] hover:bg-gray-50'
+          'text-sm relative rounded-xl transition-colors py-2.5 px-3 overflow-hidden',
+          isActive
+            ? 'bg-[#FFF7ED] text-[#F97316] font-medium'
+            : 'text-[#4B5563]'
         )}
       >
+        {/* Animated vertical strip */}
         {isActive && (
-          <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#FEDE35] rounded-r" />
+          <div
+            className="absolute left-0 top-0 bottom-0 w-1 bg-[#F97316] rounded-r origin-left"
+            style={{
+              transform: 'translateX(-4px)',
+              opacity: 0,
+              transition: 'transform 200ms ease-in-out, opacity 200ms ease-in-out',
+            }}
+            aria-hidden="true"
+          />
         )}
-        <div className="flex w-full items-center gap-3">
-          <Icon className={cn(
-            'w-5 h-5 flex-shrink-0',
-            isActive ? 'text-[#FEDE35]' : 'text-gray-400'
-          )} />
-          <span className={cn(
-            'text-sm',
-            isActive ? 'text-[#FEDE35] font-bold' : 'text-[#4B5563]'
-          )}>
-            {item.title}
-          </span>
-          {item.badge && (
-            <Badge variant="secondary" className="ml-auto">
-              {item.badge}
-            </Badge>
-          )}
-          {isOpen ? (
-            <ChevronDown className="ml-auto w-4 h-4 transition-transform text-gray-400" />
-          ) : (
-            <ChevronRight className="ml-auto w-4 h-4 transition-transform text-gray-400" />
-          )}
+        {isActive && (
+          <div
+            className="absolute left-0 top-0 bottom-0 w-1 bg-[#F97316] rounded-r"
+            style={{
+              transform: 'translateX(0)',
+              opacity: 1,
+              transition: 'transform 200ms ease-in-out, opacity 200ms ease-in-out',
+            }}
+            aria-hidden="true"
+          />
+        )}
+
+        <div className="flex w-full">
+          <div
+            className={cn(
+              'flex items-center gap-3 transition-transform duration-200 ease-in-out w-full',
+              isActive ? 'translate-x-1' : ''
+            )}
+          >
+            <Icon
+              className={cn(
+                'w-5 h-5 flex-shrink-0',
+                isActive ? 'text-[#F97316]' : 'text-gray-400'
+              )}
+            />
+            <span
+              className={cn(
+                'text-sm',
+                isActive ? 'text-[#F97316] font-medium' : 'text-[#4B5563]'
+              )}
+            >
+              {item.title}
+            </span>
+            {item.badge && (
+              <Badge variant="secondary" className="ml-auto">
+                {item.badge}
+              </Badge>
+            )}
+            {isOpen ? (
+              <ChevronDown className="ml-auto w-4 h-4 transition-transform text-gray-400" />
+            ) : (
+              <ChevronRight className="ml-auto w-4 h-4 transition-transform text-gray-400" />
+            )}
+          </div>
         </div>
       </SidebarMenuButton>
     </SidebarMenuSubItem>

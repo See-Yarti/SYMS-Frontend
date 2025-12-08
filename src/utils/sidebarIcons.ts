@@ -1,3 +1,4 @@
+// Keep all Lucide imports
 import {
   PanelLeftDashed,
   PanelRightDashed,
@@ -16,25 +17,41 @@ import {
   FileText,
 } from 'lucide-react';
 
+// Import ONLY your custom SVG wrapper components
+import DashboardIcon from '../components/SideBar/icons/DashboardIcon';
+import SettingsIcon from '../components/SideBar/icons/SettingsIcon';
+import CarClassIcon from '../components/SideBar/icons/CarClassIcon';
+import CompaniesIcon from '../components/SideBar/icons/CompaniesIcon';
+import BookingsIcon from '../components/SideBar/icons/BookingsIcon';
+import AccountingIcon from '../components/SideBar/icons/AccountingIcon';
+
 export function getSidebarIcon(name: string) {
   const normalized = name.toLowerCase().replace(/\s/g, '');
   switch (normalized) {
     case 'dashboard':
-      return PanelLeftDashed;
-    case 'rate':
-      return PanelRightDashed;
+      return DashboardIcon;
+    case 'settings':
+      return SettingsIcon;
     case 'carclasses':
     case 'carclass':
-      return Car;
-    case 'addresses':
-      return PanelRightDashed;
+      return CarClassIcon;
     case 'companies':
-      return Building2;
-    case 'operators':
-      return UsersRound;
+      return CompaniesIcon;
     case 'bookings':
     case 'operatorbookings':
-      return Calendar;
+      return BookingsIcon;
+    case 'accounting':
+    case 'adminaccounting':
+    case 'operatoraccounting':
+      return AccountingIcon;
+
+    // Everything else stays on Lucide icons
+    case 'rate':
+      return PanelRightDashed;
+    case 'addresses':
+      return PanelRightDashed;
+    case 'operators':
+      return UsersRound;
     case 'products':
       return Package;
     case 'orders':
@@ -48,13 +65,7 @@ export function getSidebarIcon(name: string) {
       return Layers2;
     case 'usermanagement':
       return UsersRound;
-    case 'settings':
-      return Settings;
-    case 'accounting':
-    case 'adminaccounting':
-    case 'operatoraccounting':
-      return FileText;
     default:
-      return Command; // fallback icon
+      return Command; // fallback
   }
 }

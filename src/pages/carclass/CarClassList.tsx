@@ -11,13 +11,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useFetchData, usePostData, useDeleteData } from '@/hooks/useApi';
 import { axiosInstance } from '@/lib/API';
+import { Car, CheckCircle2, XCircle, Search, Trash2, Plus } from 'lucide-react';
 
 const VEHICLE_SIZES = [
   { code: 'M', name: 'Mini' },
@@ -30,6 +32,7 @@ const VEHICLE_SIZES = [
   { code: 'L', name: 'Luxury' },
   { code: 'X', name: 'Special' },
 ];
+
 const BODY_TYPES = [
   { code: 'C', name: 'Sedan/Hatchback' },
   { code: 'R', name: 'SUV' },
@@ -39,12 +42,14 @@ const BODY_TYPES = [
   { code: 'P', name: 'Pickup Truck' },
   { code: 'E', name: 'Electric' },
 ];
+
 const TRANSMISSION_TYPES = [
   { code: 'A', name: 'Automatic' },
   { code: 'M', name: 'Manual' },
   { code: 'B', name: 'AWD/Auto' },
   { code: 'D', name: '4WD/Manual' },
 ];
+
 const FUEL_TYPES = [
   { code: 'R', name: 'Petrol+AC' },
   { code: 'N', name: 'Petrol' },
@@ -53,6 +58,20 @@ const FUEL_TYPES = [
   { code: 'H', name: 'Hybrid' },
   { code: 'L', name: 'CNG/LPG' },
 ];
+
+// Category badge color mapping based on size code
+const CATEGORY_COLORS: Record<string, { bg: string; text: string; label: string }> = {
+  'E': { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Economy' },
+  'X': { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Special' },
+  'L': { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Luxury' },
+  'F': { bg: 'bg-sky-100', text: 'text-sky-700', label: 'Full Size' },
+  'S': { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Standard' },
+  'I': { bg: 'bg-blue-100', text: 'text-blue-700', label: 'SUV' },
+  'M': { bg: 'bg-pink-100', text: 'text-pink-700', label: 'Mini' },
+  'C': { bg: 'bg-teal-100', text: 'text-teal-700', label: 'Compact' },
+  'P': { bg: 'bg-violet-100', text: 'text-violet-700', label: 'Premium' },
+  'V': { bg: 'bg-rose-100', text: 'text-rose-700', label: 'Van' },
+};
 
 const carClassSchema = z.object({
   size: z.string().min(1, 'Required'),
@@ -73,13 +92,19 @@ interface CarClassAPIType {
   updatedAt: string;
 }
 
-const DEBOUNCE_MS = 700; // 0.7s debounce for toggling
+const DEBOUNCE_MS = 700;
+const ITEMS_PER_PAGE = 8;
 
 const CarClassList = () => {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [isToggling, setIsToggling] = useState<string | null>(null);
   const [toggleLock, setToggleLock] = useState<{ [slug: string]: boolean }>({});
   const debounceTimers = useRef<{ [slug: string]: NodeJS.Timeout }>({});
+
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // --- DELETE STATE ---
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -141,7 +166,6 @@ const CarClassList = () => {
   const fuel = addWatch('fuel');
   const acrissCode = `${size || '_'}${body || '_'}${transmission || '_'}${fuel || '_'}`;
 
-  // *** SHOW TOAST FOR 429s ON FETCH/GET ***
   const { data: carClasses = [], isLoading, refetch } = useFetchData<CarClassAPIType[]>(
     'car-class',
     ['car-classes'],
@@ -157,6 +181,58 @@ const CarClassList = () => {
       }
     }
   );
+
+  // Filter and search logic
+  const filteredClasses = useMemo(() => {
+    let result = carClasses;
+
+    // Apply status filter
+    if (statusFilter === 'active') {
+      result = result.filter(c => c.isActive);
+    } else if (statusFilter === 'inactive') {
+      result = result.filter(c => !c.isActive);
+    }
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(c =>
+        c.name.toLowerCase().includes(query) ||
+        c.description.toLowerCase().includes(query)
+      );
+    }
+
+    return result;
+  }, [carClasses, statusFilter, searchQuery]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredClasses.length / ITEMS_PER_PAGE);
+  const paginatedClasses = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredClasses.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredClasses, currentPage]);
+
+  // Stats
+  const totalClasses = carClasses.length;
+  const activeClasses = carClasses.filter(c => c.isActive).length;
+  const inactiveClasses = carClasses.filter(c => !c.isActive).length;
+
+  // Reset page when filter changes
+  const handleFilterChange = (filter: 'all' | 'active' | 'inactive') => {
+    setStatusFilter(filter);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1);
+  };
+
+  // Get category info from ACRISS code
+  const getCategoryFromCode = (code: string) => {
+    const sizeCode = code.charAt(0);
+    return CATEGORY_COLORS[sizeCode] || { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Other' };
+  };
 
   // --- Add / Create Car Class ---
   const { mutateAsync: createCarClass, isPending: isCreating } = usePostData<any, any>(
@@ -187,7 +263,7 @@ const CarClassList = () => {
     await createCarClass(postBody);
   };
 
-  // --- Toggle Status (with 429 error handling and lockout) ---
+  // --- Toggle Status ---
   const handleToggleStatus = (slug: string, currentActive: boolean) => {
     if (toggleLock[slug]) {
       toast.warning('You are toggling too quickly. Please wait a moment.');
@@ -219,97 +295,284 @@ const CarClassList = () => {
   };
 
   return (
-    <Card className="p-6 border-none shadow-none">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-2xl font-bold">Car Classes</h2>
-          <p className="text-sm text-muted-foreground">
-            Manage vehicle classifications using ACRISS codes
-          </p>
-        </div>
-        <Button onClick={() => setAddModalOpen(true)}>
-          + Add Car Class
-        </Button>
+    <div className="p-6 min-h-screen">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Car Classes Management</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          Configure and manage ACRISS vehicle classifications
+        </p>
       </div>
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="min-w-full divide-y">
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">ACRISS Code</th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Description</th>
-              <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {isLoading ? (
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        {/* Total Classes */}
+        <Card className="p-5 bg-white border border-gray-100 shadow-sm rounded-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Total Classes</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">{totalClasses}</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+              <Car className="w-6 h-6 text-blue-500" />
+            </div>
+          </div>
+        </Card>
+
+        {/* Total Active Classes */}
+        <Card className="p-5 bg-white border border-gray-100 shadow-sm rounded-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Total Active Classes</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">{activeClasses}</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
+              <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+            </div>
+          </div>
+        </Card>
+
+        {/* Total Inactive Classes */}
+        <Card className="p-5 bg-white border border-gray-100 shadow-sm rounded-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Total Inactive Classes</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">{inactiveClasses}</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center">
+              <XCircle className="w-6 h-6 text-red-500" />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Main Content Card */}
+      <Card className="bg-white border border-gray-100 shadow-sm rounded-xl overflow-hidden">
+        {/* Search and Filters */}
+        <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-gray-100">
+          {/* Search Input */}
+          <div className="relative w-full sm:w-96">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Search by code or description..."
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-10 bg-gray-[#F9FAFB] border-gray-200 focus:bg-white"
+            />
+          </div>
+
+          {/* Filter Buttons and Add Button */}
+          <div className="flex items-center gap-3">
+            {/* Filter Toggle */}
+            <div className="flex items-center bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => handleFilterChange('all')}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  statusFilter === 'all'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => handleFilterChange('active')}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  statusFilter === 'active'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Active
+              </button>
+              <button
+                onClick={() => handleFilterChange('inactive')}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  statusFilter === 'inactive'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Inactive
+              </button>
+            </div>
+
+            {/* Add Button */}
+            <Button
+              onClick={() => setAddModalOpen(true)}
+              className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-4"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add New Class
+            </Button>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <td colSpan={4} className="px-6 py-4 text-center text-muted-foreground">Loading...</td>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  ACRISS Code
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Description
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Category
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
-            ) : carClasses.length > 0 ? (
-              carClasses.map((row) => (
-                <tr key={row.id} className="hover:bg-muted/50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <Switch
-                        checked={row.isActive}
-                        onCheckedChange={() => handleToggleStatus(row.slug, row.isActive)}
-                        disabled={isToggling === row.slug || !!toggleLock[row.slug]}
-                        className="mr-2"
-                      />
-                      <span className={row.isActive ? 'text-green-600' : 'text-gray-500'}>
-                        {row.isActive ? 'Active' : 'Inactive'}
-                      </span>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                      Loading...
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <Badge variant="outline" className="font-mono mr-2">
-                        {row.name}
-                      </Badge>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-xs">{row.description}</span>
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => openDeleteDialog(row.id)}
-                      disabled={isDeleting}
-                    >
-                      Delete
-                    </Button>
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={4} className="px-6 py-4 text-center text-muted-foreground">
-                  No car classes found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : paginatedClasses.length > 0 ? (
+                paginatedClasses.map((row) => {
+                  const category = getCategoryFromCode(row.name);
+                  return (
+                    <tr key={row.id} className="hover:bg-gray-50 transition-colors">
+                      {/* Status */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <Switch
+                          checked={row.isActive}
+                          onCheckedChange={() => handleToggleStatus(row.slug, row.isActive)}
+                          disabled={isToggling === row.slug || !!toggleLock[row.slug]}
+                          className="data-[state=checked]:bg-[#00C950]"
+                        />
+                      </td>
+
+                      {/* ACRISS Code */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="font-semibold text-[#D08700]">
+                          {row.name}
+                        </span>
+                      </td>
+
+                      {/* Description */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-gray-700">{row.description}</span>
+                      </td>
+
+                      {/* Category */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full ${category.bg} ${category.text}`}>
+                          {category.label}
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <button
+                          onClick={() => openDeleteDialog(row.id)}
+                          disabled={isDeleting}
+                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                    No car classes found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {filteredClasses.length > 0 && (
+          <div className="px-6 py-4 flex items-center justify-between border-t border-gray-100">
+            <p className="text-sm text-gray-500">
+              Showing <span className="font-medium text-gray-900">{paginatedClasses.length}</span> of{' '}
+              <span className="font-medium text-gray-900">{filteredClasses.length}</span> classes
+            </p>
+
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="text-gray-600"
+              >
+                Previous
+              </Button>
+
+              {Array.from({ length: Math.min(totalPages, 3) }, (_, i) => {
+                let pageNum: number;
+                if (totalPages <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage === 1) {
+                  pageNum = i + 1;
+                } else if (currentPage === totalPages) {
+                  pageNum = totalPages - 2 + i;
+                } else {
+                  pageNum = currentPage - 1 + i;
+                }
+
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={currentPage === pageNum ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'text-gray-600'}
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="text-gray-600"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+      </Card>
 
       {/* --- Add Car Class Dialog --- */}
       <Dialog open={addModalOpen} onOpenChange={open => { setAddModalOpen(open); if (!open) addReset(); }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[518px] max-h-[518px] p-10" style={{ fontFamily: 'Poppins' }}>
           <DialogHeader>
-            <DialogTitle>Create New Car Class</DialogTitle>
+            <DialogTitle className="text-xl font-semibold" style={{ fontFamily: 'Poppins' }}>Create New Car Class</DialogTitle>
           </DialogHeader>
-          <form onSubmit={addHandleSubmit(onAddSubmit)} className="space-y-4">
-            <div className="grid grid-cols-4 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="size">Size</Label>
+
+          <form onSubmit={addHandleSubmit(onAddSubmit)} className="space-y-6">
+            {/* Row 1: Size, Body, Trans, Fuel */}
+            <div className="grid grid-cols-4 gap-3" style={{ fontFamily: 'Poppins' }}>
+              <div className="space-y-1">
+                <Label className="text-sm">Size</Label>
                 <Select
                   value={size}
                   onValueChange={(val) => addSetValue('size', val, { shouldValidate: true })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9">
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
@@ -320,15 +583,15 @@ const CarClassList = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                {addErrors.size && <p className="text-xs text-red-500">{addErrors.size.message}</p>}
+                {addErrors.size && <p className="text-xs text-red-500 mt-1">{addErrors.size.message}</p>}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="body">Body</Label>
+              <div className="space-y-1">
+                <Label className="text-sm">Body</Label>
                 <Select
                   value={body}
                   onValueChange={(val) => addSetValue('body', val, { shouldValidate: true })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9">
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
@@ -339,15 +602,15 @@ const CarClassList = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                {addErrors.body && <p className="text-xs text-red-500">{addErrors.body.message}</p>}
+                {addErrors.body && <p className="text-xs text-red-500 mt-1">{addErrors.body.message}</p>}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="transmission">Trans</Label>
+              <div className="space-y-1">
+                <Label className="text-sm">Trans</Label>
                 <Select
                   value={transmission}
                   onValueChange={(val) => addSetValue('transmission', val, { shouldValidate: true })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9">
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
@@ -358,15 +621,15 @@ const CarClassList = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                {addErrors.transmission && <p className="text-xs text-red-500">{addErrors.transmission.message}</p>}
+                {addErrors.transmission && <p className="text-xs text-red-500 mt-1">{addErrors.transmission.message}</p>}
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="fuel">Fuel</Label>
+              <div className="space-y-1">
+                <Label className="text-sm">Fuel</Label>
                 <Select
                   value={fuel}
                   onValueChange={(val) => addSetValue('fuel', val, { shouldValidate: true })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9">
                     <SelectValue placeholder="Select" />
                   </SelectTrigger>
                   <SelectContent>
@@ -377,44 +640,110 @@ const CarClassList = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                {addErrors.fuel && <p className="text-xs text-red-500">{addErrors.fuel.message}</p>}
+                {addErrors.fuel && <p className="text-xs text-red-500 mt-1">{addErrors.fuel.message}</p>}
               </div>
             </div>
+
+            {/* Category Display as Chips with Remove Button */}
             <div>
-              <Label htmlFor="description">Description</Label>
+              <Label className="text-sm font-medium mb-1 block">Category</Label>
+              <div className="flex flex-wrap items-center gap-2 bg-white border border-input rounded-lg px-3 py-2 min-h-[36px]">
+                {size && (
+                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                    {VEHICLE_SIZES.find(s => s.code === size)?.name || size}
+                    <button
+                      type="button"
+                      onClick={() => addSetValue('size', '', { shouldValidate: true })}
+                      className="ml-1.5 w-4 h-4 flex items-center justify-center rounded-full hover:bg-blue-200 transition-colors"
+                    >
+                      <span className="text-xs font-bold">×</span>
+                    </button>
+                  </span>
+                )}
+                {body && (
+                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                    {BODY_TYPES.find(b => b.code === body)?.name || body}
+                    <button
+                      type="button"
+                      onClick={() => addSetValue('body', '', { shouldValidate: true })}
+                      className="ml-1.5 w-4 h-4 flex items-center justify-center rounded-full hover:bg-green-200 transition-colors"
+                    >
+                      <span className="text-xs font-bold">×</span>
+                    </button>
+                  </span>
+                )}
+                {transmission && (
+                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
+                    {TRANSMISSION_TYPES.find(t => t.code === transmission)?.name || transmission}
+                    <button
+                      type="button"
+                      onClick={() => addSetValue('transmission', '', { shouldValidate: true })}
+                      className="ml-1.5 w-4 h-4 flex items-center justify-center rounded-full hover:bg-purple-200 transition-colors"
+                    >
+                      <span className="text-xs font-bold">×</span>
+                    </button>
+                  </span>
+                )}
+                {fuel && (
+                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
+                    {FUEL_TYPES.find(f => f.code === fuel)?.name || fuel}
+                    <button
+                      type="button"
+                      onClick={() => addSetValue('fuel', '', { shouldValidate: true })}
+                      className="ml-1.5 w-4 h-4 flex items-center justify-center rounded-full hover:bg-yellow-200 transition-colors"
+                    >
+                      <span className="text-xs font-bold">×</span>
+                    </button>
+                  </span>
+                )}
+                {!size && !body && !transmission && !fuel && (
+                  <span className="text-sm text-gray-400">Select options above</span>
+                )}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <Label className="text-sm font-medium mb-1 block">Description</Label>
               <input
                 id="description"
                 type="text"
-                placeholder="Describe this class (optional)"
+                placeholder="Enter description (e.g., Economy Car)"
                 {...register('description')}
-                className="input border rounded w-full px-3 py-2 mt-1 text-sm"
+                className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               />
-              {addErrors.description && <p className="text-xs text-red-500">{addErrors.description.message}</p>}
+              {addErrors.description && <p className="text-xs text-red-500 mt-1">{addErrors.description.message}</p>}
             </div>
-            <div className="bg-muted/50 p-3 rounded-lg">
+
+            {/* ACRISS Code */}
+            <div className="bg-orange-50 border border-orange-300 rounded-lg p-3">
               <div className="flex items-center justify-between">
-                <Label>ACRISS Code:</Label>
-                <Badge variant="secondary" className="font-mono text-lg">
-                  {acrissCode}
+                <Label className="text-sm font-medium">ACRISS Code:</Label>
+                <Badge variant="secondary" className="font-mono text-lg bg-white border px-3 py-1">
+                  {acrissCode.replace(/_/g, '') || '____'}
                 </Badge>
               </div>
             </div>
-            <DialogFooter>
+
+            {/* Buttons */}
+            <div className="space-x-5 pt-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setAddModalOpen(false)}
                 disabled={addSubmitting}
+                className="px-4 py-2 text-sm w-52"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={!addValid || addSubmitting || isCreating}
+                className="px-4 py-2 text-sm w-52 bg-orange-500 hover:bg-orange-600 text-white"
               >
                 {addSubmitting || isCreating ? 'Creating...' : 'Create Car Class'}
               </Button>
-            </DialogFooter>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
@@ -423,10 +752,10 @@ const CarClassList = () => {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete Car Class</DialogTitle>
+            <DialogTitle className='text-center'>Delete Car Class</DialogTitle>
           </DialogHeader>
           <div>
-            <p className="mb-2 text-sm text-muted-foreground">
+            <p className="mb-2 text-sm text-muted-foreground text-center">
               Are you sure you want to delete this car class? <br />
               <strong>This action cannot be undone.</strong>
             </p>
@@ -437,6 +766,7 @@ const CarClassList = () => {
               variant="outline"
               onClick={cancelDeleteDialog}
               disabled={isDeleting}
+              className='w-40'
             >
               Cancel
             </Button>
@@ -445,13 +775,14 @@ const CarClassList = () => {
               variant="destructive"
               onClick={confirmDeleteCarClass}
               disabled={isDeleting}
+              className='w-40'
             >
               {isDeleting ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   );
 };
 

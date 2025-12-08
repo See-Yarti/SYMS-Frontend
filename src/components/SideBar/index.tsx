@@ -28,11 +28,11 @@ const SideBar = () => {
   };
 
   return (
-    <div>
+    <div className="bg-gray-100 min-h-screen">
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset className="flex flex-col">
-          <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 ">
+        <SidebarInset className="flex flex-col bg-gray-100">
+          <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 bg-gray-100">
             <div className="flex flex-1 items-center gap-2 px-3">
                   <SidebarTrigger />
               <Label className="line-clamp-1">{firstIndex}</Label>
