@@ -79,7 +79,7 @@ const formatDateTime = (value?: string | null) => {
 
 export default function CompaniesList() {
     const navigate = useNavigate();
-    
+
     // Filters & table state
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'verified' | 'not_verified'>('all');
@@ -98,23 +98,31 @@ export default function CompaniesList() {
         limit,
     });
 
+    // Separate call for stats - get ALL companies without pagination for accurate counts
+    const { data: statsData, refetch: refetchStats } = useGetCompanies({
+        page: 1,
+        limit: 1000, 
+        sortBy: 'createdAt',
+        sortOrder: 'DESC',
+    });
+
+    // Combined refetch function
+    const refetchAll = () => {
+        refetch();
+        refetchStats();
+    };
+
     const companies = useMemo(
         () => (data?.data?.companies ?? []),
         [data]
     );
 
-    // Pagination metadata
-    const total = data?.data?.total ?? companies.length;
-    const currentPage = data?.data?.page ?? page;
-    const currentLimit = data?.data?.limit ?? limit;
-    const totalPages = Math.ceil(total / currentLimit) || 1;
-
     // Stats calculation
     const stats = useMemo(() => {
-        const allCompanies = data?.data?.companies ?? [];
-        const totalCount = data?.data?.total ?? allCompanies.length;
+        const allCompanies = statsData?.data?.companies ?? [];
+        const totalCount = statsData?.data?.total ?? allCompanies.length;
         const verifiedCount = allCompanies.filter((c: any) => c.isVerified).length;
-        const unverifiedCount = totalCount - verifiedCount;
+        const unverifiedCount = allCompanies.filter((c: any) => !c.isVerified).length;
         const thisMonth = allCompanies.filter((c: any) => {
             const createdAt = new Date(c.createdAt);
             const now = new Date();
@@ -127,7 +135,12 @@ export default function CompaniesList() {
             unverified: unverifiedCount,
             thisMonth,
         };
-    }, [data]);
+    }, [statsData]);
+
+    // Pagination metadata
+    const total = stats.total; const currentPage = data?.data?.page ?? page;
+    const currentLimit = data?.data?.limit ?? limit;
+    const totalPages = Math.ceil(total / currentLimit) || 1;
 
     // Reset page to 1 when filters change
     useEffect(() => {
@@ -176,71 +189,73 @@ export default function CompaniesList() {
         setPage(1);
     };
 
+    const canGoForward = companies.length === limit;
+
     return (
         <div className="min-h-screen p-6">
             {/* Header */}
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Companies Management</h1>
-                <p className="text-sm text-gray-500 mt-1">View and manage all registered companies</p>
+                <h1 className="text-2xl font-bold text-foreground">Companies Management</h1>
+                <p className="text-sm text-muted-foreground mt-1">View and manage all registered companies</p>
             </div>
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {/* Total Companies */}
-                <Card className="p-5 bg-white border border-[#DBEAFE] shadow-sm rounded-xl">
+                <Card className="p-5 bg-card border border-blue-200 dark:border-blue-900/50 shadow-sm rounded-xl">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm text-gray-500 font-normal">Total Companies</p>
-                            <p className="text-3xl font-medium text-gray-900 mt-1">{stats.total}</p>
+                            <p className="text-sm text-muted-foreground font-normal">Total Companies</p>
+                            <p className="text-3xl font-medium text-foreground mt-1">{stats.total}</p>
                         </div>
-                        <div className="w-12 h-12 rounded-xl bg-[#EFF6FF] flex items-center justify-center">
-                            <Building2 className="w-6 h-6 text-[#155DFC]" />
+                        <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                            <Building2 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                         </div>
                     </div>
                 </Card>
 
                 {/* Total Verified Companies */}
-                <Card className="p-5 bg-white border border-[#DCFCE7] shadow-sm rounded-xl">
+                <Card className="p-5 bg-card border border-green-200 dark:border-green-900/50 shadow-sm rounded-xl">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm text-gray-500 font-normal">Total Verified Companies</p>
-                            <p className="text-3xl font-medium text-gray-900 mt-1">{stats.verified}</p>
+                            <p className="text-sm text-muted-foreground font-normal">Total Verified Companies</p>
+                            <p className="text-3xl font-medium text-foreground mt-1">{stats.verified}</p>
                         </div>
-                        <div className="w-12 h-12 rounded-xl bg-[#F0FDF4] flex items-center justify-center">
-                            <ShieldCheck className="w-6 h-6 text-[#00A912]" />
+                        <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                            <ShieldCheck className="w-6 h-6 text-green-600 dark:text-green-400" />
                         </div>
                     </div>
                 </Card>
 
                 {/* Total Unverified Companies */}
-                <Card className="p-5 bg-white border border-[#FFB60017] shadow-sm rounded-xl">
+                <Card className="p-5 bg-card border border-amber-200 dark:border-amber-900/50 shadow-sm rounded-xl">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm text-gray-500 font-normal">Total UnVerified Companies</p>
-                            <p className="text-3xl font-medium text-gray-900 mt-1">{stats.unverified}</p>
+                            <p className="text-sm text-muted-foreground font-normal">Total UnVerified Companies</p>
+                            <p className="text-3xl font-medium text-foreground mt-1">{stats.unverified}</p>
                         </div>
-                        <div className="w-12 h-12 rounded-xl bg-[#FFB60017] flex items-center justify-center">
-                            <ShieldAlert className="w-6 h-6 text-[#DBB900]" />
+                        <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                            <ShieldAlert className="w-6 h-6 text-amber-600 dark:text-amber-400" />
                         </div>
                     </div>
                 </Card>
 
                 {/* This Month */}
-                <Card className="p-5 bg-white border border-[#F3E8FF] shadow-sm rounded-xl">
+                <Card className="p-5 bg-card border border-purple-200 dark:border-purple-900/50 shadow-sm rounded-xl">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm text-gray-500 font-normal">This Month</p>
-                            <p className="text-3xl font-mrdium text-gray-900 mt-1">{stats.thisMonth}</p>
+                            <p className="text-sm text-muted-foreground font-normal">This Month</p>
+                            <p className="text-3xl font-medium text-foreground mt-1">{stats.thisMonth}</p>
                         </div>
-                        <div className="w-12 h-12 rounded-xl bg-[#F2E8FFD9] flex items-center justify-center">
-                            <TrendingUp className="w-6 h-6 text-[#6700FF]" />
+                        <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                            <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                         </div>
                     </div>
                 </Card>
             </div>
 
             {/* Main Content Card */}
-            <Card className="bg-white border border-gray-100 shadow-sm rounded-xl overflow-hidden">
+            <Card className="bg-card border border-border shadow-sm rounded-xl overflow-hidden">
                 {/* Search and Filters */}
                 <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-gray-100">
                     {/* Search Input */}
@@ -260,31 +275,28 @@ export default function CompaniesList() {
                         <div className="flex items-center bg-gray-100 rounded-lg p-1">
                             <button
                                 onClick={() => handleFilterChange('all')}
-                                className={`px-4 py-1.5 truncate text-sm font-normal rounded-md transition-colors ${
-                                    statusFilter === 'all'
+                                className={`px-4 py-1.5 truncate text-sm font-normal rounded-md transition-colors ${statusFilter === 'all'
                                         ? 'bg-white text-gray-900 shadow-sm'
                                         : 'text-gray-600 hover:text-gray-900'
-                                }`}
+                                    }`}
                             >
                                 All
                             </button>
                             <button
                                 onClick={() => handleFilterChange('verified')}
-                                className={`px-4 py-1.5 truncate text-sm font-normal rounded-md transition-colors ${
-                                    statusFilter === 'verified'
+                                className={`px-4 py-1.5 truncate text-sm font-normal rounded-md transition-colors ${statusFilter === 'verified'
                                         ? 'bg-white text-gray-900 shadow-sm'
                                         : 'text-gray-600 hover:text-gray-900'
-                                }`}
+                                    }`}
                             >
                                 Verified
                             </button>
                             <button
                                 onClick={() => handleFilterChange('not_verified')}
-                                className={`px-4 py-1.5 truncate text-sm font-normal rounded-md transition-colors ${
-                                    statusFilter === 'not_verified'
+                                className={`px-4 py-1.5 truncate text-sm font-normal rounded-md transition-colors ${statusFilter === 'not_verified'
                                         ? 'bg-white text-gray-900 shadow-sm'
                                         : 'text-gray-600 hover:text-gray-900'
-                                }`}
+                                    }`}
                             >
                                 Not Verified
                             </button>
@@ -372,7 +384,7 @@ export default function CompaniesList() {
                                         {/* Description */}
                                         <td className="px-6 py-4">
                                             <span className="text-[#1A1A1A] text-sm line-clamp-1 max-w-[200px]">
-                                                {company.description || 'Lorem Epsom'}
+                                                {company.description || '—'}
                                             </span>
                                         </td>
 
@@ -446,7 +458,7 @@ export default function CompaniesList() {
                                                             <DropdownMenuItem
                                                                 onClick={() =>
                                                                     verifyCompany.mutate(company.id, {
-                                                                        onSuccess: () => { toast.success('Company verified'); refetch(); },
+                                                                        onSuccess: () => { toast.success('Company verified'); refetchAll(); },
                                                                         onError: (e) => toast.error('Failed to verify', { description: (e as any)?.message }),
                                                                     })
                                                                 }
@@ -472,7 +484,7 @@ export default function CompaniesList() {
                     <div className="px-6 py-4 flex items-center justify-between border-t border-gray-100">
                         <p className="text-sm text-gray-500">
                             Showing <span className="font-medium text-gray-900">{companies.length}</span> of{' '}
-                            <span className="font-medium text-gray-900">{total}</span> classes
+                            <span className="font-medium text-gray-900">{total}</span> companies 
                         </p>
 
                         <div className="flex items-center gap-1">
@@ -497,7 +509,6 @@ export default function CompaniesList() {
                                 } else {
                                     pageNum = currentPage - 1 + i;
                                 }
-
                                 return (
                                     <Button
                                         key={pageNum}
@@ -514,8 +525,8 @@ export default function CompaniesList() {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                                disabled={currentPage === totalPages || totalPages === 0}
+                                onClick={() => setPage(p => p + 1)}
+                                disabled={!canGoForward}
                                 className="text-gray-600"
                             >
                                 Next
@@ -581,7 +592,7 @@ export default function CompaniesList() {
                                             setSelectedCompanyId(null);
                                             setUnverifiedReason('');
                                             setUnverifiedReasonDescription('');
-                                            refetch();
+                                            refetchAll();
                                         },
                                         onError: (e) => {
                                             toast.error('Failed to unverify', { description: (e as any)?.message });
@@ -633,7 +644,7 @@ export default function CompaniesList() {
                                     setUpdateCompanyId(null);
                                     setUpdateCompanyData(null);
                                     reset();
-                                    refetch();
+                                    refetchAll();
                                 },
                                 onError: (e: any) => {
                                     const errorMessage = e?.response?.data?.message || e?.message || 'Failed to update company';
@@ -695,8 +706,8 @@ export default function CompaniesList() {
                             >
                                 Cancel
                             </Button>
-                            <Button 
-                                type="submit" 
+                            <Button
+                                type="submit"
                                 disabled={updateCompany.isPending}
                                 className="bg-orange-500 hover:bg-orange-600 text-white"
                             >
@@ -726,7 +737,7 @@ export default function CompaniesList() {
                                     onSuccess: () => {
                                         toast.success('Company deleted successfully');
                                         setDeleteCompanyId(null);
-                                        refetch();
+                                        refetchAll();
                                     },
                                     onError: (e: any) => {
                                         const errorMessage = e?.response?.data?.message || e?.message || 'Failed to delete company';

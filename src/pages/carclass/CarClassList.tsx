@@ -298,8 +298,8 @@ const CarClassList = () => {
     <div className="p-6 min-h-screen">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Car Classes Management</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <h1 className="text-2xl font-bold text-foreground">Car Classes Management</h1>
+        <p className="text-sm text-muted-foreground mt-1">
           Configure and manage ACRISS vehicle classifications
         </p>
       </div>
@@ -307,70 +307,70 @@ const CarClassList = () => {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         {/* Total Classes */}
-        <Card className="p-5 bg-white border border-gray-100 shadow-sm rounded-xl">
+        <Card className="p-5 bg-card border border-amber-200 dark:border-amber-900/50 shadow-sm rounded-xl">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Total Classes</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{totalClasses}</p>
+              <p className="text-sm text-muted-foreground font-medium">Total Classes</p>
+              <p className="text-3xl font-bold text-foreground mt-1">{totalClasses}</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
-              <Car className="w-6 h-6 text-blue-500" />
+            <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+              <Car className="w-6 h-6 text-amber-600 dark:text-amber-400" />
             </div>
           </div>
         </Card>
 
         {/* Total Active Classes */}
-        <Card className="p-5 bg-white border border-gray-100 shadow-sm rounded-xl">
+        <Card className="p-5 bg-card border border-emerald-200 dark:border-emerald-900/50 shadow-sm rounded-xl">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Total Active Classes</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{activeClasses}</p>
+              <p className="text-sm text-muted-foreground font-medium">Total Active Classes</p>
+              <p className="text-3xl font-bold text-foreground mt-1">{activeClasses}</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
-              <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+            <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+              <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
             </div>
           </div>
         </Card>
 
         {/* Total Inactive Classes */}
-        <Card className="p-5 bg-white border border-gray-100 shadow-sm rounded-xl">
+        <Card className="p-5 bg-card border border-red-200 dark:border-red-900/50 shadow-sm rounded-xl">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 font-medium">Total Inactive Classes</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{inactiveClasses}</p>
+              <p className="text-sm text-muted-foreground font-medium">Total Inactive Classes</p>
+              <p className="text-3xl font-bold text-foreground mt-1">{inactiveClasses}</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center">
-              <XCircle className="w-6 h-6 text-red-500" />
+            <div className="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+              <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
             </div>
           </div>
         </Card>
       </div>
 
       {/* Main Content Card */}
-      <Card className="bg-white border border-gray-100 shadow-sm rounded-xl overflow-hidden">
+      <Card className="bg-card border border-border shadow-sm rounded-xl overflow-hidden">
         {/* Search and Filters */}
-        <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-gray-100">
+        <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-border">
           {/* Search Input */}
           <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Search by code or description..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-10 bg-gray-[#F9FAFB] border-gray-200 focus:bg-white"
+              className="pl-10 bg-muted/50 border-border focus:bg-background"
             />
           </div>
 
           {/* Filter Buttons and Add Button */}
           <div className="flex items-center gap-3">
             {/* Filter Toggle */}
-            <div className="flex items-center bg-gray-100 rounded-lg p-1">
+            <div className="flex items-center bg-muted rounded-lg p-1">
               <button
                 onClick={() => handleFilterChange('all')}
                 className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
                   statusFilter === 'all'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 All
@@ -379,8 +379,8 @@ const CarClassList = () => {
                 onClick={() => handleFilterChange('active')}
                 className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
                   statusFilter === 'active'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 Active
@@ -389,8 +389,8 @@ const CarClassList = () => {
                 onClick={() => handleFilterChange('inactive')}
                 className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
                   statusFilter === 'inactive'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 Inactive
@@ -411,29 +411,29 @@ const CarClassList = () => {
         {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-100">
+            <thead className="bg-muted/50 border-b border-border">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   ACRISS Code
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Description
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Category
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
                       Loading...
@@ -444,7 +444,7 @@ const CarClassList = () => {
                 paginatedClasses.map((row) => {
                   const category = getCategoryFromCode(row.name);
                   return (
-                    <tr key={row.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={row.id} className="hover:bg-muted/50 transition-colors">
                       {/* Status */}
                       <td className="px-6 py-4 whitespace-nowrap">
                         <Switch
@@ -489,7 +489,7 @@ const CarClassList = () => {
                 })
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
                     No car classes found
                   </td>
                 </tr>
@@ -500,10 +500,10 @@ const CarClassList = () => {
 
         {/* Pagination */}
         {filteredClasses.length > 0 && (
-          <div className="px-6 py-4 flex items-center justify-between border-t border-gray-100">
-            <p className="text-sm text-gray-500">
-              Showing <span className="font-medium text-gray-900">{paginatedClasses.length}</span> of{' '}
-              <span className="font-medium text-gray-900">{filteredClasses.length}</span> classes
+          <div className="px-6 py-4 flex items-center justify-between border-t border-border">
+            <p className="text-sm text-muted-foreground">
+              Showing <span className="font-medium text-foreground">{paginatedClasses.length}</span> of{' '}
+              <span className="font-medium text-foreground">{filteredClasses.length}</span> classes
             </p>
 
             <div className="flex items-center gap-1">

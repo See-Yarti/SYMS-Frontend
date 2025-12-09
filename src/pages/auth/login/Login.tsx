@@ -53,7 +53,7 @@ const Login = () => {
                 <img
                   src="/images/logo1.svg"
                   alt="Logo"
-                  className='w-[130px] h-[25px] sm:w-[156px] sm:h-[30px]'
+                  className='w-[130px] h-[25px] sm:w-[180px] sm:h-[40px]'
                 />
               </div>
 

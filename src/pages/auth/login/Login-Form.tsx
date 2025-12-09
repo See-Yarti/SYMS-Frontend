@@ -106,7 +106,7 @@ const LoginForm = () => {
       <Button
         type="submit"
         disabled={isSubmitting || isLoading}
-        className="w-full bg-[#FEDE35] hover:bg-yellow-400 text-gray-900 font-semibold py-2.5 rounded-lg transition-all duration-300 flex items-center justify-center h-10 sm:h-11 text-sm sm:text-base"
+        className="w-full bg-[#FE6603] hover:bg-orange-600 text-white font-semibold py-2.5 rounded-lg transition-all duration-300 flex items-center justify-center h-10 sm:h-11 text-sm sm:text-base"
         size={'default'}
       >
         {isLoading && <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />}

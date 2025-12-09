@@ -6,34 +6,39 @@ import { useTheme } from 'next-themes';
 const ThemeSelect = () => {
   const { setTheme, theme } = useTheme();
   const [mounted, setMounted] = React.useState<boolean>(false);
+
   // useEffect only runs on the client, so now we can safely show the UI
   React.useEffect(() => {
     setMounted(true);
   }, []);
 
   if (!mounted) {
-    return null;
-  }
-  if (theme && theme == 'dark') {
     return (
-      <React.Fragment>
-        <Button variant="ghost" onClick={() => setTheme('light')} size="icon" className="h-4 w-4">
-          <Moon />
-          <span className="sr-only">Light mode</span>
-        </Button>
-      </React.Fragment>
+      <Button variant="ghost" size="icon" className="h-9 w-9" disabled>
+        <Sun className="h-5 w-5" />
+      </Button>
     );
   }
-  if (theme && theme == 'light') {
-    return (
-      <React.Fragment>
-        <Button variant="ghost" onClick={() => setTheme('dark')} size="icon" className="h-4 w-4">
-          <Sun />
-          <span className="sr-only">Dark mode</span>
-        </Button>
-      </React.Fragment>
-    );
-  }
+
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={toggleTheme}
+      className="h-9 w-9 rounded-lg hover:bg-accent"
+    >
+      {theme === 'dark' ? (
+        <Moon className="h-5 w-5 text-yellow-400" />
+      ) : (
+        <Sun className="h-5 w-5 text-orange-500" />
+      )}
+      <span className="sr-only">Toggle theme</span>
+    </Button>
+  );
 };
 
 export default ThemeSelect;

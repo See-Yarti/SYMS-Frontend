@@ -14,9 +14,9 @@ const Provider = (props: ProviderProps) => {
   return (
     <ThemeProvider
       attribute="class"
-      defaultTheme="dark"
+      defaultTheme="system"
       enableSystem
-      disableTransitionOnChange
+      storageKey="yellaride-theme"
     >
       <HelmetProvider>
         <QueryClientProvider client={queryClient}>
