@@ -1,10 +1,11 @@
-// src/pages/company/CompaniesList.tsx
+// src/components/Company/CompanyList.tsx
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { useVerifyCompany, useUnverifyCompany, useGetCompanies, useDeleteCompany, useUpdateCompany } from '@/hooks/useCompanyApi';
 import {
     Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
@@ -19,22 +20,15 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import {
-    Loader2, ChevronsUpDown, ChevronUp, ChevronDown, Eye, CheckCircle2, XCircle, Trash2, MoreVertical, Pencil,
+    Loader2, Eye, CheckCircle2, XCircle, Trash2, MoreVertical, Pencil,
+    Building2, TrendingUp, Search, Plus, ShieldCheck, ShieldX, ShieldAlert
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 type SortOrder = 'ASC' | 'DESC';
-
-const statusOptions = [
-    { value: '', label: 'All Status' },
-    { value: 'true', label: 'Verified' },
-    { value: 'false', label: 'Not Verified' },
-];
 
 // Update company schema
 const updateCompanySchema = z.object({
@@ -48,7 +42,26 @@ type UpdateCompanyFormValues = z.infer<typeof updateCompanySchema>;
 const getInitials = (name?: string) => {
     if (!name) return '—';
     const parts = name.trim().split(/\s+/);
-    return (parts[0]?.[0] || '') + (parts[1]?.[0] || '');
+    return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase();
+};
+
+// Generate random avatar color based on name
+const getAvatarColor = (name?: string) => {
+    if (!name) return 'bg-gray-400';
+    const colors = [
+        'bg-blue-500',
+        'bg-green-500',
+        'bg-yellow-500',
+        'bg-purple-500',
+        'bg-pink-500',
+        'bg-indigo-500',
+        'bg-red-500',
+        'bg-orange-500',
+        'bg-teal-500',
+        'bg-cyan-500',
+    ];
+    const index = name.charCodeAt(0) % colors.length;
+    return colors[index];
 };
 
 const formatDateTime = (value?: string | null) => {
@@ -65,18 +78,20 @@ const formatDateTime = (value?: string | null) => {
 };
 
 export default function CompaniesList() {
+    const navigate = useNavigate();
+    
     // Filters & table state
     const [search, setSearch] = useState('');
-    const [isVerified, setIsVerified] = useState<string>('');
+    const [statusFilter, setStatusFilter] = useState<'all' | 'verified' | 'not_verified'>('all');
     const [sortBy, setSortBy] = useState('createdAt');
     const [sortOrder, setSortOrder] = useState<SortOrder>('DESC');
     const [page, setPage] = useState(1);
-    const [limit] = useState(10);
+    const [limit] = useState(8);
 
     // Data
     const { data, isLoading, error, refetch } = useGetCompanies({
         search,
-        isVerified: isVerified === '' ? undefined : isVerified === 'true',
+        isVerified: statusFilter === 'all' ? undefined : statusFilter === 'verified',
         sortBy,
         sortOrder,
         page,
@@ -87,19 +102,37 @@ export default function CompaniesList() {
         () => (data?.data?.companies ?? []),
         [data]
     );
-    
+
     // Pagination metadata
-    const total = data?.data?.total ?? (companies.length === limit ? limit * page : companies.length);
+    const total = data?.data?.total ?? companies.length;
     const currentPage = data?.data?.page ?? page;
     const currentLimit = data?.data?.limit ?? limit;
     const totalPages = Math.ceil(total / currentLimit) || 1;
-    const canGoBack = currentPage > 1;
-    const canGoForward = companies.length === limit || currentPage < totalPages;
+
+    // Stats calculation
+    const stats = useMemo(() => {
+        const allCompanies = data?.data?.companies ?? [];
+        const totalCount = data?.data?.total ?? allCompanies.length;
+        const verifiedCount = allCompanies.filter((c: any) => c.isVerified).length;
+        const unverifiedCount = totalCount - verifiedCount;
+        const thisMonth = allCompanies.filter((c: any) => {
+            const createdAt = new Date(c.createdAt);
+            const now = new Date();
+            return createdAt.getMonth() === now.getMonth() && createdAt.getFullYear() === now.getFullYear();
+        }).length;
+
+        return {
+            total: totalCount,
+            verified: verifiedCount,
+            unverified: unverifiedCount,
+            thisMonth,
+        };
+    }, [data]);
 
     // Reset page to 1 when filters change
     useEffect(() => {
         setPage(1);
-    }, [search, isVerified, sortBy, sortOrder]);
+    }, [search, statusFilter, sortBy, sortOrder]);
 
     // Mutations
     const verifyCompany = useVerifyCompany();
@@ -137,288 +170,360 @@ export default function CompaniesList() {
         }
     }, [updateCompanyId, updateCompanyData, setValue]);
 
-    // Sorting
-    const handleSort = (field: string) => {
-        if (sortBy === field) {
-            setSortOrder(sortOrder === 'ASC' ? 'DESC' : 'ASC');
-        } else {
-            setSortBy(field);
-            setSortOrder('ASC');
-        }
+    // Handle filter change
+    const handleFilterChange = (filter: 'all' | 'verified' | 'not_verified') => {
+        setStatusFilter(filter);
         setPage(1);
     };
 
     return (
-        <div className="max-w-7xl mx-auto px-2 md:px-6 py-8 space-y-8">
-            {/* Fancy banner */}
-            <div className="relative overflow-hidden rounded-2xl border shadow-md bg-gradient-to-r from-primary/15 via-fuchsia-200/30 to-emerald-200/30 dark:from-primary/10 dark:via-fuchsia-300/20 dark:to-emerald-300/20">
-                <div className="p-6 md:p-8">
+        <div className="min-h-screen p-6">
+            {/* Header */}
+            <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-900">Companies Management</h1>
+                <p className="text-sm text-gray-500 mt-1">View and manage all registered companies</p>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                {/* Total Companies */}
+                <Card className="p-5 bg-white border border-[#DBEAFE] shadow-sm rounded-xl">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                                Companies
-                            </h1>
-                            <p className="text-muted-foreground mt-1">
-                                Manage verification, browse company details, and jump into profiles quickly.
-                            </p>
+                            <p className="text-sm text-gray-500 font-normal">Total Companies</p>
+                            <p className="text-3xl font-medium text-gray-900 mt-1">{stats.total}</p>
                         </div>
-                        <div className="hidden md:flex items-center gap-3">
-                            <Badge variant="default" className="bg-primary/90">
-                                {total} total
-                            </Badge>
+                        <div className="w-12 h-12 rounded-xl bg-[#EFF6FF] flex items-center justify-center">
+                            <Building2 className="w-6 h-6 text-[#155DFC]" />
                         </div>
                     </div>
-                </div>
-                <div className="absolute -bottom-24 -right-24 h-56 w-56 rounded-full bg-primary/20 blur-3xl" />
-                <div className="absolute -top-24 -left-24 h-56 w-56 rounded-full bg-fuchsia-400/20 blur-3xl" />
+                </Card>
+
+                {/* Total Verified Companies */}
+                <Card className="p-5 bg-white border border-[#DCFCE7] shadow-sm rounded-xl">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm text-gray-500 font-normal">Total Verified Companies</p>
+                            <p className="text-3xl font-medium text-gray-900 mt-1">{stats.verified}</p>
+                        </div>
+                        <div className="w-12 h-12 rounded-xl bg-[#F0FDF4] flex items-center justify-center">
+                            <ShieldCheck className="w-6 h-6 text-[#00A912]" />
+                        </div>
+                    </div>
+                </Card>
+
+                {/* Total Unverified Companies */}
+                <Card className="p-5 bg-white border border-[#FFB60017] shadow-sm rounded-xl">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm text-gray-500 font-normal">Total UnVerified Companies</p>
+                            <p className="text-3xl font-medium text-gray-900 mt-1">{stats.unverified}</p>
+                        </div>
+                        <div className="w-12 h-12 rounded-xl bg-[#FFB60017] flex items-center justify-center">
+                            <ShieldAlert className="w-6 h-6 text-[#DBB900]" />
+                        </div>
+                    </div>
+                </Card>
+
+                {/* This Month */}
+                <Card className="p-5 bg-white border border-[#F3E8FF] shadow-sm rounded-xl">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm text-gray-500 font-normal">This Month</p>
+                            <p className="text-3xl font-mrdium text-gray-900 mt-1">{stats.thisMonth}</p>
+                        </div>
+                        <div className="w-12 h-12 rounded-xl bg-[#F2E8FFD9] flex items-center justify-center">
+                            <TrendingUp className="w-6 h-6 text-[#6700FF]" />
+                        </div>
+                    </div>
+                </Card>
             </div>
 
-            {/* Filters row */}
-            <div className=" px-1">
-                <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-                    <div className="flex flex-wrap items-end gap-3">
-                        <div className="space-y-1">
-                            <Label htmlFor="search" className="text-xs">Search</Label>
-                            <Input
-                                id="search"
-                                placeholder="Search companies..."
-                                value={search}
-                                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                                className="w-56"
-                            />
-                        </div>
+            {/* Main Content Card */}
+            <Card className="bg-white border border-gray-100 shadow-sm rounded-xl overflow-hidden">
+                {/* Search and Filters */}
+                <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-gray-100">
+                    {/* Search Input */}
+                    <div className="relative w-full sm:w-96">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Input
+                            placeholder="Search companies by name, description..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="pl-10 bg-gray-50 border-gray-200 focus:bg-white truncate"
+                        />
+                    </div>
 
-                        <div className="space-y-1">
-                            <Label htmlFor="status" className="text-xs flex">Status</Label>
-                            {/* native select to avoid Radix empty-value issue */}
-                            <select
-                                id="status"
-                                value={isVerified}
-                                onChange={(e) => { setIsVerified(e.target.value); setPage(1); }}
-                                className="border rounded-md px-3 py-[9px] text-sm min-w-[140px] bg-background"
+                    {/* Filter Buttons and Add Button */}
+                    <div className="flex items-center gap-3">
+                        {/* Filter Toggle */}
+                        <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                            <button
+                                onClick={() => handleFilterChange('all')}
+                                className={`px-4 py-1.5 truncate text-sm font-normal rounded-md transition-colors ${
+                                    statusFilter === 'all'
+                                        ? 'bg-white text-gray-900 shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                }`}
                             >
-                                {statusOptions.map(opt => (
-                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                ))}
-                            </select>
+                                All
+                            </button>
+                            <button
+                                onClick={() => handleFilterChange('verified')}
+                                className={`px-4 py-1.5 truncate text-sm font-normal rounded-md transition-colors ${
+                                    statusFilter === 'verified'
+                                        ? 'bg-white text-gray-900 shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                }`}
+                            >
+                                Verified
+                            </button>
+                            <button
+                                onClick={() => handleFilterChange('not_verified')}
+                                className={`px-4 py-1.5 truncate text-sm font-normal rounded-md transition-colors ${
+                                    statusFilter === 'not_verified'
+                                        ? 'bg-white text-gray-900 shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                }`}
+                            >
+                                Not Verified
+                            </button>
                         </div>
-                    </div>
-                </div>
-            </div>
 
-            {/* Table / Loading / Error */}
-            <div className="rounded-2xl bg-background/90 overflow-x-auto border border-muted shadow-lg">
-                {isLoading ? (
-                    <div className="p-6">
-                        {/* simple skeleton rows */}
-                        <div className="animate-pulse space-y-3">
-                            {[...Array(5)].map((_, i) => (
-                                <div key={i} className="h-12 rounded-md bg-muted/60" />
-                            ))}
-                        </div>
-                    </div>
-                ) : error ? (
-                    <div className="p-8 flex flex-col items-center">
-                        <p className="text-destructive font-medium mb-1">Error loading companies</p>
-                        <p className="text-sm text-muted-foreground">{(error as any)?.message || 'Unknown error'}</p>
-                        <Button variant="outline" size="sm" className="mt-4" onClick={() => refetch()}>
-                            Retry
+                        {/* Add Button */}
+                        <Button
+                            onClick={() => navigate('/companies/new')}
+                            className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4"
+                        >
+                            <Plus className="w-5 h-5 mr-2" />
+                            Add New Company
                         </Button>
                     </div>
-                ) : companies.length === 0 ? (
-                    <div className="p-12 text-center">
-                        <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-primary/10 text-primary text-sm font-medium">
-                            Nothing here yet
-                        </div>
-                        <p className="text-muted-foreground mt-2">No companies match your filters.</p>
-                    </div>
-                ) : (
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="bg-muted/70 sticky top-0 z-10">
-                                <th
-                                    className="px-4 py-3 text-left font-semibold cursor-pointer select-none"
-                                    onClick={() => handleSort('name')}
-                                >
-                                    Name
-                                    {' '}
-                                    {sortBy === 'name'
-                                        ? (sortOrder === 'ASC' ? <ChevronUp className="inline w-4 h-4" /> : <ChevronDown className="inline w-4 h-4" />)
-                                        : <ChevronsUpDown className="inline w-4 h-4 text-muted-foreground" />}
+                </div>
+
+                {/* Table */}
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead className="bg-gray-50 border-b border-gray-100">
+                            <tr>
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    Company
                                 </th>
-                                <th
-                                    className="px-4 py-3 text-left font-semibold cursor-pointer select-none"
-                                    onClick={() => handleSort('isVerified')}
-                                >
-                                    Status
-                                    {' '}
-                                    {sortBy === 'isVerified'
-                                        ? (sortOrder === 'ASC' ? <ChevronUp className="inline w-4 h-4" /> : <ChevronDown className="inline w-4 h-4" />)
-                                        : <ChevronsUpDown className="inline w-4 h-4 text-muted-foreground" />}
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    Description
                                 </th>
-                                <th
-                                    className="px-4 py-3 text-left font-semibold cursor-pointer select-none"
-                                    onClick={() => handleSort('createdAt')}
-                                >
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                     Created At
-                                    {' '}
-                                    {sortBy === 'createdAt'
-                                        ? (sortOrder === 'ASC' ? <ChevronUp className="inline w-4 h-4" /> : <ChevronDown className="inline w-4 h-4" />)
-                                        : <ChevronsUpDown className="inline w-4 h-4 text-muted-foreground" />}
                                 </th>
-                                <th className="px-4 py-3 text-left font-semibold">Actions</th>
+                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    Status
+                                </th>
+                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    Actions
+                                </th>
                             </tr>
                         </thead>
-                        <tbody>
-                            {companies.map((company: any, idx: number) => (
-                                <tr
-                                    key={company.id}
-                                    className={`transition-colors duration-150 ${idx % 2 === 0 ? 'bg-muted/30' : 'bg-background'}`}
-                                >
-                                    {/* Name with “logo”/initials */}
-                                    <td className="px-4 py-3 whitespace-nowrap">
-                                        <div className="flex items-center gap-3">
-                                            {company.logo ? (
-                                                <img
-                                                    src={company.logo}
-                                                    alt={company.name}
-                                                    className="h-8 w-8 rounded-full object-cover ring-2 ring-primary/20"
-                                                />
-                                            ) : (
-                                                <div className="h-8 w-8 rounded-full grid place-items-center bg-gradient-to-br from-primary/80 to-fuchsia-500 text-white text-xs font-semibold ring-2 ring-primary/20">
-                                                    {getInitials(company.name)}
-                                                </div>
-                                            )}
-                                            <div className="flex flex-col">
-                                                <span className="font-medium">{company.name}</span>
-                                                <span className="text-xs text-muted-foreground line-clamp-1 max-w-[340px]">
-                                                    {company.description || '—'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    {/* Status */}
-                                    <td className="px-4 py-3">
-                                        {company.isVerified ? (
-                                            <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 gap-1">
-                                                <CheckCircle2 className="h-3.5 w-3.5" />
-                                                Verified
-                                            </Badge>
-                                        ) : (
-                                            <Badge variant="secondary" className="bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30 gap-1">
-                                                <XCircle className="h-3.5 w-3.5" />
-                                                Not Verified
-                                            </Badge>
-                                        )}
-                                    </td>
-
-                                    {/* Created At */}
-                                    <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                                        {formatDateTime(company.createdAt)}
-                                    </td>
-
-                                    {/* Actions */}
-                                    <td className="px-4 py-3 whitespace-nowrap">
-                                        <div className="flex flex-wrap gap-2 items-center">
-                                            {company.isVerified ? (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => setSelectedCompanyId(company.id)}
-                                                    disabled={unverifyCompany.isPending}
-                                                    className="rounded-lg"
-                                                >
-                                                    {unverifyCompany.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                    Unverify
-                                                </Button>
-                                            ) : (
-                                                <Button
-                                                    size="sm"
-                                                    onClick={() =>
-                                                        verifyCompany.mutate(company.id, {
-                                                            onSuccess: () => { toast.success('Company verified'); refetch(); },
-                                                            onError: (e) => toast.error('Failed to verify', { description: (e as any)?.message }),
-                                                        })
-                                                    }
-                                                    disabled={verifyCompany.isPending}
-                                                    className="rounded-lg bg-primary/90 hover:bg-primary"
-                                                >
-                                                    {verifyCompany.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                                    Verify
-                                                </Button>
-                                            )}
-
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="outline" size="sm" className="rounded-lg">
-                                                        <MoreVertical className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem asChild>
-                                                        <Link to={`/companies/${company.id}`} className="flex items-center cursor-pointer">
-                                                            <Eye className="mr-2 h-4 w-4" />
-                                                            View
-                                                        </Link>
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => {
-                                                            setUpdateCompanyId(company.id);
-                                                            setUpdateCompanyData(company);
-                                                        }}
-                                                        className="cursor-pointer"
-                                                    >
-                                                        <Pencil className="mr-2 h-4 w-4" />
-                                                        Update
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => setDeleteCompanyId(company.id)}
-                                                        className="cursor-pointer text-destructive focus:text-destructive"
-                                                    >
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                        <tbody className="divide-y divide-gray-100">
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
+                                            Loading...
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
+                            ) : error ? (
+                                <tr>
+                                    <td colSpan={5} className="px-6 py-12 text-center">
+                                        <p className="text-red-500 font-medium mb-2">Error loading companies</p>
+                                        <Button variant="outline" size="sm" onClick={() => refetch()}>
+                                            Retry
+                                        </Button>
+                                    </td>
+                                </tr>
+                            ) : companies.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                                        No companies found
+                                    </td>
+                                </tr>
+                            ) : (
+                                companies.map((company: any) => (
+                                    <tr key={company.id} className="hover:bg-gray-50 transition-colors">
+                                        {/* Company */}
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center gap-3">
+                                                {company.logo ? (
+                                                    <img
+                                                        src={company.logo}
+                                                        alt={company.name}
+                                                        className="h-10 w-10 rounded-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className={`h-10 w-10 rounded-full flex items-center justify-center text-white text-sm font-semibold ${getAvatarColor(company.name)}`}>
+                                                        {getInitials(company.name)}
+                                                    </div>
+                                                )}
+                                                <span className="font-normal text-gray-900">{company.name}</span>
+                                            </div>
+                                        </td>
+
+                                        {/* Description */}
+                                        <td className="px-6 py-4">
+                                            <span className="text-[#1A1A1A] text-sm line-clamp-1 max-w-[200px]">
+                                                {company.description || 'Lorem Epsom'}
+                                            </span>
+                                        </td>
+
+                                        {/* Created At */}
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className="text-[#1A1A1A]">{formatDateTime(company.createdAt)}</span>
+                                        </td>
+
+                                        {/* Status */}
+                                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                                            {company.isVerified ? (
+                                                <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium border border-[#A4F4CF] rounded-lg bg-[#ECFDF5] text-[#007A55]">
+                                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                                    Verified
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium border border-[#FEE685] rounded-lg bg-[#FFFBEB] text-[#BB4D00]">
+                                                    <XCircle className="w-3.5 h-3.5" />
+                                                    Not Verified
+                                                </span>
+                                            )}
+                                        </td>
+
+                                        {/* Actions */}
+                                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                                            <div className="flex items-center justify-end gap-1">
+                                                {/* View */}
+                                                <Link
+                                                    to={`/companies/${company.id}`}
+                                                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </Link>
+
+                                                {/* Edit */}
+                                                <button
+                                                    onClick={() => {
+                                                        setUpdateCompanyId(company.id);
+                                                        setUpdateCompanyData(company);
+                                                    }}
+                                                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                </button>
+
+                                                {/* Delete */}
+                                                <button
+                                                    onClick={() => setDeleteCompanyId(company.id)}
+                                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+
+                                                {/* More Options */}
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                                                            <MoreVertical className="w-4 h-4" />
+                                                        </button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        {company.isVerified ? (
+                                                            <DropdownMenuItem
+                                                                onClick={() => setSelectedCompanyId(company.id)}
+                                                                className="cursor-pointer text-orange-600"
+                                                            >
+                                                                <ShieldX className="mr-2 h-4 w-4" />
+                                                                Unverify your company
+                                                            </DropdownMenuItem>
+                                                        ) : (
+                                                            <DropdownMenuItem
+                                                                onClick={() =>
+                                                                    verifyCompany.mutate(company.id, {
+                                                                        onSuccess: () => { toast.success('Company verified'); refetch(); },
+                                                                        onError: (e) => toast.error('Failed to verify', { description: (e as any)?.message }),
+                                                                    })
+                                                                }
+                                                                className="cursor-pointer text-green-600"
+                                                            >
+                                                                <ShieldCheck className="mr-2 h-4 w-4" />
+                                                                Verify your company
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
-                )}
-            </div>
+                </div>
 
-            {/* Pagination */}
-            {(totalPages > 1 || companies.length === limit || currentPage > 1) && (
-                <>
-                    <Separator />
-                    <div className="flex items-center justify-between px-1">
-                        <p className="text-sm text-muted-foreground">
-                            Page {currentPage} {totalPages > 1 ? `of ${totalPages}` : ''} {data?.data?.total ? `(${total} total companies)` : companies.length === limit ? '(More pages available)' : ''}
+                {/* Pagination */}
+                {companies.length > 0 && (
+                    <div className="px-6 py-4 flex items-center justify-between border-t border-gray-100">
+                        <p className="text-sm text-gray-500">
+                            Showing <span className="font-medium text-gray-900">{companies.length}</span> of{' '}
+                            <span className="font-medium text-gray-900">{total}</span> classes
                         </p>
-                        <div className="flex gap-2">
+
+                        <div className="flex items-center gap-1">
                             <Button
                                 variant="outline"
                                 size="sm"
-                                disabled={!canGoBack}
-                                onClick={() => setPage(Math.max(1, currentPage - 1))}
+                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="text-gray-600"
                             >
                                 Previous
                             </Button>
+
+                            {Array.from({ length: Math.min(totalPages, 3) }, (_, i) => {
+                                let pageNum: number;
+                                if (totalPages <= 3) {
+                                    pageNum = i + 1;
+                                } else if (currentPage === 1) {
+                                    pageNum = i + 1;
+                                } else if (currentPage === totalPages) {
+                                    pageNum = totalPages - 2 + i;
+                                } else {
+                                    pageNum = currentPage - 1 + i;
+                                }
+
+                                return (
+                                    <Button
+                                        key={pageNum}
+                                        variant={currentPage === pageNum ? 'default' : 'outline'}
+                                        size="sm"
+                                        onClick={() => setPage(pageNum)}
+                                        className={currentPage === pageNum ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'text-gray-600'}
+                                    >
+                                        {pageNum}
+                                    </Button>
+                                );
+                            })}
+
                             <Button
                                 variant="outline"
                                 size="sm"
-                                disabled={!canGoForward && companies.length < limit}
-                                onClick={() => setPage(currentPage + 1)}
+                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages || totalPages === 0}
+                                className="text-gray-600"
                             >
                                 Next
                             </Button>
                         </div>
                     </div>
-                </>
-            )}
+                )}
+            </Card>
 
             {/* Unverify Dialog */}
             <Dialog open={!!selectedCompanyId} onOpenChange={(o) => !o && setSelectedCompanyId(null)}>
@@ -487,7 +592,7 @@ export default function CompaniesList() {
                             disabled={
                                 unverifyCompany.isPending || !unverifiedReason || !unverifiedReasonDescription
                             }
-                            className="bg-rose-600/90 hover:bg-rose-600"
+                            className="bg-red-500 hover:bg-red-600 text-white"
                         >
                             {unverifyCompany.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Confirm Unverification
@@ -546,7 +651,7 @@ export default function CompaniesList() {
                                 disabled={updateCompany.isPending}
                             />
                             {errors.name && (
-                                <p className="text-sm text-destructive">{errors.name.message}</p>
+                                <p className="text-sm text-red-500">{errors.name.message}</p>
                             )}
                         </div>
 
@@ -560,7 +665,7 @@ export default function CompaniesList() {
                                 rows={4}
                             />
                             {errors.description && (
-                                <p className="text-sm text-destructive">{errors.description.message}</p>
+                                <p className="text-sm text-red-500">{errors.description.message}</p>
                             )}
                         </div>
 
@@ -573,7 +678,7 @@ export default function CompaniesList() {
                                 disabled={updateCompany.isPending}
                             />
                             {errors.tradeLicenseExpiryDate && (
-                                <p className="text-sm text-destructive">{errors.tradeLicenseExpiryDate.message}</p>
+                                <p className="text-sm text-red-500">{errors.tradeLicenseExpiryDate.message}</p>
                             )}
                         </div>
 
@@ -590,7 +695,11 @@ export default function CompaniesList() {
                             >
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={updateCompany.isPending}>
+                            <Button 
+                                type="submit" 
+                                disabled={updateCompany.isPending}
+                                className="bg-orange-500 hover:bg-orange-600 text-white"
+                            >
                                 {updateCompany.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 Update Company
                             </Button>
@@ -626,7 +735,7 @@ export default function CompaniesList() {
                                 });
                             }}
                             disabled={deleteCompany.isPending}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            className="bg-red-500 text-white hover:bg-red-600"
                         >
                             {deleteCompany.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Delete
