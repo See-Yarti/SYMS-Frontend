@@ -90,7 +90,7 @@ function SidebarRoutedItem({
       <SidebarMenuButton
         tooltip={item.title}
         className={cn(
-          'text-sm relative rounded-xl transition-colors py-2.5 px-3 overflow-hidden',
+          'text-sm relative rounded-xl transition-colors py-6 px-3 overflow-hidden',
           isActive
             ? 'bg-[#FFF7ED] text-[#F97316] font-medium'
             : 'text-[#4B5563] '
@@ -137,8 +137,8 @@ function SidebarRoutedItem({
             >
               <Icon
                 className={cn(
-                  "w-4 h-4",
-                  isActive ? "text-[#F97316]" : "text-gray-400"
+                  "w-5 h-5",
+                  isActive ? "text-[#F97316]" : "text-gray-600"
                 )}
               />
             </div>
