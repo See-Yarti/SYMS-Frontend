@@ -400,7 +400,7 @@ const CarClassList = () => {
             {/* Add Button */}
             <Button
               onClick={() => setAddModalOpen(true)}
-              className="bg-orange-500 hover:bg-orange-600 text-white font-medium px-4"
+              className="bg-[#FE6603] hover:bg-orange-600 text-white font-medium px-4"
             >
               <Plus className="w-4 h-4 mr-2" />
               Add New Class

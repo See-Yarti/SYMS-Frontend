@@ -127,16 +127,26 @@ function SidebarRoutedItem({
               isActive ? 'translate-x-1' : ''
             )}
           >
-            <Icon
+            <div
               className={cn(
-                'w-5 h-5 flex-shrink-0',
-                isActive ? 'text-[#F97316]' : 'text-gray-400'
+                "w-7 h-7 rounded-md flex items-center justify-center transition",
+                isActive
+                  ? "text-[#F97316]"
+                  : "bg-[#F1F1F1] border"
               )}
-            />
+            >
+              <Icon
+                className={cn(
+                  "w-4 h-4",
+                  isActive ? "text-[#F97316]" : "text-gray-400"
+                )}
+              />
+            </div>
+
             <span
               className={cn(
                 'text-sm',
-                isActive ? 'text-[#F97316] font-medium' : 'text-[#4B5563]'
+                isActive ? 'text-[#F97316] font-normal' : 'text-[#4B5563]'
               )}
             >
               {item.title}
