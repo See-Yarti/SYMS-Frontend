@@ -1,0 +1,52 @@
+// src/components/SideBar/icons/CarClassIcon.tsx
+import React from 'react';
+
+const CarClassIcon = React.forwardRef<
+  SVGSVGElement,
+  React.SVGProps<SVGSVGElement>
+>((props, ref) => {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+      ref={ref}
+    >
+      <path
+        d="M15.8332 14.1667H17.4998C17.9998 14.1667 18.3332 13.8334 18.3332 13.3334V10.8334C18.3332 10.0834 17.7498 9.41671 17.0832 9.25004C15.5832 8.83337 13.3332 8.33337 13.3332 8.33337C13.3332 8.33337 12.2498 7.16671 11.4998 6.41671C11.0832 6.08337 10.5832 5.83337 9.99984 5.83337H4.1665C3.6665 5.83337 3.24984 6.16671 2.99984 6.58337L1.83317 9.00004C1.72282 9.3219 1.6665 9.65979 1.6665 10V13.3334C1.6665 13.8334 1.99984 14.1667 2.49984 14.1667H4.1665"
+        stroke="currentColor"
+        strokeWidth="1.66667"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M5.83317 15.8333C6.75365 15.8333 7.49984 15.0871 7.49984 14.1667C7.49984 13.2462 6.75365 12.5 5.83317 12.5C4.9127 12.5 4.1665 13.2462 4.1665 14.1667C4.1665 15.0871 4.9127 15.8333 5.83317 15.8333Z"
+        stroke="currentColor"
+        strokeWidth="1.66667"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M7.5 14.1666H12.5"
+        stroke="currentColor"
+        strokeWidth="1.66667"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14.1667 15.8333C15.0871 15.8333 15.8333 15.0871 15.8333 14.1667C15.8333 13.2462 15.0871 12.5 14.1667 12.5C13.2462 12.5 12.5 13.2462 12.5 14.1667C12.5 15.0871 13.2462 15.8333 14.1667 15.8333Z"
+        stroke="currentColor"
+        strokeWidth="1.66667"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+});
+
+CarClassIcon.displayName = 'CarClassIcon';
+
+export default CarClassIcon;

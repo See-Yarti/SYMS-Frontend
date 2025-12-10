@@ -14,7 +14,7 @@ const Login = () => {
 
   return (
     <React.Fragment>
-      <div className="min-h-screen bg-white flex items-center justify-center overflow-hidden">
+      <div className="min-h-screen bg-white flex items-center justify-center overflow-hidden overflow-y-auto">
         <div className="w-full min-h-screen grid lg:grid-cols-[50%_50%] lg:h-screen p-4 sm:p-6 md:p-8">
           {/* Left Side: Car Image with Promotional Text */}
           <motion.div
@@ -23,10 +23,12 @@ const Login = () => {
             transition={{ duration: 0.8 }}
             className="hidden lg:flex items-center justify-center relative overflow-hidden rounded-3xl"
             style={{
-              backgroundImage: `url('/images/auth/login.svg')`,
-              backgroundSize: '100% auto',
+              backgroundImage: `url('/images/auth/login1.svg')`,
+              backgroundSize: 'contain',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
+              width: '740px', 
+              height: '922px', 
             }}
           >
             {/* Overlay for better text readability */}
@@ -45,7 +47,7 @@ const Login = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="flex items-center justify-center p-4 sm:p-6 md:p-8 lg:p-8 overflow-y-auto bg-white w-full min-h-screen lg:min-h-0"
+            className="flex items-center justify-center p-4 sm:p-6 md:p-8 lg:p-8 lg:mx-20 overflow-y-auto bg-white w-full min-h-screen lg:min-h-0"
           >
             <div className="w-full max-w-md mx-auto">
               {/* Logo */}

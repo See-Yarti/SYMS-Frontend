@@ -28,7 +28,7 @@ const SettingsSidebar = () => {
     lastIndex = '';
   }
   return (
-    <div>
+    <div className="bg-gray-100 min-h-full">
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-3 ">
         <div className=" grid w-full max-w-6xl gap-2">
           <Label className="text-2xl font-semibold">Settings</Label>

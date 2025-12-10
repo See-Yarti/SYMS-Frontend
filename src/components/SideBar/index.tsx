@@ -1,15 +1,14 @@
 // src/components/SideBar/index.tsx:
 
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
 import ThemeSelect from '../Select/Theme-Select';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '../ui/sidebar';
 import { AppSidebar } from './app-sidebar';
-import { Separator } from '@/components/ui/separator';
 import { Button } from '../ui/button';
 import { Maximize, Settings } from 'lucide-react';
 import { Label } from '../ui/label';
 // import NotificationsSheet from '../Sheet/Notifications';
-import { useLocation } from 'react-router-dom';
+
 const SideBar = () => {
   const { pathname } = useLocation();
   let firstIndex = pathname.split('/')[1] || 'dashboard';
@@ -28,34 +27,34 @@ const SideBar = () => {
   };
 
   return (
-    <div>
+    <div className="bg-background min-h-screen transition-colors duration-300">
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset className="flex flex-col">
-          <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 ">
+        <SidebarInset className="flex flex-col bg-background transition-colors duration-300">
+          <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border/40">
             <div className="flex flex-1 items-center gap-2 px-3">
-                  <SidebarTrigger />
-              <Label className="line-clamp-1">{firstIndex}</Label>
+              <SidebarTrigger />
+              <Label className="line-clamp-1 font-medium">{firstIndex}</Label>
             </div>
-            <div className="flex items-center gap-2.5 px-3 ">
+            <div className="flex items-center gap-1 px-3">
               {/* <NotificationsSheet /> */}
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-4 w-4 relative inline-flex"
+                className="h-9 w-9 rounded-lg hover:bg-accent"
                 onClick={toggleFullScreen}
               >
-                <Maximize />
+                <Maximize className="h-5 w-5" />
                 <span className="sr-only">Toggle Full Screen Mode</span>
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-4 w-4 relative inline-flex"
+                className="h-9 w-9 rounded-lg hover:bg-accent"
                 asChild
               >
                 <Link to="/settings">
-                  <Settings />
+                  <Settings className="h-5 w-5" />
                   <span className="sr-only">Settings</span>
                 </Link>
               </Button>
@@ -69,4 +68,6 @@ const SideBar = () => {
       </SidebarProvider>
     </div>
   );
-};export default SideBar;
+};
+
+export default SideBar;

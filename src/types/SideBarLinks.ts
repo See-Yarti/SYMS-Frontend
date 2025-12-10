@@ -10,6 +10,7 @@ import {
   Package,
   PanelRightDashed,
   Calculator,
+  Settings,
 } from 'lucide-react';
 import { OperatorRole, UserRole } from './auth';
 
@@ -138,6 +139,14 @@ export const sideBarLinks: SideBarItem[] = [
       'accountantOperator',
       'salesOperator',
     ],
+  },
+  {
+    title: 'Settings',
+    type: 'routed',
+    url: '/settings',
+    slug: 'settings',
+    icon: Settings,
+    roles: ['admin', 'adminOperator', 'managerOperator', 'salesOperator'],
   },
   // {
   //   type: 'separation',

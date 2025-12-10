@@ -1,0 +1,44 @@
+// src/components/SideBar/icons/AccountingIcon.tsx
+import React from 'react';
+
+const AccountingIcon = React.forwardRef<
+  SVGSVGElement,
+  React.SVGProps<SVGSVGElement>
+>((props, ref) => {
+  return (
+    <svg
+      width="13"
+      height="15"
+      viewBox="0 0 13 15"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      {...props}
+      ref={ref}
+    >
+      <path
+        d="M0.5 0.5V14.5L2 13.8L3.5 14.5L5 13.8L6.5 14.5L8 13.8L9.5 14.5L11 13.8L12.5 14.5V0.5L11 1.2L9.5 0.5L8 1.2L6.5 0.5L5 1.2L3.5 0.5L2 1.2L0.5 0.5Z"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9.5 4.70001H5C4.60218 4.70001 4.22064 4.84751 3.93934 5.11006C3.65804 5.37261 3.5 5.72871 3.5 6.10001C3.5 6.47132 3.65804 6.82741 3.93934 7.08996C4.22064 7.35251 4.60218 7.50001 5 7.50001H8C8.39782 7.50001 8.77936 7.64751 9.06066 7.91006C9.34196 8.17261 9.5 8.52871 9.5 8.90001C9.5 9.27132 9.34196 9.62741 9.06066 9.88996C8.77936 10.1525 8.39782 10.3 8 10.3H3.5"
+        stroke="currentColor"
+        strokeWidth="0.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M6.5 11.3504V3.65039"
+        stroke="currentColor"
+        strokeWidth="0.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+});
+
+AccountingIcon.displayName = 'AccountingIcon';
+
+export default AccountingIcon;
