@@ -123,7 +123,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     nextItem?.focus();
   }
 
-
   return (
     <TooltipProvider delayDuration={300}>
       <Sidebar
@@ -134,7 +133,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <div className="bg-card rounded-2xl border-0 h-full flex flex-col shadow-xl dark:shadow-2xl dark:shadow-black/20 transition-colors duration-300">
           <SidebarHeader className="px-4 py-4">
             <div className="flex items-center justify-center">
-              <img src="/images/logo1.svg" alt="Yella Ride Logo" className='w-[180px] h-[35px]' />
+              <img src="/images/logo1.svg" alt="Yella Ride Logo" className='w-[130px] h-[20px] my-3' />
             </div>
           </SidebarHeader>
           <SidebarContent className='flex-1 overflow-y-hidden py-2 px-3'>

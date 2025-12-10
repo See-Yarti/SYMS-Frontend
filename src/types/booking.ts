@@ -18,6 +18,7 @@ export type BookingTotals = {
 };
 
 export type OperationalLocation = {
+  isAirportZone: any;
   id: string;
   city: string;
   addressLine: string;
