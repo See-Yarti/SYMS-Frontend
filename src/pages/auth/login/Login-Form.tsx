@@ -60,10 +60,10 @@ const LoginForm = () => {
         <Input
           id="email"
           type="email"
-          placeholder="usman@gmail.com"
+          placeholder="user@example.com"
           disabled={isSubmitting || isLoading}
           {...register('email')}
-          className="h-10 sm:h-11 rounded-md bg-[#F9FAFB] border-[#E5E7EB] focus:ring-yellow-400 focus:border-yellow-400 text-sm sm:text-base"
+          className="h-10 sm:h-11 rounded-md bg-[#F9FAFB] border-[#E5E7EB] focus:ring-[#FE6603] focus:border-[#FE6603] text-sm sm:text-base"
         />
         {errors.email && (
           <span className="text-red-500 text-xs sm:text-sm">{errors.email.message}</span>
@@ -80,7 +80,7 @@ const LoginForm = () => {
             placeholder="*********"
             type={showPassword ? 'text' : 'password'}
             disabled={isSubmitting || isLoading}
-            className="h-10 sm:h-11 rounded-md bg-[#F9FAFB] border-[#E5E7EB] focus:ring-1 focus:ring-yellow-400 focus:border-yellow-400 pr-10 text-sm sm:text-base"
+            className="h-10 sm:h-11 rounded-md bg-[#F9FAFB] border-[#E5E7EB] focus:ring-1 focus:ring-[#FE6603] focus:border-[#FE6603] pr-10 text-sm sm:text-base"
           />
           <Button
             type="button"
