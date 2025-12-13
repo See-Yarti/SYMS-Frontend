@@ -96,7 +96,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   let currentMenu = filteredMenu;
   for (const index of selectedPath) {
-    if (currentMenu[index] && currentMenu[index].type === 'dropdown') {
+    if (currentMenu[index] && currentMenu[index].type === 'dropdown' && currentMenu[index].slug !== 'settings') {
       currentMenu = currentMenu[index].items || [];
     } else {
       break;

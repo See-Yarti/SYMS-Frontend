@@ -1,19 +1,21 @@
-// src/pages/profile/Profile.tsx
+// src/pages/settings/password-changes/index.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useAppSelector } from '@/store';
-import { useUpdateOperatorPassword, useGetUserByEmail, useUpdateAdminPassword } from '@/hooks/useOperatorApi';
-import { ChevronLeft, Eye, EyeOff } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import {
+  useUpdateOperatorPassword,
+  useGetUserByEmail,
+  useUpdateAdminPassword,
+} from '@/hooks/useOperatorApi';
+import { Mail, KeyRound, Key, Building, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { AxiosError } from 'axios';
 
-const Profile = () => {
-  const navigate = useNavigate();
-  const { user: reduxUser } = useAppSelector(state => state.auth);
+const PasswordChanges = () => {
+  const { user: reduxUser } = useAppSelector((state) => state.auth);
   const email = reduxUser?.email || '';
 
   // Fetch latest user data from API
@@ -26,28 +28,38 @@ const Profile = () => {
     confirmPassword: '',
   });
 
-  const [showPassword, setShowPassword] = useState({
-    previous: false,
-    new: false,
-    confirm: false,
-  });
+  const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>(
+    {}
+  );
 
-  const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
+  const { mutate: updateOperatorPassword, isPending: isUpdatingOperator } =
+    useUpdateOperatorPassword();
+  const { mutate: updateAdminPassword, isPending: isUpdatingAdmin } =
+    useUpdateAdminPassword();
 
-  const { mutate: updateOperatorPassword, isPending: isUpdatingOperator } = useUpdateOperatorPassword();
-  const { mutate: updateAdminPassword, isPending: isUpdatingAdmin } = useUpdateAdminPassword();
+  // Password validation checks
+  const passwordChecks = useMemo(() => {
+    const pwd = passwordData.newPassword;
+    return {
+      minLength: pwd.length >= 8,
+      upperLower: /[a-z]/.test(pwd) && /[A-Z]/.test(pwd),
+      hasNumber: /\d/.test(pwd),
+      hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(pwd),
+    };
+  }, [passwordData.newPassword]);
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setPasswordData(prev => ({ ...prev, [name]: value }));
+    setPasswordData((prev) => ({ ...prev, [name]: value }));
     if (passwordErrors[name]) {
-      setPasswordErrors(prev => ({ ...prev, [name]: '' }));
+      setPasswordErrors((prev) => ({ ...prev, [name]: '' }));
     }
   };
 
   const validatePasswordForm = () => {
     const errors: Record<string, string> = {};
-    if (!passwordData.previousPassword) errors.previousPassword = 'Current password is required';
+    if (!passwordData.previousPassword)
+      errors.previousPassword = 'Current password is required';
     if (!passwordData.newPassword) {
       errors.newPassword = 'New password is required';
     } else if (passwordData.newPassword.length < 8) {
@@ -66,7 +78,7 @@ const Profile = () => {
 
     const variables = {
       previousPassword: passwordData.previousPassword,
-      newPassword: passwordData.newPassword
+      newPassword: passwordData.newPassword,
     };
 
     const commonCallbacks = {
@@ -75,7 +87,7 @@ const Profile = () => {
         setPasswordData({
           previousPassword: '',
           newPassword: '',
-          confirmPassword: ''
+          confirmPassword: '',
         });
       },
       onError: (error: unknown) => {
@@ -93,7 +105,7 @@ const Profile = () => {
         toast.error(
           backendError.response?.data?.message || 'Failed to update password'
         );
-      }
+      },
     };
 
     if (user?.role === 'admin') {
@@ -101,6 +113,15 @@ const Profile = () => {
     } else {
       updateOperatorPassword(variables, commonCallbacks);
     }
+  };
+
+  const handleCancel = () => {
+    setPasswordData({
+      previousPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    });
+    setPasswordErrors({});
   };
 
   const isUpdating = isUpdatingOperator || isUpdatingAdmin;
@@ -130,137 +151,235 @@ const Profile = () => {
   }
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => navigate(-1)}
-          className="h-9 w-9"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">{user.name}&rsquo;s Profile</h1>
-          <div className="text-sm text-muted-foreground font-medium">{user.email}</div>
-        </div>
+    <div className="min-h-screen dark:bg-background p-6">
+      {/* Page Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
+        <p className="text-muted-foreground text-sm">
+          Security - Manage your password and security preferences
+        </p>
       </div>
 
-      {/* Main Content */}
-      <div className="bg-card rounded-2xl shadow border border-border p-8 space-y-10">
-        {/* Account Info */}
-        <div>
-          <div className="mb-2 font-semibold text-lg">Account Information</div>
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <Label className="mb-1 text-xs">Full Name</Label>
-              <div className="border rounded-lg px-3 py-2 bg-muted text-sm">{user.name}</div>
-            </div>
-            <div>
-              <Label className="mb-1 text-xs">Email Address</Label>
-              <div className="border rounded-lg px-3 py-2 bg-muted text-sm">{user.email}</div>
+      {/* Security Status Card */}
+      <div className="bg-[#F0FDF4] dark:bg-green-950/20 rounded-2xl p-5 mb-6 border border-[#B9F8CF] dark:border-green-900/40">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-[#00A63E] flex items-center justify-center">
+            <ShieldCheck className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h3 className="text-xl font-medium text-[#0D542B]">
+              Your account is secure
+            </h3>
+            <p className="text-xs text-[#008236] font-normal">
+              Last password change: 30 days ago
+            </p>
+            <div className="flex items-center gap-1.5 mt-1">
+              <CheckCircle2 className="w-4 h-4 text-[#00A63E]" />
+              <span className="text-xs text-[#008236] font-normal">
+                Strong password active
+              </span>
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="border-b border-border" />
+      {/* Update Password Card */}
+      <div className="bg-white dark:bg-card rounded-2xl p-6 border border-border/40">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-[#FE6603] flex items-center justify-center">
+            <Key className="w-5 h-5 text-white" />
+          </div>
+          <h3 className="text-xl font-medium text-foreground">
+            Update Password
+          </h3>
+        </div>
 
-        {/* Password Change */}
-        <div>
-          <div className="mb-2 font-semibold text-lg">Change Password</div>
-          <form onSubmit={handlePasswordSubmit} className="grid gap-5 mt-3">
-            {/* Current Password */}
-            <div>
-              <Label htmlFor="current-password" className="text-xs">Current Password</Label>
-              <div className="relative">
-                <Input
-                  id="current-password"
-                  type={showPassword.previous ? 'text' : 'password'}
-                  name="previousPassword"
-                  value={passwordData.previousPassword}
-                  onChange={handlePasswordChange}
-                  autoComplete="current-password"
-                  className={passwordErrors.previousPassword ? 'border-destructive pr-10' : 'pr-10'}
-                />
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                  onClick={() => setShowPassword(s => ({ ...s, previous: !s.previous }))}
-                >
-                  {showPassword.previous ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {passwordErrors.previousPassword && (
-                <p className="text-xs text-destructive mt-1">{passwordErrors.previousPassword}</p>
-              )}
+        <form onSubmit={handlePasswordSubmit} className="space-y-5">
+          {/* Current Password */}
+          <div>
+            <Label
+              htmlFor="current-password"
+              className="text-foreground text-sm font-normal"
+            >
+              Current Password
+            </Label>
+            <div className="relative mt-1.5">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="current-password"
+                type="password"
+                name="previousPassword"
+                value={passwordData.previousPassword}
+                onChange={handlePasswordChange}
+                autoComplete="current-password"
+                placeholder="Enter your current password"
+                className={`pl-10 bg-[#F9FAFB] dark:bg-muted border border-[#E5E7EB] h-11 ${
+                  passwordErrors.previousPassword ? 'border-destructive' : ''
+                }`}
+              />
             </div>
-            {/* New Password */}
-            <div>
-              <Label htmlFor="new-password" className="text-xs">New Password</Label>
-              <div className="relative">
-                <Input
-                  id="new-password"
-                  type={showPassword.new ? 'text' : 'password'}
-                  name="newPassword"
-                  value={passwordData.newPassword}
-                  onChange={handlePasswordChange}
-                  autoComplete="new-password"
-                  minLength={8}
-                  className={passwordErrors.newPassword ? 'border-destructive pr-10' : 'pr-10'}
-                />
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                  onClick={() => setShowPassword(s => ({ ...s, new: !s.new }))}
-                >
-                  {showPassword.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {passwordErrors.newPassword && (
-                <p className="text-xs text-destructive mt-1">{passwordErrors.newPassword}</p>
-              )}
+            {passwordErrors.previousPassword && (
+              <p className="text-xs text-destructive mt-1.5">
+                {passwordErrors.previousPassword}
+              </p>
+            )}
+          </div>
+
+          {/* New Password */}
+          <div>
+            <Label
+              htmlFor="new-password"
+              className="text-foreground text-sm font-normal"
+            >
+              New Password
+            </Label>
+            <div className="relative mt-1.5">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="new-password"
+                type="password"
+                name="newPassword"
+                value={passwordData.newPassword}
+                onChange={handlePasswordChange}
+                autoComplete="new-password"
+                placeholder="Enter your new password"
+                className={`pl-10 bg-[#F9FAFB] dark:bg-muted border border-[#E5E7EB] h-11 ${
+                  passwordErrors.newPassword ? 'border-destructive' : ''
+                }`}
+              />
             </div>
-            {/* Confirm Password */}
-            <div>
-              <Label htmlFor="confirm-password" className="text-xs">Confirm New Password</Label>
-              <div className="relative">
-                <Input
-                  id="confirm-password"
-                  type={showPassword.confirm ? 'text' : 'password'}
-                  name="confirmPassword"
-                  value={passwordData.confirmPassword}
-                  onChange={handlePasswordChange}
-                  autoComplete="new-password"
-                  className={passwordErrors.confirmPassword ? 'border-destructive pr-10' : 'pr-10'}
-                />
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                  onClick={() => setShowPassword(s => ({ ...s, confirm: !s.confirm }))}
-                >
-                  {showPassword.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {passwordErrors.confirmPassword && (
-                <p className="text-xs text-destructive mt-1">{passwordErrors.confirmPassword}</p>
-              )}
+            {passwordErrors.newPassword && (
+              <p className="text-xs text-destructive mt-1.5">
+                {passwordErrors.newPassword}
+              </p>
+            )}
+          </div>
+
+          {/* Confirm Password */}
+          <div>
+            <Label
+              htmlFor="confirm-password"
+              className="text-foreground text-sm font-normal"
+            >
+              Confirm New Password
+            </Label>
+            <div className="relative mt-1.5">
+              <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="confirm-password"
+                type="password"
+                name="confirmPassword"
+                value={passwordData.confirmPassword}
+                onChange={handlePasswordChange}
+                autoComplete="new-password"
+                placeholder="Confirm your new password"
+                className={`pl-10 bg-[#F9FAFB] dark:bg-muted border border-[#E5E7EB] h-11 ${
+                  passwordErrors.confirmPassword ? 'border-destructive' : ''
+                }`}
+              />
             </div>
+            {passwordErrors.confirmPassword && (
+              <p className="text-xs text-destructive mt-1.5">
+                {passwordErrors.confirmPassword}
+              </p>
+            )}
+          </div>
+
+          {/* Password Requirements */}
+          <div className="bg-[#FFB58424] dark:bg-orange-950/20 rounded-xl p-4 border border-[#FF802EBF] dark:border-orange-900/40">
+            <p className="text-sm font-normal text-foreground mb-3">
+              Password must contain:
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex items-center gap-2">
+                <div
+                  className={`w-3 h-3 rounded-full ${
+                    passwordChecks.minLength ? 'bg-[#22C55E]' : 'bg-gray-300'
+                  }`}
+                />
+                <span
+                  className={`text-sm ${
+                    passwordChecks.minLength
+                      ? 'text-[#22C55E]'
+                      : 'text-muted-foreground'
+                  }`}
+                >
+                  At least 8 characters
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div
+                  className={`w-3 h-3 rounded-full ${
+                    passwordChecks.upperLower ? 'bg-[#22C55E]' : 'bg-gray-300'
+                  }`}
+                />
+                <span
+                  className={`text-sm ${
+                    passwordChecks.upperLower
+                      ? 'text-[#22C55E]'
+                      : 'text-muted-foreground'
+                  }`}
+                >
+                  Upper & lowercase
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div
+                  className={`w-3 h-3 rounded-full ${
+                    passwordChecks.hasNumber ? 'bg-[#22C55E]' : 'bg-gray-300'
+                  }`}
+                />
+                <span
+                  className={`text-sm ${
+                    passwordChecks.hasNumber
+                      ? 'text-[#22C55E]'
+                      : 'text-muted-foreground'
+                  }`}
+                >
+                  At least one number
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div
+                  className={`w-3 h-3 rounded-full ${
+                    passwordChecks.hasSpecial ? 'bg-[#22C55E]' : 'bg-gray-300'
+                  }`}
+                />
+                <span
+                  className={`text-sm ${
+                    passwordChecks.hasSpecial
+                      ? 'text-[#22C55E]'
+                      : 'text-muted-foreground'
+                  }`}
+                >
+                  Special character
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-3 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancel}
+              className="px-8 border-border/60"
+            >
+              Cancel
+            </Button>
             <Button
               type="submit"
               disabled={isUpdating}
-              className="w-full mt-3"
+              className="bg-[#F97316] hover:bg-[#EA580C] text-white px-8"
             >
               {isUpdating ? 'Updating...' : 'Update Password'}
             </Button>
-          </form>
-        </div>
+          </div>
+        </form>
       </div>
     </div>
   );
 };
 
-export default Profile;
+export default PasswordChanges;

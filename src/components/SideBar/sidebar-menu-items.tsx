@@ -178,8 +178,16 @@ function SidebarDropdownItem({
   isActive?: boolean;
   onDropdownOpen?: () => void;
 }) {
+  const location = useLocation();
   const isOpen = selectedPath.includes(index);
   const Icon = getSidebarIcon(item.title);
+
+  const useInlineExpansion = item.slug === 'settings';
+
+  const isSubItemActive = (url: string | undefined) => {
+    if (!url) return false;
+    return location.pathname === url || location.pathname.startsWith(url + '/');
+  };
 
   function handleDropdownClick() {
     if (onDropdownOpen) onDropdownOpen();
@@ -189,75 +197,119 @@ function SidebarDropdownItem({
   }
 
   return (
-    <SidebarMenuSubItem>
-      <SidebarMenuButton
-        tooltip={item.title}
-        onClick={handleDropdownClick}
-        className={cn(
-          'text-sm relative rounded-xl transition-colors py-2.5 px-3 overflow-hidden',
-          isActive
-            ? 'bg-[#FFF7ED] text-[#F97316] font-medium'
-            : 'text-[#4B5563]'
-        )}
-      >
-        {/* Animated vertical strip */}
-        {isActive && (
-          <div
-            className="absolute left-0 top-0 bottom-0 w-1 bg-[#F97316] rounded-r origin-left"
-            style={{
-              transform: 'translateX(-4px)',
-              opacity: 0,
-              transition: 'transform 200ms ease-in-out, opacity 200ms ease-in-out',
-            }}
-            aria-hidden="true"
-          />
-        )}
-        {isActive && (
-          <div
-            className="absolute left-0 top-0 bottom-0 w-1 bg-[#F97316] rounded-r"
-            style={{
-              transform: 'translateX(0)',
-              opacity: 1,
-              transition: 'transform 200ms ease-in-out, opacity 200ms ease-in-out',
-            }}
-            aria-hidden="true"
-          />
-        )}
-
-        <div className="flex w-full">
-          <div
-            className={cn(
-              'flex items-center gap-3 transition-transform duration-200 ease-in-out w-full',
-              isActive ? 'translate-x-1' : ''
-            )}
-          >
-            <Icon
-              className={cn(
-                'w-5 h-5 flex-shrink-0',
-                isActive ? 'text-[#F97316]' : 'text-gray-400'
-              )}
+    <>
+      <SidebarMenuSubItem>
+        <SidebarMenuButton
+          tooltip={item.title}
+          onClick={handleDropdownClick}
+          className={cn(
+            'text-sm relative rounded-xl transition-colors py-2.5 px-3 overflow-hidden',
+            isActive
+              ? 'bg-[#FFF7ED] text-[#F97316] font-medium'
+              : 'text-[#4B5563]'
+          )}
+        >
+          {/* Animated vertical strip */}
+          {isActive && (
+            <div
+              className="absolute left-0 top-0 bottom-0 w-1 bg-[#F97316] rounded-r origin-left"
+              style={{
+                transform: 'translateX(-4px)',
+                opacity: 0,
+                transition: 'transform 200ms ease-in-out, opacity 200ms ease-in-out',
+              }}
+              aria-hidden="true"
             />
-            <span
+          )}
+          {isActive && (
+            <div
+              className="absolute left-0 top-0 bottom-0 w-1 bg-[#F97316] rounded-r"
+              style={{
+                transform: 'translateX(0)',
+                opacity: 1,
+                transition: 'transform 200ms ease-in-out, opacity 200ms ease-in-out',
+              }}
+              aria-hidden="true"
+            />
+          )}
+
+          <div className="flex w-full">
+            <div
               className={cn(
-                'text-sm',
-                isActive ? 'text-[#F97316] font-medium' : 'text-[#4B5563]'
+                'flex items-center gap-3 transition-transform duration-200 ease-in-out w-full',
+                isActive ? 'translate-x-1' : ''
               )}
             >
-              {item.title}
-            </span>
-            {item.badge && (
-              <Badge variant="secondary" className="ml-auto">
-                {item.badge}
-              </Badge>
-            )}
-            {isOpen ? (
-              <ChevronDown className="ml-auto w-4 h-4 transition-transform text-gray-400" />
-            ) : (
-              <ChevronRight className="ml-auto w-4 h-4 transition-transform text-gray-400" />
-            )}
+              <Icon
+                className={cn(
+                  'w-5 h-5 flex-shrink-0',
+                  isActive ? 'text-[#F97316]' : 'text-gray-400'
+                )}
+              />
+              <span
+                className={cn(
+                  'text-sm',
+                  isActive ? 'text-[#F97316] font-medium' : 'text-[#4B5563]'
+                )}
+              >
+                {item.title}
+              </span>
+              {item.badge && (
+                <Badge variant="secondary" className="ml-auto">
+                  {item.badge}
+                </Badge>
+              )}
+              {isOpen ? (
+                <ChevronDown className="ml-auto w-4 h-4 transition-transform text-gray-400" />
+              ) : (
+                <ChevronRight className="ml-auto w-4 h-4 transition-transform text-gray-400" />
+              )}
+            </div>
           </div>
+        </SidebarMenuButton>
+      </SidebarMenuSubItem>
+
+      {useInlineExpansion && isOpen && item.items && (
+        <div className="pl-1 border-l-2 border-border/40 space-y-1 mt-1">
+          {item.items.map((subItem, subIndex) => {
+            const SubIcon = getSidebarIcon(subItem.title);
+            const subIsActive = isSubItemActive(subItem.url);
+
+            return (
+              <SidebarMenuSubItem key={`${subItem.title}-${subIndex}`}>
+                <SidebarMenuButton
+                  tooltip={subItem.title}
+                  className={cn(
+                    'text-sm relative rounded-xl transition-colors py-2 px-3 overflow-hidden',
+                    subIsActive
+                      ? 'bg-[#FFF7ED] text-[#F97316] font-medium'
+                      : 'text-[#4B5563] hover:bg-gray-100 dark:hover:bg-gray-800'
+                  )}
+                >
+                  <Link to={subItem.url || '#'} className="flex w-full">
+                    <div className="flex items-center gap-3">
+                      <SubIcon
+                        className={cn(
+                          'w-4 h-4 flex-shrink-0',
+                          subIsActive ? 'text-[#F97316]' : 'text-gray-400'
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          'text-sm',
+                          subIsActive ? 'text-[#F97316]' : 'text-[#4B5563]'
+                        )}
+                      >
+                        {subItem.title}
+                      </span>
+                    </div>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuSubItem>
+            );
+          })}
         </div>
-      </SidebarMenuButton>
-    </SidebarMenuSubItem>
+      )}
+    </>
   );
 }

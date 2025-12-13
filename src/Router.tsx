@@ -19,7 +19,6 @@ import Addresses from './pages/addresses/Addresses';
 import CompanyFormWrapper from './components/Company/CompanyFormWrapper';
 import OperatorRegister from './pages/operators/OperatorRegister';
 import ProfileUpdate from './pages/settings/profile-update';
-import SettingsSidebar from './pages/settings/Sidebar';
 import Appearance from './pages/settings/Appearance';
 import PasswordChanges from './pages/settings/password-changes';
 import CarClass from './pages/carclass/CarClass';
@@ -77,22 +76,21 @@ const router = createBrowserRouter([
             element: <Products />,
           },
           {
+            path: '/settings/profile',
+            element: <ProfileUpdate />,
+          },
+          {
+            path: '/settings/security',
+            element: <PasswordChanges />,
+          },
+          {
+            path: '/settings/appearance',
+            element: <Appearance />,
+          },
+          {
+            // Redirect /settings to /settings/profile
             path: '/settings',
-            element: <SettingsSidebar />,
-            children: [
-              {
-                path: '',
-                element: <Appearance />,
-              },
-              {
-                path: 'profile-update',
-                element: <ProfileUpdate />,
-              },
-              {
-                path: 'password-changes',
-                element: <PasswordChanges />,
-              },
-            ],
+            element: <Navigate to="/settings/profile" replace />,
           },
           {
             path: 'companies',
