@@ -92,8 +92,8 @@ function SidebarRoutedItem({
         className={cn(
           'text-sm relative rounded-xl transition-colors py-6 px-3 overflow-hidden',
           isActive
-            ? 'bg-[#FFF7ED] text-[#F97316] font-medium'
-            : 'text-[#4B5563] '
+            ? 'bg-[#FFF7ED] dark:bg-orange-900/20 text-[#F97316] font-medium'
+            : 'text-[#4B5563] dark:text-gray-400'
         )}
       >
         {/* Animated vertical strip */}
@@ -132,13 +132,13 @@ function SidebarRoutedItem({
                 "w-7 h-7 rounded-md flex items-center justify-center transition",
                 isActive
                   ? "text-[#F97316]"
-                  : "bg-[#F1F1F1] border"
+                  : "bg-[#F1F1F1] dark:bg-gray-800 border dark:border-gray-700"
               )}
             >
               <Icon
                 className={cn(
                   "w-5 h-5",
-                  isActive ? "text-[#F97316]" : "text-gray-600"
+                  isActive ? "text-[#F97316]" : "text-gray-600 dark:text-gray-400"
                 )}
               />
             </div>
@@ -146,7 +146,7 @@ function SidebarRoutedItem({
             <span
               className={cn(
                 'text-sm',
-                isActive ? 'text-[#F97316] font-normal' : 'text-[#4B5563]'
+                isActive ? 'text-[#F97316] font-normal' : 'text-[#4B5563] dark:text-gray-400'
               )}
             >
               {item.title}
@@ -205,8 +205,8 @@ function SidebarDropdownItem({
           className={cn(
             'text-sm relative rounded-xl transition-colors py-2.5 px-3 overflow-hidden',
             isActive
-              ? 'bg-[#FFF7ED] text-[#F97316] font-medium'
-              : 'text-[#4B5563]'
+              ? 'bg-[#FFF7ED] dark:bg-orange-900/20 text-[#F97316] font-medium'
+              : 'text-[#4B5563] dark:text-gray-400'
           )}
         >
           {/* Animated vertical strip */}
@@ -243,13 +243,13 @@ function SidebarDropdownItem({
               <Icon
                 className={cn(
                   'w-5 h-5 flex-shrink-0',
-                  isActive ? 'text-[#F97316]' : 'text-gray-400'
+                  isActive ? 'text-[#F97316]' : 'text-gray-400 dark:text-gray-500'
                 )}
               />
               <span
                 className={cn(
                   'text-sm',
-                  isActive ? 'text-[#F97316] font-medium' : 'text-[#4B5563]'
+                  isActive ? 'text-[#F97316] font-medium' : 'text-[#4B5563] dark:text-gray-400'
                 )}
               >
                 {item.title}
@@ -260,9 +260,9 @@ function SidebarDropdownItem({
                 </Badge>
               )}
               {isOpen ? (
-                <ChevronDown className="ml-auto w-4 h-4 transition-transform text-gray-400" />
+                <ChevronDown className="ml-auto w-4 h-4 transition-transform text-gray-400 dark:text-gray-500" />
               ) : (
-                <ChevronRight className="ml-auto w-4 h-4 transition-transform text-gray-400" />
+                <ChevronRight className="ml-auto w-4 h-4 transition-transform text-gray-400 dark:text-gray-500" />
               )}
             </div>
           </div>
@@ -282,8 +282,8 @@ function SidebarDropdownItem({
                   className={cn(
                     'text-sm relative rounded-xl transition-colors py-2 px-3 overflow-hidden',
                     subIsActive
-                      ? 'bg-[#FFF7ED] text-[#F97316] font-medium'
-                      : 'text-[#4B5563] hover:bg-gray-100 dark:hover:bg-gray-800'
+                      ? 'bg-[#FFF7ED] dark:bg-orange-900/20 text-[#F97316] font-medium'
+                      : 'text-[#4B5563] dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                   )}
                 >
                   <Link to={subItem.url || '#'} className="flex w-full">
@@ -291,13 +291,13 @@ function SidebarDropdownItem({
                       <SubIcon
                         className={cn(
                           'w-4 h-4 flex-shrink-0',
-                          subIsActive ? 'text-[#F97316]' : 'text-gray-400'
+                          subIsActive ? 'text-[#F97316]' : 'text-gray-400 dark:text-gray-500'
                         )}
                       />
                       <span
                         className={cn(
                           'text-sm',
-                          subIsActive ? 'text-[#F97316]' : 'text-[#4B5563]'
+                          subIsActive ? 'text-[#F97316]' : 'text-[#4B5563] dark:text-gray-400'
                         )}
                       >
                         {subItem.title}

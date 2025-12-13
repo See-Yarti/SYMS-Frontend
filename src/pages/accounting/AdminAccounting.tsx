@@ -39,13 +39,13 @@ import { PageLoadingSkeleton } from '@/components/ui/loading';
 import { toast } from 'sonner';
 
 const typeStyles: Record<AccountingType, string> = {
-  BOOKING_COMPLETED: 'bg-green-100 text-green-700 border-green-200',
-  NO_SHOW: 'bg-red-100 text-red-700 border-red-200',
-  FREE_CANCEL: 'bg-blue-100 text-blue-700 border-blue-200',
-  LATE_CANCEL: 'bg-amber-100 text-amber-700 border-amber-200',
-  CUSTOMER_FAULT: 'bg-purple-100 text-purple-700 border-purple-200',
-  OPERATOR_FAULT: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-  PARTIAL_USE: 'bg-cyan-100 text-cyan-700 border-cyan-200',
+  BOOKING_COMPLETED: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700',
+  NO_SHOW: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700',
+  FREE_CANCEL: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700',
+  LATE_CANCEL: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700',
+  CUSTOMER_FAULT: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-700',
+  OPERATOR_FAULT: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700',
+  PARTIAL_USE: 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-700',
 };
 
 const formatCurrency = (value: string | number) => {
@@ -369,8 +369,8 @@ const AdminAccounting: React.FC = () => {
     return (
       <div className="p-6 space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Admin Accounting</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Admin Accounting</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             View all financial transactions across all companies
           </p>
         </div>
@@ -383,12 +383,12 @@ const AdminAccounting: React.FC = () => {
     return (
       <div className="p-6 space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Admin Accounting</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Admin Accounting</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             View all financial transactions across all companies
           </p>
         </div>
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
+        <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4 text-red-800 dark:text-red-200">
           <div className="flex items-center gap-2 mb-2">
             <RefreshCw className="h-4 w-4" />
             <span className="font-medium">Unable to load accounting data</span>
@@ -428,8 +428,8 @@ const AdminAccounting: React.FC = () => {
       {/* Always Visible Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Admin Accounting</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Admin Accounting</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             View all financial transactions across all companies
           </p>
         </div>
@@ -482,7 +482,7 @@ const AdminAccounting: React.FC = () => {
         <>
           {/* Invoice Generator Section */}
           <Card className="overflow-hidden border-0 shadow-sm">
-            <div className="bg-stone-900 px-6 py-4 flex items-center gap-3">
+            <div className="bg-stone-900 dark:bg-stone-800 px-6 py-4 flex items-center gap-3">
               <div className="p-2 bg-orange-500 rounded-lg">
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
@@ -492,20 +492,20 @@ const AdminAccounting: React.FC = () => {
               </div>
             </div>
 
-            <CardContent className="p-6 bg-white">
+            <CardContent className="p-6 bg-card">
               <div className="mb-2">
-                <Label className="text-sm font-medium text-gray-700">Invoice Scope</Label>
+                <Label className="text-sm font-medium text-foreground">Invoice Scope</Label>
               </div>
 
               <div className="mb-6 flex items-center gap-4">
-                <div className="inline-flex h-14 px-3 py-1.5 rounded-lg border border-gray-200 p-1 bg-[#E5E7EB70]">
+                <div className="inline-flex h-14 px-3 py-1.5 rounded-lg border border-border p-1 bg-muted/50">
                   <button
                     onClick={() => setInvoiceMode('all')}
                     className={cn(
                       "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all",
                       invoiceMode === 'all'
-                        ? "bg-white text-gray-900 shadow-sm"
-                        : "text-gray-500 hover:text-gray-700"
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
                     )}
                   >
                     <Building2 className="h-4 w-4" />
@@ -516,8 +516,8 @@ const AdminAccounting: React.FC = () => {
                     className={cn(
                       "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all",
                       invoiceMode === 'single'
-                        ? "bg-white text-gray-900 shadow-sm"
-                        : "text-gray-500 hover:text-gray-700"
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
                     )}
                   >
                     <MapPin className="h-4 w-4" />
@@ -539,9 +539,9 @@ const AdminAccounting: React.FC = () => {
 
               <div className="flex items-end gap-4">
                 <div className="flex-1 space-y-2">
-                  <Label className="text-sm font-normal text-gray-700">Company</Label>
+                  <Label className="text-sm font-normal text-muted-foreground">Company</Label>
                   <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
-                    <SelectTrigger className="bg-white border-gray-200">
+                    <SelectTrigger className="bg-card border-border">
                       <SelectValue placeholder="Select Company" />
                     </SelectTrigger>
                     <SelectContent>
@@ -557,13 +557,13 @@ const AdminAccounting: React.FC = () => {
 
                 {invoiceMode === 'single' && (
                   <div className="flex-1 space-y-2">
-                    <Label className="text-sm font-normal text-gray-700">Location</Label>
+                    <Label className="text-sm font-normal text-muted-foreground">Location</Label>
                     <Select
                       value={selectedLocationId}
                       onValueChange={setSelectedLocationId}
                       disabled={!selectedCompanyId || selectedCompanyId === 'all'}
                     >
-                      <SelectTrigger className="bg-white border-gray-200">
+                      <SelectTrigger className="bg-card border-border">
                         <SelectValue placeholder="Select Location" />
                       </SelectTrigger>
                       <SelectContent>
@@ -579,31 +579,31 @@ const AdminAccounting: React.FC = () => {
                 )}
 
                 <div className="flex-1 space-y-2">
-                  <Label className="text-sm font-normal text-gray-700">Start Date</Label>
+                  <Label className="text-sm font-normal text-muted-foreground">Start Date</Label>
                   <Input
                     type="date"
                     value={invoiceDateFrom}
                     max={invoiceDateTo || undefined}
                     onChange={(e) => setInvoiceDateFrom(e.target.value)}
-                    className="bg-white border-gray-200"
+                    className="bg-card border-border"
                   />
                 </div>
 
                 <div className="flex-1 space-y-2">
-                  <Label className="text-sm font-normal text-gray-700">End Date</Label>
+                  <Label className="text-sm font-normal text-muted-foreground">End Date</Label>
                   <Input
                     type="date"
                     value={invoiceDateTo}
                     min={invoiceDateFrom || undefined}
                     onChange={(e) => setInvoiceDateTo(e.target.value)}
-                    className="bg-white border-gray-200"
+                    className="bg-card border-border"
                   />
                 </div>
               </div>
 
               {invoiceData && (
                 <div className="mt-4 flex items-center gap-3">
-                  <Button onClick={handleDownloadInvoice} variant="outline" className="border-green-500 text-green-600 hover:bg-green-50">
+                  <Button onClick={handleDownloadInvoice} variant="outline" className="border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20">
                     <Download className="mr-2 h-4 w-4" />
                     Download PDF
                   </Button>
@@ -615,8 +615,8 @@ const AdminAccounting: React.FC = () => {
 
           {/* Quick Search by ID Section */}
           <Card className="overflow-hidden border-0 shadow-sm">
-            <div className="bg-gradient-to-r from-orange-400 to-orange-300 px-6 py-4 flex items-center gap-3">
-              <div className="p-2 bg-white rounded-lg">
+            <div className="bg-gradient-to-r from-orange-400 to-orange-300 dark:from-orange-600 dark:to-orange-500 px-6 py-4 flex items-center gap-3">
+              <div className="p-2 bg-white dark:bg-white/90 rounded-lg">
                 <Zap className="h-5 w-5 text-[#FE6603]" />
               </div>
               <div>
@@ -625,17 +625,17 @@ const AdminAccounting: React.FC = () => {
               </div>
             </div>
 
-            <CardContent className="p-6 bg-white">
+            <CardContent className="p-6 bg-card">
               <div className="flex items-center gap-4">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="text"
                     placeholder="Enter transaction ID, company name, or location..."
                     value={quickSearchQuery}
                     onChange={(e) => setQuickSearchQuery(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleQuickSearch()}
-                    className="pl-10 bg-white border-gray-200"
+                    className="pl-10 bg-card border-border"
                   />
                 </div>
                 <Button
@@ -646,7 +646,7 @@ const AdminAccounting: React.FC = () => {
                   Search
                 </Button>
               </div>
-              <p className="text-sm text-gray-500 mt-3">
+              <p className="text-sm text-muted-foreground mt-3">
                 Search for individual records by ID, company, or location. For bulk data export, use the filters below.
               </p>
             </CardContent>
@@ -656,65 +656,65 @@ const AdminAccounting: React.FC = () => {
         <>
           {summary && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="border border-[#DBEAFE] shadow-sm bg-white">
+              <Card className="border border-blue-200 dark:border-blue-900/50 shadow-sm bg-card">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-normal text-gray-500">Total Refund</p>
-                      <p className="text-3xl font-medium text-gray-900 mt-1">
+                      <p className="text-sm font-normal text-muted-foreground">Total Refund</p>
+                      <p className="text-3xl font-medium text-foreground mt-1">
                         {Number(summary.totalRefund || 0).toLocaleString()}
                       </p>
                     </div>
-                    <div className="p-3 bg-[#EFF6FF] rounded-xl">
-                      <TrendingDown className="h-6 w-6 text-[#155DFC]" />
+                    <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                      <TrendingDown className="h-6 w-6 text-[#155DFC] dark:text-blue-400" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border border-[#F3E8FF] shadow-sm bg-white">
+              <Card className="border border-purple-200 dark:border-purple-900/50 shadow-sm bg-card">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-normal text-gray-500">Total Payout</p>
-                      <p className="text-3xl font-medium text-gray-900 mt-1">
+                      <p className="text-sm font-normal text-muted-foreground">Total Payout</p>
+                      <p className="text-3xl font-medium text-foreground mt-1">
                         {formatCurrency(summary.totalPayout)}
                       </p>
                     </div>
-                    <div className="p-3 bg-[#F2E8FFD9] rounded-xl">
-                      <DollarSign className="h-6 w-6 text-[#6700FF]" />
+                    <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
+                      <DollarSign className="h-6 w-6 text-[#6700FF] dark:text-purple-400" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border border-[#DCFCE7] shadow-sm bg-white">
+              <Card className="border border-green-200 dark:border-green-900/50 shadow-sm bg-card">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-normal text-gray-500">Total Commissions</p>
-                      <p className="text-3xl font-medium text-gray-900 mt-1">
+                      <p className="text-sm font-normal text-muted-foreground">Total Commissions</p>
+                      <p className="text-3xl font-medium text-foreground mt-1">
                         {formatCurrency(summary.totalCommission)}
                       </p>
                     </div>
-                    <div className="p-3 bg-[#F0FDF4] rounded-xl">
-                      <TrendingUp className="h-6 w-6 text-[#009410]" />
+                    <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
+                      <TrendingUp className="h-6 w-6 text-[#009410] dark:text-green-400" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border border-amber-200 shadow-sm bg-white">
+              <Card className="border border-amber-200 dark:border-amber-900/50 shadow-sm bg-card">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-normal text-gray-500">Total Records</p>
-                      <p className="text-3xl font-medium text-gray-900 mt-1">
+                      <p className="text-sm font-normal text-muted-foreground">Total Records</p>
+                      <p className="text-3xl font-medium text-foreground mt-1">
                         {summary.totalRecords}
                       </p>
                     </div>
-                    <div className="p-3 bg-[#FFB60017] rounded-xl">
-                      <ClipboardList className="h-6 w-6 text-[#DBB800]" />
+                    <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
+                      <ClipboardList className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                     </div>
                   </div>
                 </CardContent>
@@ -722,22 +722,22 @@ const AdminAccounting: React.FC = () => {
             </div>
           )}
 
-          <Card className="border border-[#E5E7EB] shadow-sm bg-white">
+          <Card className="border border-border shadow-sm bg-card">
             <CardContent className="p-6">
               <div className="flex items-center gap-4 mb-6">
                 <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="text"
                     placeholder="Search by ID, company, or location..."
                     value={tableSearchQuery}
                     onChange={(e) => setTableSearchQuery(e.target.value)}
-                    className="pl-10 bg-white border-gray-200"
+                    className="pl-10 bg-card border-border"
                   />
                 </div>
 
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[140px] bg-white border-gray-200">
+                  <SelectTrigger className="w-[140px] bg-card border-border">
                     <SelectValue placeholder="All Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -749,7 +749,7 @@ const AdminAccounting: React.FC = () => {
                 </Select>
 
                 <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
-                  <SelectTrigger className="w-[160px] bg-white border-gray-200">
+                  <SelectTrigger className="w-[160px] bg-card border-border">
                     <SelectValue placeholder="Last 30 days" />
                   </SelectTrigger>
                   <SelectContent>
@@ -773,33 +773,33 @@ const AdminAccounting: React.FC = () => {
 
               {filteredItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <ClipboardList className="h-12 w-12 text-gray-300 mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No accounting records found</h3>
-                  <p className="text-sm text-gray-500 max-w-md">
+                  <ClipboardList className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">No accounting records found</h3>
+                  <p className="text-sm text-muted-foreground max-w-md">
                     Try adjusting your filters. We will show accounting records that match your criteria as soon as they are available.
                   </p>
                 </div>
               ) : (
                 <>
-                  <div className="rounded-lg border border-gray-200 overflow-hidden">
+                  <div className="rounded-lg border border-border overflow-hidden">
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-gray-50">
-                          <TableHead className="font-semibold text-gray-700 truncate">Type</TableHead>
-                          <TableHead className="font-semibold text-gray-700 truncate">BookingID</TableHead>
-                          <TableHead className="font-semibold text-gray-700 truncate">Company</TableHead>
-                          <TableHead className="font-semibold text-gray-700 truncate">Status</TableHead>
-                          <TableHead className="font-semibold text-gray-700 truncate">Pickup Date</TableHead>
-                          <TableHead className="font-semibold text-gray-700 truncate">Drop Date</TableHead>
-                          <TableHead className="font-semibold text-gray-700 text-center truncate">Customer Refund</TableHead>
-                          <TableHead className="font-semibold text-gray-700 text-center truncate">Operator Payout</TableHead>
-                          <TableHead className="font-semibold text-gray-700 text-center truncate">Commission</TableHead>
-                          <TableHead className="font-semibold text-gray-700 text-center truncate">Created</TableHead>
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="font-semibold text-foreground truncate">Type</TableHead>
+                          <TableHead className="font-semibold text-foreground truncate">BookingID</TableHead>
+                          <TableHead className="font-semibold text-foreground truncate">Company</TableHead>
+                          <TableHead className="font-semibold text-foreground truncate">Status</TableHead>
+                          <TableHead className="font-semibold text-foreground truncate">Pickup Date</TableHead>
+                          <TableHead className="font-semibold text-foreground truncate">Drop Date</TableHead>
+                          <TableHead className="font-semibold text-foreground text-center truncate">Customer Refund</TableHead>
+                          <TableHead className="font-semibold text-foreground text-center truncate">Operator Payout</TableHead>
+                          <TableHead className="font-semibold text-foreground text-center truncate">Commission</TableHead>
+                          <TableHead className="font-semibold text-foreground text-center truncate">Created</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredItems.map((item: AccountingItem) => (
-                          <TableRow key={item.id} className="hover:bg-gray-50">
+                          <TableRow key={item.id} className="hover:bg-muted/50">
                             <TableCell>
                               <Badge
                                 variant="outline"
@@ -811,33 +811,33 @@ const AdminAccounting: React.FC = () => {
                                 {item.type.replace('_', ' ')}
                               </Badge>
                             </TableCell>
-                            <TableCell className="font-mono text-sm text-gray-600">
+                            <TableCell className="font-mono text-sm text-muted-foreground">
                               {item.bookingid.slice(0, 8)}
                             </TableCell>
-                            <TableCell className="font-medium text-gray-900 truncate">
+                            <TableCell className="font-medium text-foreground truncate">
                               {item.companyname || 'N/A'}
                             </TableCell>
                             <TableCell>
-                              <Badge variant="outline" className="text-xs bg-gray-100 text-gray-700 border-gray-200">
+                              <Badge variant="outline" className="text-xs bg-muted text-foreground border-border">
                                 {item.status}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-gray-600">
+                            <TableCell className="text-muted-foreground">
                               {formatDate(item.pickupat)}
                             </TableCell>
-                            <TableCell className="text-gray-600">
+                            <TableCell className="text-muted-foreground">
                               {formatDate(item.dropat)}
                             </TableCell>
-                            <TableCell className="text-center font-mono text-gray-900">
+                            <TableCell className="text-center font-mono text-foreground">
                               {formatCurrency(item.customerrefund)}
                             </TableCell>
-                            <TableCell className="text-center font-mono text-gray-900">
+                            <TableCell className="text-center font-mono text-foreground">
                               {formatCurrency(item.operatorpayout)}
                             </TableCell>
-                            <TableCell className="text-center font-mono text-gray-900">
+                            <TableCell className="text-center font-mono text-foreground">
                               {formatCurrency(item.yellacommission)}
                             </TableCell>
-                            <TableCell className="text-gray-600 text-sm truncate">
+                            <TableCell className="text-muted-foreground text-sm truncate">
                               {formatDateTime(item.createdat)}
                             </TableCell>
                           </TableRow>
@@ -847,7 +847,7 @@ const AdminAccounting: React.FC = () => {
                   </div>
 
                   <div className="flex items-center justify-between mt-6">
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       Showing {filteredItems.length} of {meta?.total || 0} transactions
                     </p>
                     <div className="flex items-center gap-2">
@@ -856,7 +856,7 @@ const AdminAccounting: React.FC = () => {
                         size="sm"
                         onClick={() => handlePageChange(currentPage - 1)}
                         disabled={currentPage <= 1}
-                        className="border-gray-200"
+                        className="border-border"
                       >
                         Previous
                       </Button>
@@ -883,7 +883,7 @@ const AdminAccounting: React.FC = () => {
                               "w-9",
                               currentPage === pageNum
                                 ? "bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
-                                : "border-gray-200"
+                                : "border-border"
                             )}
                           >
                             {pageNum}
@@ -896,7 +896,7 @@ const AdminAccounting: React.FC = () => {
                         size="sm"
                         onClick={() => handlePageChange(currentPage + 1)}
                         disabled={currentPage >= totalPages}
-                        className="border-gray-200"
+                        className="border-border"
                       >
                         Next
                       </Button>
