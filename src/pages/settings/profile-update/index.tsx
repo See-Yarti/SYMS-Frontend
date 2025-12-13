@@ -3,32 +3,58 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import {
-  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useUpdateOperator, useGetUserByEmail, useUpdateAdmin } from '@/hooks/useOperatorApi';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  useUpdateOperator,
+  useGetUserByEmail,
+  useUpdateAdmin,
+} from '@/hooks/useOperatorApi';
 import { useAppSelector } from '@/store';
+import {
+  User,
+  Mail,
+  Phone,
+  Building2,
+  MapPin,
+  Shield,
+  Calendar,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  AlertCircle,
+  Camera,
+  Briefcase,
+} from 'lucide-react';
 
 // Validation schema
 const profileFormSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
   phoneNumber: z.string().min(1, 'Phone number is required'),
-  gender: z.string().min(1, 'Gender is required'),
+  department: z.string().optional(),
+  location: z.string().optional(),
+  bio: z.string().optional(),
   avatar: z.any().optional(),
 });
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export default function ProfileUpdate() {
-  const { user: authUser, otherInfo } = useAppSelector(state => state.auth);
+  const { user: authUser, otherInfo } = useAppSelector((state) => state.auth);
   const email = authUser?.email || '';
+  const [isEditing, setIsEditing] = useState(false);
 
   // Fetch user profile from backend via email
   const { data, isLoading, isError, refetch } = useGetUserByEmail(email);
@@ -36,24 +62,40 @@ export default function ProfileUpdate() {
   // Get the actual user data from the API response
   const user = data?.data?.user;
 
-  const { mutate: updateOperator, isPending: isPendingOperator } = useUpdateOperator();
+  const { mutate: updateOperator, isPending: isPendingOperator } =
+    useUpdateOperator();
   const { mutate: updateAdmin, isPending: isPendingAdmin } = useUpdateAdmin();
+
+  // Split name into first and last
+  const nameParts = user?.name?.split(' ') || [];
+  const defaultFirstName = nameParts[0] || '';
+  const defaultLastName = nameParts.slice(1).join(' ') || '';
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
-      name: '',
+      firstName: '',
+      lastName: '',
       phoneNumber: '',
-      gender: '',
+      department: '',
+      location: '',
+      bio: '',
     },
   });
 
   useEffect(() => {
     if (user) {
+      const nameParts = user.name?.split(' ') || [];
+      const userAny = user as any;
       form.reset({
-        name: user.name || '',
+        firstName: nameParts[0] || '',
+        lastName: nameParts.slice(1).join(' ') || '',
         phoneNumber: user.phoneNumber || '',
-        gender: user.gender || '',
+        department: userAny.department || 'Operations',
+        location: userAny.location || 'Orlando, Florida',
+        bio:
+          userAny.bio ||
+          'Experienced administrator managing fleet operations and customer relations.',
       });
     }
   }, [user, form]);
@@ -63,27 +105,21 @@ export default function ProfileUpdate() {
       toast.error('User data not available');
       return;
     }
+    const fullName = `${values.firstName} ${values.lastName}`.trim();
     const payload = {
-      name: values.name,
+      name: fullName,
       phoneNumber: values.phoneNumber,
-      gender: values.gender,
-      avatar: values.avatar && values.avatar.length > 0 ? values.avatar[0] : undefined,
+      department: values.department,
+      location: values.location,
+      bio: values.bio,
+      avatar:
+        values.avatar && values.avatar.length > 0 ? values.avatar[0] : undefined,
     };
-
-    const hasChanges =
-      values.name !== user.name ||
-      values.phoneNumber !== user.phoneNumber ||
-      values.gender !== user.gender ||
-      (values.avatar && values.avatar.length > 0);
-
-    if (!hasChanges) {
-      toast.info('No changes detected');
-      return;
-    }
 
     const commonCallbacks = {
       onSuccess: () => {
         toast.success('Profile updated successfully');
+        setIsEditing(false);
         refetch();
       },
       onError: (error: any) => {
@@ -92,10 +128,8 @@ export default function ProfileUpdate() {
     };
 
     if (user.role === 'admin') {
-      // Hit admin update endpoint
       updateAdmin({ payload }, commonCallbacks);
     } else {
-      // Default to operator flow
       updateOperator({ operatorId: user.id, payload }, commonCallbacks);
     }
   };
@@ -131,116 +165,388 @@ export default function ProfileUpdate() {
 
   const formattedRole = displayRole
     .split(/(?=[A-Z])/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 
   const isSubmitting = isPendingOperator || isPendingAdmin;
 
+  // Get role permissions based on role
+  const getRolePermissions = () => {
+    if (user.role === 'admin' || displayRole === 'adminOperator') {
+      return ['Manage Users', 'Edit Settings', 'View Reports', 'Manage Bookings'];
+    }
+    if (displayRole === 'managerOperator') {
+      return ['View Reports', 'Manage Bookings', 'Edit Settings'];
+    }
+    if (displayRole === 'salesOperator') {
+      return ['Create Bookings', 'View Reports'];
+    }
+    return ['View Dashboard'];
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      ?.split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
-    <div className="p-6">
-      <div>
-        <h1 className="text-2xl font-bold mb-2">Update Profile</h1>
-        <p className="text-muted-foreground text-sm">
-          Keep your profile information up to date for a more secure and personalized experience.
+    <div className="min-h-screen dark:bg-background p-6">
+      {/* Page Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
+        <p className="text-muted-foreground text-sm mt-3">
+          Profile - Manage your account
         </p>
       </div>
 
-      {/* Current Profile Display */}
-      <div className="flex items-center gap-5 p-5 border border-border rounded-2xl bg-card shadow-sm mb-6">
-        <Avatar className="h-16 w-16">
-          <AvatarImage src={user.avatar || undefined} />
-          <AvatarFallback>{user.name?.charAt(0)?.toUpperCase()}</AvatarFallback>
-        </Avatar>
-        <div>
-          <div className="text-lg font-semibold">{user.name}</div>
-          <div className="text-sm text-muted-foreground">{user.email}</div>
-          <div className="text-xs text-muted-foreground">Role: {formattedRole}</div>
+      <div className="flex flex-col h-[330px] w-full rounded-2xl overflow-hidden shadow-sm mb-6">
+        <div className="flex-1 bg-[#1F1F1F] dark:bg-[#EA580C] px-9 py-7 flex items-center h-[175px]">
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-20 w-20 border-4 border-[#2A2A2A]">
+                <AvatarImage src={user.avatar || undefined} />
+                <AvatarFallback className="bg-white text-[#F97316] text-4xl font-normal">
+                  {getInitials(user.name)}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h2 className="text-2xl font-medium text-white">{user.name}</h2>
+                <p className="text-[#F9FAFB] text-sm">
+                  {formattedRole} • {(user as any).department || 'Operations'}
+                </p>
+                <div className="flex items-center gap-4 mt-2 text-xs text-[#F9FAFB]">
+                  <span className="flex items-center gap-1">
+                    <Mail className="w-3.5 h-3.5" />
+                    {user.email}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5" />
+                    {(user as any).location || 'Orlando, Florida'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <Button
+              onClick={() => setIsEditing(!isEditing)}
+              className="bg-[#F97316] hover:bg-[#EA580C] text-sm  text-white px-6 h-11"
+            >
+              {isEditing ? 'Cancel' : 'Edit Profile'}
+              {/* Edit Profile */}
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex-1 bg-white dark:bg-card p-6 flex items-cente h-[97px]">
+          <div className="w-full">
+            <div className="grid grid-cols-4 gap-4 bg-[#FFB58424] border border-[#FF802EBF] p-2 rounded-xl">
+              <div className="p-4">
+                <p className="text-xs mt-4 text-muted-foreground">Member Since</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-normal text-sm mt-1 text-foreground">
+                    {(user as any).createdAt
+                      ? new Date((user as any).createdAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        year: 'numeric',
+                      })
+                      : 'Jan 2023'}
+                  </span>
+                </div>
+              </div>
+              <div className="p-4">
+                <p className="text-xs mt-4 text-muted-foreground">Last Login</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <span className="font-normal text-sm truncate mt-1 text-foreground">2 hours ago</span>
+                </div>
+              </div>
+              <div className="p-4">
+                <p className="text-xs mt-4 text-muted-foreground">Account Status</p>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                  <span className="font-normal text-sm mt-1 text-green-600">Active</span>
+                </div>
+              </div>
+              <div className="p-4">
+                <p className="text-xs mt-4 text-muted-foreground">Verification</p>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[#155DFC]" />
+                  <span className="font-normal text-sm mt-1 text-[#1447E6]">Verified</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Update Form */}
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="Your name" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+      {/* Personal Information */}
+      <div className="bg-white dark:bg-card rounded-2xl p-6 mb-6 border border-border/40">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-[#FE6603] flex items-center justify-center">
+            <User className="w-5 h-5 text-white" />
+          </div>
+          <h3 className="text-lg font-medium text-foreground">
+            Personal Information
+          </h3>
+        </div>
 
-          <FormField
-            control={form.control}
-            name="phoneNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Phone Number</FormLabel>
-                <FormControl>
-                  <Input placeholder="Add your new phone number" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            <div className="grid grid-cols-2 gap-5">
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground text-sm font-normal">
+                      First Name
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          placeholder="First name"
+                          {...field}
+                          disabled={!isEditing}
+                          className="pl-10 bg-[#F9FAFB] dark:bg-muted border border-[#E5E7EB] rounded-lg"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <FormField
-            control={form.control}
-            name="gender"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Gender</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your gender" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground text-sm font-normal">
+                      Last Name
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Last name"
+                        {...field}
+                        disabled={!isEditing}
+                        className="bg-[#F9FAFB] dark:bg-muted border border-[#E5E7EB]"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-          <FormField
-            control={form.control}
-            name="avatar"
-            render={({ field }) => (
+            <div className="grid grid-cols-2 gap-5">
               <FormItem>
-                <FormLabel>Profile Picture</FormLabel>
-                <FormControl>
+                <FormLabel className="text-muted-foreground text-sm font-normal">
+                  Email Address
+                </FormLabel>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      if (e.target.files) {
-                        field.onChange(Array.from(e.target.files));
-                      }
-                    }}
+                    value={user.email}
+                    disabled
+                    className="pl-10 bg-[#F9FAFB] dark:bg-muted border border-[#E5E7EB]"
                   />
-                </FormControl>
-                <FormMessage />
+                </div>
               </FormItem>
-            )}
-          />
 
-          <div className="flex justify-end">
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Updating...' : 'Update Profile'}
+              <FormField
+                control={form.control}
+                name="phoneNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground text-sm font-normal">
+                      Phone Number
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          placeholder="+1 (407) 779-4604"
+                          {...field}
+                          disabled={!isEditing}
+                          className="pl-10 bg-[#F9FAFB] dark:bg-muted border border-[#E5E7EB]"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-5">
+              <FormField
+                control={form.control}
+                name="department"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground text-sm font-normal">
+                      Department
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Operations"
+                          {...field}
+                          disabled={!isEditing}
+                          className="pl-10 bg-[#F9FAFB] dark:bg-muted border border-[#E5E7EB]"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground text-sm font-normal">
+                      Location
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          placeholder="Orlando, Florida"
+                          {...field}
+                          disabled={!isEditing}
+                          className="pl-10 bg-[#F9FAFB] dark:bg-muted border border-[#E5E7EB]"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="bio"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-muted-foreground text-sm font-normal">Bio</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Tell us about yourself..."
+                      {...field}
+                      disabled={!isEditing}
+                      className="bg-[#F9FAFB] dark:bg-muted border border-[#E5E7EB] min-h-[100px] resize-none"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </form>
+        </Form>
+      </div>
+
+      {/* Role & Permissions */}
+      <div className="bg-white dark:bg-card rounded-2xl p-6 mb-6 border border-border/40">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-[#F56304] flex items-center justify-center">
+            <Briefcase className="w-5 h-5 text-white" />
+          </div>
+          <h3 className="text-lg font-medium text-foreground">
+            Role & Permissions
+          </h3>
+        </div>
+
+        <div className="bg-[#FFB58424] dark:bg-muted rounded-xl p-5 border border-[#FF802EBF]">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-[#F56304] flex items-center justify-center">
+              <Briefcase className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-normal text-foreground">
+                  {formattedRole === 'Admin' ? 'Administrator' : formattedRole}
+                </span>
+                <span className="text-xs px-2 py-0.5 bg-[#DCFCE7] text-[#16A34A] rounded-full font-normal">
+                  Full Access
+                </span>
+              </div>
+              <p className="text-sm font-normal text-muted-foreground mt-1">
+                You have complete control over the system including user
+                management, settings, and all data.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2 mt-4">
+            {getRolePermissions().map((permission) => (
+              <span
+                key={permission}
+                className="text-xs text-[#F56308] px-3 py-1.5 bg-white dark:bg-card border border-[#F56304] rounded-xl text-foreground"
+              >
+                {permission}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Danger Zone */}
+      <div className="bg-[#FEF2F2] dark:bg-red-950/20 rounded-2xl p-6 border border-[#FFC9C9] dark:border-red-900/40">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-[#E7000B] flex items-center justify-center">
+            <AlertCircle className="w-5 h-5 text-white" />
+          </div>
+          <h3 className="text-lg font-medium">Danger Zone</h3>
+        </div>
+
+        <div className="bg-white dark:bg-card rounded-xl p-5 border border-[#FFC9C9]">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-normal text-foreground">Deactivate Account</h4>
+              <p className="text-sm text-muted-foreground mt-1">
+                Temporarily disable your account. You can reactivate it anytime.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="border-[#E7000B] rounded-xl text-[#E7000B] hover:bg-[#FFF7ED] hover:text-[#EA580C]"
+            >
+              Deactivate
             </Button>
           </div>
-        </form>
-      </Form>
+        </div>
+      </div>
+
+      {/* Footer Buttons - Only show when editing */}
+      {isEditing && (
+        <div className="flex justify-end gap-3 mt-6">
+          <Button
+            variant="outline"
+            onClick={() => setIsEditing(false)}
+            className="border-gray-300 text-gray-700 hover:bg-gray-100"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={form.handleSubmit(onSubmit)}
+            disabled={isSubmitting}
+            className="bg-[#F97316] hover:bg-[#EA580C] text-white px-8"
+          >
+            {isSubmitting ? 'Updating...' : 'Update Profile'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

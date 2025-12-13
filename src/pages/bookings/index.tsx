@@ -192,29 +192,29 @@ const AllBookings: React.FC = () => {
 
   // Calculate stats
   const stats = React.useMemo(() => {
-  const allBookings = bookings; 
-  const totalBookings = meta.total; 
+    const allBookings = bookings;
+    const totalBookings = meta.total;
 
-  const activeRentals = allBookings.filter(
-    (b: any) => b.status === 'IN_PROGRESS' || b.status === 'CONFIRMED'
-  ).length;
+    const activeRentals = allBookings.filter(
+      (b: any) => b.status === 'IN_PROGRESS' || b.status === 'CONFIRMED'
+    ).length;
 
-  const pendingPayment = allBookings.filter(
-    (b: any) => b.paidStatus === 'UNPAID' || b.paidStatus === 'PENDING'
-  ).length;
+    const pendingPayment = allBookings.filter(
+      (b: any) => b.paidStatus === 'UNPAID' || b.paidStatus === 'PENDING'
+    ).length;
 
-  const revenue = allBookings.reduce((sum: number, b: any) => {
-    const total = parseFloat(b.totals?.grandTotal || '0');
-    return sum + (isNaN(total) ? 0 : total);
-  }, 0);
+    const revenue = allBookings.reduce((sum: number, b: any) => {
+      const total = parseFloat(b.totals?.grandTotal || '0');
+      return sum + (isNaN(total) ? 0 : total);
+    }, 0);
 
-  return {
-    totalBookings,
-    activeRentals,      
-    pendingPayment,     
-    revenue,            
-  };
-}, [bookings, meta.total]);
+    return {
+      totalBookings,
+      activeRentals,
+      pendingPayment,
+      revenue,
+    };
+  }, [bookings, meta.total]);
 
   const handleResetFilters = () => {
     setSearchTerm('');
@@ -245,7 +245,7 @@ const AllBookings: React.FC = () => {
   }
 
   return (
-    <div className="p-6 min-h-screen">
+    <div className="p-6 min-h-screen -ml-6">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-foreground">All Bookings</h1>
@@ -466,8 +466,8 @@ const AllBookings: React.FC = () => {
               ) : (
                 bookings.map((booking) => {
                   const statusKey = booking.status?.toUpperCase() ?? 'PENDING';
-                  const statusStyle = statusStyles[statusKey] ?? { 
-                    ...statusStyles.PENDING, 
+                  const statusStyle = statusStyles[statusKey] ?? {
+                    ...statusStyles.PENDING,
                     label: booking.status?.charAt(0).toUpperCase() + booking.status?.slice(1).toLowerCase() || 'Pending'
                   };
                   const paymentKey = booking.paidStatus?.toUpperCase() ?? 'UNPAID';
@@ -511,8 +511,8 @@ const AllBookings: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <span className={cn(
                             'w-2 h-2 rounded-full',
-                            booking.operationalLocation?.isAirportZone 
-                              ? 'bg-blue-500' 
+                            booking.operationalLocation?.isAirportZone
+                              ? 'bg-blue-500'
                               : 'bg-orange-500'
                           )} />
                           <span className="text-sm font-normal text-foreground">
