@@ -257,27 +257,27 @@ export default function CompaniesList() {
             {/* Main Content Card */}
             <Card className="bg-card border border-border shadow-sm rounded-xl overflow-hidden">
                 {/* Search and Filters */}
-                <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-gray-100">
+                <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-border">
                     {/* Search Input */}
                     <div className="relative w-full sm:w-96">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input
                             placeholder="Search companies by name, description..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="pl-10 bg-gray-50 border-gray-200 focus:bg-white truncate"
+                            className="pl-10 bg-muted/50 border-border focus:bg-background truncate"
                         />
                     </div>
 
                     {/* Filter Buttons and Add Button */}
                     <div className="flex items-center gap-3">
                         {/* Filter Toggle */}
-                        <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                        <div className="flex items-center bg-muted rounded-lg p-1">
                             <button
                                 onClick={() => handleFilterChange('all')}
                                 className={`px-4 py-1.5 truncate text-sm font-normal rounded-md transition-colors ${statusFilter === 'all'
-                                        ? 'bg-white text-gray-900 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
+                                        ? 'bg-card text-foreground shadow-sm'
+                                        : 'text-muted-foreground hover:text-foreground'
                                     }`}
                             >
                                 All
@@ -285,8 +285,8 @@ export default function CompaniesList() {
                             <button
                                 onClick={() => handleFilterChange('verified')}
                                 className={`px-4 py-1.5 truncate text-sm font-normal rounded-md transition-colors ${statusFilter === 'verified'
-                                        ? 'bg-white text-gray-900 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
+                                        ? 'bg-card text-foreground shadow-sm'
+                                        : 'text-muted-foreground hover:text-foreground'
                                     }`}
                             >
                                 Verified
@@ -294,8 +294,8 @@ export default function CompaniesList() {
                             <button
                                 onClick={() => handleFilterChange('not_verified')}
                                 className={`px-4 py-1.5 truncate text-sm font-normal rounded-md transition-colors ${statusFilter === 'not_verified'
-                                        ? 'bg-white text-gray-900 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-900'
+                                        ? 'bg-card text-foreground shadow-sm'
+                                        : 'text-muted-foreground hover:text-foreground'
                                     }`}
                             >
                                 Not Verified
@@ -316,29 +316,29 @@ export default function CompaniesList() {
                 {/* Table */}
                 <div className="overflow-x-auto">
                     <table className="w-full">
-                        <thead className="bg-gray-50 border-b border-gray-100">
+                        <thead className="bg-muted/50 border-b border-border">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                     Company
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                     Description
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                     Created At
                                 </th>
-                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                <th className="px-6 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                     Status
                                 </th>
-                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                <th className="px-6 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                                     Actions
                                 </th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-border">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                                    <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
                                         <div className="flex items-center justify-center gap-2">
                                             <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
                                             Loading...
@@ -356,13 +356,13 @@ export default function CompaniesList() {
                                 </tr>
                             ) : companies.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                                    <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
                                         No companies found
                                     </td>
                                 </tr>
                             ) : (
                                 companies.map((company: any) => (
-                                    <tr key={company.id} className="hover:bg-gray-50 transition-colors">
+                                    <tr key={company.id} className="hover:bg-muted/50 transition-colors">
                                         {/* Company */}
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center gap-3">
@@ -377,31 +377,31 @@ export default function CompaniesList() {
                                                         {getInitials(company.name)}
                                                     </div>
                                                 )}
-                                                <span className="font-normal text-gray-900">{company.name}</span>
+                                                <span className="font-normal text-foreground">{company.name}</span>
                                             </div>
                                         </td>
 
                                         {/* Description */}
                                         <td className="px-6 py-4">
-                                            <span className="text-[#1A1A1A] text-sm line-clamp-1 max-w-[200px]">
+                                            <span className="text-foreground text-sm line-clamp-1 max-w-[200px]">
                                                 {company.description || '—'}
                                             </span>
                                         </td>
 
                                         {/* Created At */}
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="text-[#1A1A1A]">{formatDateTime(company.createdAt)}</span>
+                                            <span className="text-foreground">{formatDateTime(company.createdAt)}</span>
                                         </td>
 
                                         {/* Status */}
                                         <td className="px-6 py-4 whitespace-nowrap text-center">
                                             {company.isVerified ? (
-                                                <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium border border-[#A4F4CF] rounded-lg bg-[#ECFDF5] text-[#007A55]">
+                                                <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium border border-green-300 dark:border-green-700 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300">
                                                     <CheckCircle2 className="w-3.5 h-3.5" />
                                                     Verified
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium border border-[#FEE685] rounded-lg bg-[#FFFBEB] text-[#BB4D00]">
+                                                <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium border border-amber-300 dark:border-amber-700 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
                                                     <XCircle className="w-3.5 h-3.5" />
                                                     Not Verified
                                                 </span>
@@ -414,7 +414,7 @@ export default function CompaniesList() {
                                                 {/* View */}
                                                 <Link
                                                     to={`/companies/${company.id}`}
-                                                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                                                 >
                                                     <Eye className="w-4 h-4" />
                                                 </Link>
@@ -425,7 +425,7 @@ export default function CompaniesList() {
                                                         setUpdateCompanyId(company.id);
                                                         setUpdateCompanyData(company);
                                                     }}
-                                                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                                                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                                                 >
                                                     <Pencil className="w-4 h-4" />
                                                 </button>
@@ -433,7 +433,7 @@ export default function CompaniesList() {
                                                 {/* Delete */}
                                                 <button
                                                     onClick={() => setDeleteCompanyId(company.id)}
-                                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                    className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
@@ -441,7 +441,7 @@ export default function CompaniesList() {
                                                 {/* More Options */}
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                                                        <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors">
                                                             <MoreVertical className="w-4 h-4" />
                                                         </button>
                                                     </DropdownMenuTrigger>
@@ -481,10 +481,10 @@ export default function CompaniesList() {
 
                 {/* Pagination */}
                 {companies.length > 0 && (
-                    <div className="px-6 py-4 flex items-center justify-between border-t border-gray-100">
-                        <p className="text-sm text-gray-500">
-                            Showing <span className="font-medium text-gray-900">{companies.length}</span> of{' '}
-                            <span className="font-medium text-gray-900">{total}</span> companies 
+                    <div className="px-6 py-4 flex items-center justify-between border-t border-border">
+                        <p className="text-sm text-muted-foreground">
+                            Showing <span className="font-medium text-foreground">{companies.length}</span> of{' '}
+                            <span className="font-medium text-foreground">{total}</span> companies 
                         </p>
 
                         <div className="flex items-center gap-1">
@@ -493,7 +493,7 @@ export default function CompaniesList() {
                                 size="sm"
                                 onClick={() => setPage(p => Math.max(1, p - 1))}
                                 disabled={currentPage === 1}
-                                className="text-gray-600"
+                                className="text-muted-foreground"
                             >
                                 Previous
                             </Button>
@@ -515,7 +515,7 @@ export default function CompaniesList() {
                                         variant={currentPage === pageNum ? 'default' : 'outline'}
                                         size="sm"
                                         onClick={() => setPage(pageNum)}
-                                        className={currentPage === pageNum ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'text-gray-600'}
+                                        className={currentPage === pageNum ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'text-muted-foreground'}
                                     >
                                         {pageNum}
                                     </Button>
@@ -527,7 +527,7 @@ export default function CompaniesList() {
                                 size="sm"
                                 onClick={() => setPage(p => p + 1)}
                                 disabled={!canGoForward}
-                                className="text-gray-600"
+                                className="text-muted-foreground"
                             >
                                 Next
                             </Button>

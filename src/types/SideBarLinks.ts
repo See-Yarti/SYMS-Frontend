@@ -11,6 +11,9 @@ import {
   PanelRightDashed,
   Calculator,
   Settings,
+  User,
+  Shield,
+  Palette,
 } from 'lucide-react';
 import { OperatorRole, UserRole } from './auth';
 
@@ -142,11 +145,36 @@ export const sideBarLinks: SideBarItem[] = [
   },
   {
     title: 'Settings',
-    type: 'routed',
-    url: '/settings',
+    type: 'dropdown',
     slug: 'settings',
     icon: Settings,
     roles: ['admin', 'adminOperator', 'managerOperator', 'salesOperator'],
+    items: [
+      {
+        title: 'Profile',
+        slug: 'profile',
+        url: '/settings/profile',
+        type: 'routed',
+        icon: User,
+        roles: ['admin', 'adminOperator', 'managerOperator', 'salesOperator'],
+      },
+      {
+        title: 'Security',
+        slug: 'security',
+        url: '/settings/security',
+        type: 'routed',
+        icon: Shield,
+        roles: ['admin', 'adminOperator', 'managerOperator', 'salesOperator'],
+      },
+      {
+        title: 'Appearance',
+        slug: 'appearance',
+        url: '/settings/appearance',
+        type: 'routed',
+        icon: Palette,
+        roles: ['admin', 'adminOperator', 'managerOperator', 'salesOperator'],
+      },
+    ],
   },
   // {
   //   type: 'separation',

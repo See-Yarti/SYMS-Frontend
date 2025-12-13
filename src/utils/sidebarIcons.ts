@@ -15,6 +15,9 @@ import {
   Settings,
   Calendar,
   FileText,
+  User,
+  Shield,
+  Palette,
 } from 'lucide-react';
 
 // Import ONLY your custom SVG wrapper components
@@ -44,6 +47,14 @@ export function getSidebarIcon(name: string) {
     case 'adminaccounting':
     case 'operatoraccounting':
       return AccountingIcon;
+
+    // Settings sub-items
+    case 'profile':
+      return User;
+    case 'security':
+      return Shield;
+    case 'appearance':
+      return Palette;
 
     // Everything else stays on Lucide icons
     case 'rate':
