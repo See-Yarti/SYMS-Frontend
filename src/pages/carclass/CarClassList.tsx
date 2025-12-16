@@ -547,7 +547,7 @@ const CarClassList = () => {
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages || totalPages === 0}
-                className="text-gray-600"
+                className="text-muted-foreground"
               >
                 Next
               </Button>
@@ -647,57 +647,57 @@ const CarClassList = () => {
             {/* Category Display as Chips with Remove Button */}
             <div>
               <Label className="text-sm font-medium mb-1 block">Category</Label>
-              <div className="flex flex-wrap items-center gap-2 bg-white border border-input rounded-lg px-3 py-2 min-h-[36px]">
+              <div className="flex flex-wrap items-center gap-2 bg-background border border-input rounded-lg px-3 py-2 min-h-[36px]">
                 {size && (
-                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 rounded-full">
                     {VEHICLE_SIZES.find(s => s.code === size)?.name || size}
                     <button
                       type="button"
                       onClick={() => addSetValue('size', '', { shouldValidate: true })}
-                      className="ml-1.5 w-4 h-4 flex items-center justify-center rounded-full hover:bg-blue-200 transition-colors"
+                      className="ml-1.5 w-4 h-4 flex items-center justify-center rounded-full hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
                     >
                       <span className="text-xs font-bold">×</span>
                     </button>
                   </span>
                 )}
                 {body && (
-                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 rounded-full">
                     {BODY_TYPES.find(b => b.code === body)?.name || body}
                     <button
                       type="button"
                       onClick={() => addSetValue('body', '', { shouldValidate: true })}
-                      className="ml-1.5 w-4 h-4 flex items-center justify-center rounded-full hover:bg-green-200 transition-colors"
+                      className="ml-1.5 w-4 h-4 flex items-center justify-center rounded-full hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
                     >
                       <span className="text-xs font-bold">×</span>
                     </button>
                   </span>
                 )}
                 {transmission && (
-                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
+                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200 rounded-full">
                     {TRANSMISSION_TYPES.find(t => t.code === transmission)?.name || transmission}
                     <button
                       type="button"
                       onClick={() => addSetValue('transmission', '', { shouldValidate: true })}
-                      className="ml-1.5 w-4 h-4 flex items-center justify-center rounded-full hover:bg-purple-200 transition-colors"
+                      className="ml-1.5 w-4 h-4 flex items-center justify-center rounded-full hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors"
                     >
                       <span className="text-xs font-bold">×</span>
                     </button>
                   </span>
                 )}
                 {fuel && (
-                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">
+                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 rounded-full">
                     {FUEL_TYPES.find(f => f.code === fuel)?.name || fuel}
                     <button
                       type="button"
                       onClick={() => addSetValue('fuel', '', { shouldValidate: true })}
-                      className="ml-1.5 w-4 h-4 flex items-center justify-center rounded-full hover:bg-yellow-200 transition-colors"
+                      className="ml-1.5 w-4 h-4 flex items-center justify-center rounded-full hover:bg-yellow-200 dark:hover:bg-yellow-800 transition-colors"
                     >
                       <span className="text-xs font-bold">×</span>
                     </button>
                   </span>
                 )}
                 {!size && !body && !transmission && !fuel && (
-                  <span className="text-sm text-gray-400">Select options above</span>
+                  <span className="text-sm text-muted-foreground">Select options above</span>
                 )}
               </div>
             </div>
@@ -710,16 +710,16 @@ const CarClassList = () => {
                 type="text"
                 placeholder="Enter description (e.g., Economy Car)"
                 {...register('description')}
-                className="w-full px-3 py-2 text-sm border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                className="w-full px-3 py-2 text-sm border border-input rounded-lg bg-background text-foreground focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               />
               {addErrors.description && <p className="text-xs text-red-500 mt-1">{addErrors.description.message}</p>}
             </div>
 
             {/* ACRISS Code */}
-            <div className="bg-orange-50 border border-orange-300 rounded-lg p-3">
+            <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-300 dark:border-orange-700 rounded-lg p-3">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium">ACRISS Code:</Label>
-                <Badge variant="secondary" className="font-mono text-lg bg-white border px-3 py-1">
+                <Badge variant="secondary" className="font-mono text-lg bg-background border border-border px-3 py-1">
                   {acrissCode.replace(/_/g, '') || '____'}
                 </Badge>
               </div>
