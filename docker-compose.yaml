@@ -3,6 +3,6 @@ services:
     image: ${DOCKER_IMAGE}
     build: .
     ports:
-      - "127.0.0.1:1001:3000"
+      - "1001:3000"
     env_file:
       - .env 
