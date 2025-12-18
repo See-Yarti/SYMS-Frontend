@@ -388,8 +388,8 @@ const CompanyForm: React.FC = () => {
                                 <User className="w-6 h-6 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-medium text-gray-900">Operator Information</h2>
-                                <p className="text-sm text-gray-500">Enter the operator's personal details and credentials</p>
+                                <h2 className="text-xl font-medium text-foreground">Operator Information</h2>
+                                <p className="text-sm text-muted-foreground">Enter the operator's personal details and credentials</p>
                             </div>
                         </div>
 
@@ -399,13 +399,13 @@ const CompanyForm: React.FC = () => {
                                 Full Name <span className="text-red-500">*</span>
                             </Label>
                             <div className="relative">
-                                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                                 <Input
                                     id="operatorName"
                                     type="text"
                                     placeholder="Enter full name"
                                     {...register('operatorName')}
-                                    className="pl-10 h-11 bg-gray-50 border-gray-200"
+                                    className="pl-10 h-11 bg-muted border-input"
                                 />
                             </div>
                             {errors.operatorName && (
@@ -420,13 +420,13 @@ const CompanyForm: React.FC = () => {
                                     Email Address <span className="text-red-500">*</span>
                                 </Label>
                                 <div className="relative">
-                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                                     <Input
                                         id="operatorEmail"
                                         type="email"
                                         placeholder="operator@company.com"
                                         {...register('operatorEmail')}
-                                        className="pl-10 h-11 bg-gray-50 border-gray-200"
+                                        className="pl-10 h-11 bg-muted border-input"
                                     />
                                 </div>
                                 {errors.operatorEmail && (
@@ -450,7 +450,7 @@ const CompanyForm: React.FC = () => {
                                             onChange={field.onChange}
                                             value={field.value}
                                             placeholder="50 123 4567"
-                                            className="flex h-11 w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm"
+                                            className="flex h-11 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm"
                                         />
                                     )}
                                 />
@@ -467,23 +467,23 @@ const CompanyForm: React.FC = () => {
                                     Password <span className="text-red-500">*</span>
                                 </Label>
                                 <div className="relative">
-                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                                     <Input
                                         id="password"
                                         type={showPassword ? "text" : "password"}
                                         placeholder="Create strong password"
                                         {...register('password')}
-                                        className="pl-10 pr-10 h-11 bg-gray-50 border-gray-200"
+                                        className="pl-10 pr-10 h-11 bg-muted border-input"
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                     >
                                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                     </button>
                                 </div>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs text-muted-foreground">
                                     Must contain uppercase, number, special character, and be at least 8 characters
                                 </p>
                                 {errors.password && (
@@ -496,18 +496,18 @@ const CompanyForm: React.FC = () => {
                                     Confirm Password <span className="text-red-500">*</span>
                                 </Label>
                                 <div className="relative">
-                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                                     <Input
                                         id="confirmPassword"
                                         type={showConfirmPassword ? "text" : "password"}
                                         placeholder="Re-enter password"
                                         {...register('confirmPassword')}
-                                        className="pl-10 pr-10 h-11 bg-gray-50 border-gray-200"
+                                        className="pl-10 pr-10 h-11 bg-muted border-input"
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                                     >
                                         {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                     </button>
@@ -529,8 +529,8 @@ const CompanyForm: React.FC = () => {
                                 <Building2 className="w-6 h-6 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-medium text-gray-900">Company Information</h2>
-                                <p className="text-sm text-gray-500">Enter your company details and business information</p>
+                                <h2 className="text-xl font-medium text-foreground">Company Information</h2>
+                                <p className="text-sm text-muted-foreground">Enter your company details and business information</p>
                             </div>
                         </div>
 
@@ -544,7 +544,7 @@ const CompanyForm: React.FC = () => {
                                 type="text"
                                 placeholder="Enter company name"
                                 {...register('companyName')}
-                                className="h-11 bg-gray-50 border-gray-200"
+                                className="h-11 bg-muted border-input"
                             />
                             {errors.companyName && (
                                 <p className="text-sm text-red-500">{errors.companyName.message}</p>
@@ -555,26 +555,26 @@ const CompanyForm: React.FC = () => {
                         <div className="space-y-2 relative">
                             <Label htmlFor="companyKey" className="text-sm font-normal flex items-center gap-2">
                                 Company Key <span className="text-red-500">*</span>
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-[#155DFC] bg-[#EFF6FF] rounded-full">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-[#155DFC] bg-blue-100 dark:bg-blue-900/50 rounded-full">
                                     <Sparkles className="w-3 h-3" />
                                     Auto-generated
                                 </span>
                             </Label>
                             <div className="relative">
-                                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6B7280]" />
+                                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     id="companyKey"
                                     type="text"
                                     placeholder="ACME-2025"
                                     value={companyKey}
                                     onChange={(e) => setValue('companyKey', e.target.value.toUpperCase(), { shouldValidate: true })}
-                                    className="pl-10 pr-10 h-11 bg-[#FFB58424] text-[#1A1A1A] border-orange-300 uppercase"
+                                    className="pl-10 pr-10 h-11 bg-orange-50 dark:bg-orange-950/30 text-foreground border-orange-300 dark:border-orange-700 uppercase"
                                 />
                                 <button
                                     type="button"
                                     onClick={generateCompanyKey}
                                     disabled={isSuggesting || !companyName}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white disabled:opacity-50"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground disabled:opacity-50"
                                 >
                                     {isSuggesting ? (
                                         <Icons.spinner className="h-4 w-4 animate-spin" />
@@ -583,7 +583,7 @@ const CompanyForm: React.FC = () => {
                                     )}
                                 </button>
                             </div>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                                 This unique identifier will be used for system integration
                             </p>
                             {errors.companyKey && (
@@ -592,7 +592,7 @@ const CompanyForm: React.FC = () => {
                             {companyKey.length >= 2 && !errors.companyKey && (
                                 <div className="flex items-center gap-2">
                                     {isCheckingKey ? (
-                                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                                        <span className="text-xs text-muted-foreground flex items-center gap-1">
                                             <Icons.spinner className="h-3 w-3 animate-spin" />
                                             Checking availability...
                                         </span>
@@ -610,13 +610,13 @@ const CompanyForm: React.FC = () => {
                                 </div>
                             )}
                             {showSuggestions && suggestions.length > 0 && (
-                                <div className="company-key-suggestions absolute z-50 top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-auto">
+                                <div className="company-key-suggestions absolute z-50 top-full mt-1 w-full bg-card border border-border rounded-lg shadow-lg max-h-40 overflow-auto">
                                     <div className="p-2">
-                                        <p className="text-xs text-gray-500 mb-2 px-2">Suggestions:</p>
+                                        <p className="text-xs text-muted-foreground mb-2 px-2">Suggestions:</p>
                                         {suggestions.map((suggestion) => (
                                             <div
                                                 key={suggestion}
-                                                className="px-3 py-2 hover:bg-gray-100 cursor-pointer rounded flex items-center justify-between"
+                                                className="px-3 py-2 hover:bg-muted cursor-pointer rounded flex items-center justify-between"
                                                 onMouseDown={() => handleSelectSuggestion(suggestion)}
                                             >
                                                 <span className="font-medium uppercase">{suggestion}-{new Date().getFullYear()}</span>
@@ -637,9 +637,9 @@ const CompanyForm: React.FC = () => {
                                 id="companyDescription"
                                 placeholder="Provide a brief description of your company's services and operations..."
                                 {...register('companyDescription')}
-                                className="min-h-[120px] bg-gray-50 border-gray-200"
+                                className="min-h-[120px] bg-muted border-input"
                             />
-                            <p className="text-xs text-gray-500">Minimum 50 characters recommended</p>
+                            <p className="text-xs text-muted-foreground">Minimum 50 characters recommended</p>
                             {errors.companyDescription && (
                                 <p className="text-sm text-red-500">{errors.companyDescription.message}</p>
                             )}
@@ -656,8 +656,8 @@ const CompanyForm: React.FC = () => {
                                 <MapPin className="w-6 h-6 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-medium text-gray-900">Company Address</h2>
-                                <p className="text-sm text-gray-500">Provide the company's physical location details</p>
+                                <h2 className="text-xl font-medium text-foreground">Company Address</h2>
+                                <p className="text-sm text-muted-foreground">Provide the company's physical location details</p>
                             </div>
                         </div>
 
@@ -672,8 +672,8 @@ const CompanyForm: React.FC = () => {
                                     control={control}
                                     render={({ field }) => (
                                         <Select onValueChange={field.onChange} value={field.value}>
-                                            <SelectTrigger className="h-11 bg-gray-50 border-gray-200">
-                                                <Globe className="w-5 h-5 mr-2 text-gray-400" />
+                                            <SelectTrigger className="h-11 bg-muted border-input">
+                                                <Globe className="w-5 h-5 mr-2 text-muted-foreground" />
                                                 <SelectValue placeholder="Select country" />
                                             </SelectTrigger>
                                             <SelectContent className="max-h-60">
@@ -706,8 +706,8 @@ const CompanyForm: React.FC = () => {
                                                 value={field.value}
                                                 disabled={!selectedCountry || !states.length}
                                             >
-                                                <SelectTrigger className="h-11 bg-gray-50 border-gray-200">
-                                                    <Building className="w-5 h-5 mr-2 text-gray-500" />
+                                                <SelectTrigger className="h-11 bg-muted border-input">
+                                                    <Building className="w-5 h-5 mr-2 text-muted-foreground" />
                                                     <SelectValue placeholder={!selectedCountry ? "Select country first" : "Select state"} />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -744,7 +744,7 @@ const CompanyForm: React.FC = () => {
                                                     placeholder="Enter city name"
                                                     value={field.value || ''}
                                                     onChange={field.onChange}
-                                                    className="h-11 bg-gray-50 border-gray-200"
+                                                    className="h-11 bg-muted border-input"
                                                 />
                                             );
                                         }
@@ -754,7 +754,7 @@ const CompanyForm: React.FC = () => {
                                                 value={field.value}
                                                 disabled={!selectedCountry || !selectedState}
                                             >
-                                                <SelectTrigger className="h-11 bg-gray-50 border-gray-200">
+                                                <SelectTrigger className="h-11 bg-muted border-input">
                                                     <SelectValue placeholder="Select city" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -781,7 +781,7 @@ const CompanyForm: React.FC = () => {
                                     id="postalCode"
                                     placeholder="12345"
                                     {...register('companyAddress.postalCode')}
-                                    className="h-11 bg-gray-50 border-gray-200"
+                                    className="h-11 bg-muted border-input"
                                 />
                             </div>
                         </div>
@@ -795,7 +795,7 @@ const CompanyForm: React.FC = () => {
                                 id="street"
                                 placeholder="Street name, building number"
                                 {...register('companyAddress.street')}
-                                className="h-11 bg-gray-50 border-gray-200"
+                                className="h-11 bg-muted border-input"
                             />
                             {errors.companyAddress?.street && (
                                 <p className="text-sm text-red-500">{errors.companyAddress.street.message}</p>
@@ -811,7 +811,7 @@ const CompanyForm: React.FC = () => {
                                 id="apartment"
                                 placeholder="Apartment, suite, unit, building, floor, etc."
                                 {...register('companyAddress.apartment')}
-                                className="h-11 bg-gray-50 border-gray-200"
+                                className="h-11 bg-muted border-input"
                             />
                         </div>
 
@@ -824,7 +824,7 @@ const CompanyForm: React.FC = () => {
                                 id="additionalInfo"
                                 placeholder="Any landmarks or additional information to help locate your office..."
                                 {...register('companyAddress.additionalInfo')}
-                                className="h-11 bg-gray-50 border-gray-200"
+                                className="h-11 bg-muted border-input"
                             />
                         </div>
                     </div>
@@ -839,8 +839,8 @@ const CompanyForm: React.FC = () => {
                                 <FileText className="w-6 h-6 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-medium text-gray-900">Documents & Verification</h2>
-                                <p className="text-sm text-gray-500">Upload required documents for company verification</p>
+                                <h2 className="text-xl font-medium text-foreground">Documents & Verification</h2>
+                                <p className="text-sm text-muted-foreground">Upload required documents for company verification</p>
                             </div>
                         </div>
 
@@ -852,7 +852,7 @@ const CompanyForm: React.FC = () => {
                                     <TooltipProvider>
                                         <Tooltip>
                                             <TooltipTrigger>
-                                                <Info className="h-4 w-4 text-gray-400" />
+                                                <Info className="h-4 w-4 text-muted-foreground" />
                                             </TooltipTrigger>
                                             <TooltipContent>
                                                 <p>Your company's official tax registration number</p>
@@ -864,7 +864,7 @@ const CompanyForm: React.FC = () => {
                                     id="companyTaxNumber"
                                     placeholder="Enter tax registration number"
                                     {...register('companyTaxNumber')}
-                                    className="h-11 bg-gray-50 border-gray-200"
+                                    className="h-11 bg-muted border-input"
                                 />
                                 {errors.companyTaxNumber && (
                                     <p className="text-sm text-red-500">{errors.companyTaxNumber.message}</p>
@@ -877,7 +877,7 @@ const CompanyForm: React.FC = () => {
                                     <TooltipProvider>
                                         <Tooltip>
                                             <TooltipTrigger>
-                                                <Info className="h-4 w-4 text-gray-400" />
+                                                <Info className="h-4 w-4 text-muted-foreground" />
                                             </TooltipTrigger>
                                             <TooltipContent>
                                                 <p>Your company's trade license registration number</p>
@@ -889,7 +889,7 @@ const CompanyForm: React.FC = () => {
                                     id="companyTradeLicenseIssueNumber"
                                     placeholder="Enter trade license number"
                                     {...register('companyTradeLicenseIssueNumber')}
-                                    className="h-11 bg-gray-50 border-gray-200"
+                                    className="h-11 bg-muted border-input"
                                 />
                                 {errors.companyTradeLicenseIssueNumber && (
                                     <p className="text-sm text-red-500">{errors.companyTradeLicenseIssueNumber.message}</p>
@@ -910,10 +910,10 @@ const CompanyForm: React.FC = () => {
                                         <PopoverTrigger asChild>
                                             <Button
                                                 variant="outline"
-                                                className="w-full h-11 justify-start text-left font-normal bg-gray-50 border-gray-200"
+                                                className="w-full h-11 justify-start text-left font-normal bg-muted border-input"
                                             >
-                                                <CalendarIcon className="mr-2 h-4 w-4 text-gray-400" />
-                                                {field.value ? format(field.value, 'MM/dd/yyyy') : <span className="text-gray-400">Pick a date</span>}
+                                                <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                                                {field.value ? format(field.value, 'MM/dd/yyyy') : <span className="text-muted-foreground">Pick a date</span>}
                                             </Button>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto p-0">
@@ -938,37 +938,37 @@ const CompanyForm: React.FC = () => {
                             <div className="space-y-2">
                                 <Label className="text-sm font-normal">
                                     Tax Certificate <span className="text-red-500">*</span>
-                                    <span className="text-xs text-gray-400 ml-2">(PDF, JPG, PNG - Max 5MB)</span>
+                                    <span className="text-xs text-muted-foreground ml-2">(PDF, JPG, PNG - Max 5MB)</span>
                                 </Label>
                                 <div
                                     {...getTaxRootProps()}
                                     className={cn(
                                         "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all",
                                         isTaxDragActive
-                                            ? "border-orange-400 bg-orange-50"
+                                            ? "border-orange-400 bg-orange-50 dark:bg-orange-950/30"
                                             : watch('companyTaxFile')
-                                                ? "border-green-400 bg-green-50"
-                                                : "border-gray-200 bg-gray-50 hover:border-orange-300 hover:bg-orange-50"
+                                                ? "border-green-400 bg-green-50 dark:bg-green-950/30"
+                                                : "border-border bg-muted hover:border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/30"
                                     )}
                                 >
                                     <input {...getTaxInputProps()} />
                                     {watch('companyTaxFile') ? (
                                         <div className="flex flex-col items-center gap-2">
-                                            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                                            <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
                                                 <Check className="w-6 h-6 text-green-500" />
                                             </div>
                                             <p className="font-medium text-sm truncate max-w-full">{watch('companyTaxFile').name}</p>
-                                            <p className="text-xs text-gray-500">Click to replace</p>
+                                            <p className="text-xs text-muted-foreground">Click to replace</p>
                                         </div>
                                     ) : (
                                         <div className="flex flex-col items-center gap-2">
-                                            <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
+                                            <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center">
                                                 <Upload className="w-6 h-6 text-orange-500" />
                                             </div>
-                                            <p className="text-sm font-medium text-gray-700">
+                                            <p className="text-sm font-medium text-foreground">
                                                 Drop file here or click to upload
                                             </p>
-                                            <p className="text-xs text-gray-500">Tax certificate document</p>
+                                            <p className="text-xs text-muted-foreground">Tax certificate document</p>
                                         </div>
                                     )}
                                 </div>
@@ -981,37 +981,37 @@ const CompanyForm: React.FC = () => {
                             <div className="space-y-2">
                                 <Label className="text-sm font-normal">
                                     Trade License <span className="text-red-500">*</span>
-                                    <span className="text-xs text-gray-400 ml-2">(PDF, JPG, PNG - Max 5MB)</span>
+                                    <span className="text-xs text-muted-foreground ml-2">(PDF, JPG, PNG - Max 5MB)</span>
                                 </Label>
                                 <div
                                     {...getLicenseRootProps()}
                                     className={cn(
                                         "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all",
                                         isLicenseDragActive
-                                            ? "border-orange-400 bg-orange-50"
+                                            ? "border-orange-400 bg-orange-50 dark:bg-orange-950/30"
                                             : watch('companyTradeLicenseFile')
-                                                ? "border-green-400 bg-green-50"
-                                                : "border-gray-200 bg-gray-50 hover:border-orange-300 hover:bg-orange-50"
+                                                ? "border-green-400 bg-green-50 dark:bg-green-950/30"
+                                                : "border-border bg-muted hover:border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/30"
                                     )}
                                 >
                                     <input {...getLicenseInputProps()} />
                                     {watch('companyTradeLicenseFile') ? (
                                         <div className="flex flex-col items-center gap-2">
-                                            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                                            <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
                                                 <Check className="w-6 h-6 text-green-500" />
                                             </div>
                                             <p className="font-medium text-sm truncate max-w-full">{watch('companyTradeLicenseFile').name}</p>
-                                            <p className="text-xs text-gray-500">Click to replace</p>
+                                            <p className="text-xs text-muted-foreground">Click to replace</p>
                                         </div>
                                     ) : (
                                         <div className="flex flex-col items-center gap-2">
-                                            <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center">
+                                            <div className="w-12 h-12 rounded-full bg-orange-100 dark:bg-orange-900/50 flex items-center justify-center">
                                                 <Upload className="w-6 h-6 text-orange-500" />
                                             </div>
-                                            <p className="text-sm font-medium text-gray-700">
+                                            <p className="text-sm font-medium text-foreground">
                                                 Drop file here or click to upload
                                             </p>
-                                            <p className="text-xs text-gray-500">Trade license document</p>
+                                            <p className="text-xs text-muted-foreground">Trade license document</p>
                                         </div>
                                     )}
                                 </div>
@@ -1043,8 +1043,8 @@ const CompanyForm: React.FC = () => {
         <div className="min-h-screen p-6">
             {/* Header */}
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Companies Management</h1>
-                <p className="text-sm text-gray-500 mt-1">View and manage all registered companies</p>
+                <h1 className="text-2xl font-bold text-foreground">Companies Management</h1>
+                <p className="text-sm text-muted-foreground mt-1">View and manage all registered companies</p>
             </div>
 
             {/* Back and Save Draft */}
@@ -1052,7 +1052,7 @@ const CompanyForm: React.FC = () => {
                 <button
                     type="button"
                     onClick={() => navigate('/companies/list')}
-                    className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+                    className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                     <ArrowLeft className="w-4 h-4" />
                     <span className="text-sm font-medium">Back to Companies</span>
@@ -1068,9 +1068,9 @@ const CompanyForm: React.FC = () => {
                 </Button>
             </div>
 
-            <Card className="bg-white border border-gray-100 shadow-sm rounded-xl overflow-hidden mb-5">
+            <Card className="bg-card border border-border shadow-sm rounded-xl overflow-hidden mb-5">
                 {/* Stepper */}
-                <div className="px-8 py-6 border-b border-gray-100">
+                <div className="px-8 py-6 border-b border-border">
                     <div className="flex items-center justify-between max-w-2xl mx-auto">
                         {STEPS.map((step, index) => {
                             const Icon = step.icon;
@@ -1087,7 +1087,7 @@ const CompanyForm: React.FC = () => {
                                                     ? "bg-green-500 text-white"
                                                     : isCurrent
                                                         ? "bg-orange-500 text-white"
-                                                        : "bg-gray-100 text-gray-400"
+                                                        : "bg-muted text-muted-foreground"
                                             )}
                                         >
                                             {isCompleted ? (
@@ -1099,7 +1099,7 @@ const CompanyForm: React.FC = () => {
                                         <span
                                             className={cn(
                                                 "text-xs mt-2 font-medium",
-                                                isCurrent ? "text-orange-500" : isCompleted ? "text-green-500" : "text-gray-400"
+                                                isCurrent ? "text-orange-500" : isCompleted ? "text-green-500" : "text-muted-foreground"
                                             )}
                                         >
                                             {step.title}
@@ -1109,7 +1109,7 @@ const CompanyForm: React.FC = () => {
                                         <div
                                             className={cn(
                                                 "flex-1 h-0.5 mx-4",
-                                                currentStep > step.id ? "bg-green-500" : "bg-gray-200"
+                                                currentStep > step.id ? "bg-green-500" : "bg-border"
                                             )}
                                         />
                                     )}
@@ -1121,7 +1121,7 @@ const CompanyForm: React.FC = () => {
             </Card>
 
             {/* Main Card */}
-            <Card className="bg-white border border-gray-100 shadow-sm rounded-xl overflow-hidden">
+            <Card className="bg-card border border-border shadow-sm rounded-xl overflow-hidden">
                 {/* Form Content */}
                 <form onSubmit={handleSubmit(handleRegister)}>
                     <div className="p-8">
@@ -1129,7 +1129,7 @@ const CompanyForm: React.FC = () => {
                     </div>
 
                     {/* Navigation Footer */}
-                    <div className="px-8 py-4 border-t border-gray-100 flex items-center justify-between">
+                    <div className="px-8 py-4 border-t border-border flex items-center justify-between">
                         <Button
                             type="button"
                             variant="outline"
@@ -1140,7 +1140,7 @@ const CompanyForm: React.FC = () => {
                             Previous
                         </Button>
 
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-muted-foreground">
                             Step {currentStep} of {STEPS.length}
                         </span>
 
@@ -1176,14 +1176,14 @@ const CompanyForm: React.FC = () => {
             <Dialog open={successModalOpen} onOpenChange={setSuccessModalOpen}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader className="text-center">
-                        <div className="mx-auto w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-4">
+                        <div className="mx-auto w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center mb-4">
                             <CheckCircle2 className="w-8 h-8 text-green-500" />
                         </div>
                         <DialogTitle className="text-xl font-semibold text-center">Registration Complete!</DialogTitle>
                     </DialogHeader>
                     <div className="text-center py-4">
-                        <p className="text-gray-600">Company has been added successfully.</p>
-                        <p className="text-sm text-gray-500 mt-1">
+                        <p className="text-foreground">Company has been added successfully.</p>
+                        <p className="text-sm text-muted-foreground mt-1">
                             You can now view details or return to the company list.
                         </p>
                     </div>

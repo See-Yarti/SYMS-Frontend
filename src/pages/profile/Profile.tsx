@@ -99,16 +99,16 @@ const Profile = () => {
           <ChevronLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">{user.name}&rsquo;s Profile</h1>
+          <h1 className="text-2xl font-bold text-foreground">{user.name}&rsquo;s Profile</h1>
           <div className="text-sm text-muted-foreground font-medium">{user.email}</div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="bg-white rounded-xl shadow border p-8 space-y-8">
+      <div className="bg-card rounded-xl shadow border border-border p-8 space-y-8">
         {/* Account Info */}
         <div>
-          <div className="mb-1 font-semibold text-lg">Account Information</div>
+          <div className="mb-1 font-semibold text-lg text-foreground">Account Information</div>
           <div className="grid grid-cols-2 gap-4 mt-2">
             <div>
               <Label className="mb-1 text-xs">Full Name</Label>
@@ -121,11 +121,11 @@ const Profile = () => {
           </div>
         </div>
 
-        <div className="border-b"></div>
+        <div className="border-b border-border"></div>
 
         {/* Password Change */}
         <div>
-          <div className="mb-1 font-semibold text-lg">Change Password</div>
+          <div className="mb-1 font-semibold text-lg text-foreground">Change Password</div>
           <form onSubmit={handlePasswordSubmit} className="grid gap-4 mt-3">
             <div>
               <Label htmlFor="current-password" className="text-xs">Current Password</Label>
