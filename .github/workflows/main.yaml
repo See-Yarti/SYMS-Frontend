@@ -5,21 +5,7 @@ on:
     branches:
       - main
 
-jobs:
-  reveal-username:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install sshpass
-        run: sudo apt-get update && sudo apt-get install -y sshpass
-
-      - name: Connect and print username on VPS
-        env:
-          HOST: ${{ secrets.VPS_HOST }}
-          USERNAME: ${{ secrets.VPS_USERNAME }}
-          PASSWORD: ${{ secrets.VPS_PASSWORD }}
-        run: |
-          sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no $USERNAME@$HOST "whoami && hostname"
-
+jobs: 
   Build_Docker_Image:
     runs-on: ubuntu-latest
     steps:
