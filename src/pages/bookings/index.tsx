@@ -245,7 +245,7 @@ const AllBookings: React.FC = () => {
   }
 
   return (
-    <div className="p-6 min-h-screen -ml-6">
+    <div className="p-2 min-h-screen max-w-[1110px]">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-foreground">All Bookings</h1>
