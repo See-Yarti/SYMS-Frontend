@@ -10,7 +10,7 @@ import ProtectedRoute from './ProtectedRoute';
 import Register from './pages/auth/register/Register';
 import Operators from './pages/operators/Operators';
 import OperatorBookings from './pages/operators/OperatorBookings';
-import Profile from './pages/settings/profile-update';
+import Profile from './pages/profile/Profile';
 import Products from './pages/products/Products';
 import CompaniesList from '@/components/Company/CompanyList';
 import CompanyDetail from '@/components/Company/CompanyDetails';
