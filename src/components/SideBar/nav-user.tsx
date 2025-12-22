@@ -61,25 +61,30 @@ export function NavUser() {
       <SidebarMenuItem>
         <div className="w-full py-2">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#F97316] text-white font-semibold text-sm flex-shrink-0">
-              {isLoading && !apiUser ? '...' : (user.name?.charAt(0)?.toUpperCase() || 'U')}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-black truncate">
-                {isLoading && !apiUser ? "Loading..." : user.name}
+            <button
+              onClick={() => navigate('/profile')}
+              className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity cursor-pointer"
+            >
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#F97316] text-white font-semibold text-sm flex-shrink-0">
+                {isLoading && !apiUser ? '...' : (user.name?.charAt(0)?.toUpperCase() || 'U')}
               </div>
-              {displayRole && (
-                <div className="text-xs text-gray-500 truncate">
-                  {displayRole}
+              <div className="flex-1 min-w-0 text-left">
+                <div className="text-sm font-medium text-foreground truncate">
+                  {isLoading && !apiUser ? "Loading..." : user.name}
                 </div>
-              )}
-            </div>
+                {displayRole && (
+                  <div className="text-xs text-muted-foreground truncate">
+                    {displayRole}
+                  </div>
+                )}
+              </div>
+            </button>
             <button 
               onClick={handleLogout}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+              className="p-2 hover:bg-accent rounded-lg transition-colors flex-shrink-0"
               title="Logout"
             >
-              <LogOutIcon className="w-5 h-5 text-gray-400" />
+              <LogOutIcon className="w-5 h-5 text-muted-foreground" />
             </button>
           </div>
         </div>

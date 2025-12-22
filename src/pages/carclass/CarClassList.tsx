@@ -464,7 +464,7 @@ const CarClassList = () => {
 
                       {/* Description */}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-gray-700">{row.description}</span>
+                        <span className="text-muted-foreground">{row.description}</span>
                       </td>
 
                       {/* Category */}
