@@ -25,12 +25,10 @@ import {
   Receipt,
   Download,
   MapPin,
-  FileSpreadsheet,
   Search,
   Sparkles,
   Zap,
   ClipboardList,
-  Activity
 } from 'lucide-react';
 import { exportInvoiceToExcel } from '@/utils/excelExport';
 import { AccountingItem, AccountingType } from '@/types/accounting';
@@ -92,7 +90,6 @@ const AdminAccounting: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [dateRangeFilter, setDateRangeFilter] = useState<string>('last30');
 
-  const [limit, setLimit] = useState(20);
   const [appliedFilters, setAppliedFilters] = useState({
     dateFrom: '',
     dateTo: '',
@@ -117,7 +114,7 @@ const AdminAccounting: React.FC = () => {
 
   const [invoiceData, setInvoiceData] = useState<any>(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
-  const [invoiceError, setInvoiceError] = useState<Error | null>(null);
+  const [, setInvoiceError] = useState<Error | null>(null);
 
   // UI View State
   const [showResults, setShowResults] = useState(false);
@@ -469,7 +466,7 @@ const AdminAccounting: React.FC = () => {
               variant="outline"
               onClick={handleExportToExcel}
               disabled={!selectedCompanyId || selectedCompanyId === 'all'}
-              className="border-gray-300 bg-white"
+              className="border-gray-300 bg-white dark:text-black"
             >
               <Download className="mr-2 h-4 w-4" />
               Export to Excel

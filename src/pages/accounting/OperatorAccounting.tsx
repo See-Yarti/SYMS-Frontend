@@ -23,7 +23,6 @@ import {
   TrendingDown, 
   RefreshCw,
   Calendar,
-  Building2,
   Receipt,
   Briefcase,
   Download,
@@ -95,7 +94,7 @@ const OperatorAccounting: React.FC = () => {
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     return lastDay.toISOString().split('T')[0];
   });
-  const [page, setPage] = useState(1);
+  const [, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [appliedFilters, setAppliedFilters] = useState({
     dateFrom: '',

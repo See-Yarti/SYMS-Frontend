@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { AccountingItem, AccountingType } from '@/types/accounting';
 import { cn } from '@/lib/utils';
-import { InlineLoader, PageLoadingSkeleton } from '@/components/ui/loading';
+import { PageLoadingSkeleton } from '@/components/ui/loading';
 import { toast } from 'sonner';
 
 const typeStyles: Record<AccountingType, string> = {
