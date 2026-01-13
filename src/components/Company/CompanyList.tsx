@@ -51,7 +51,7 @@ const getAvatarColor = (name?: string) => {
     const colors = [
         'bg-blue-500',
         'bg-green-500',
-        'bg-yellow-500',
+        'bg-[#F56304]',
         'bg-purple-500',
         'bg-pink-500',
         'bg-indigo-500',
@@ -228,14 +228,14 @@ export default function CompaniesList() {
                 </Card>
 
                 {/* Total Unverified Companies */}
-                <Card className="p-5 bg-card border border-amber-200 dark:border-amber-900/50 shadow-sm rounded-xl">
+                <Card className="p-5 bg-card border border-[#F56304]/30 dark:border-[#F56304]/50 shadow-sm rounded-xl">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm text-muted-foreground font-normal">Total UnVerified Companies</p>
                             <p className="text-3xl font-medium text-foreground mt-1">{stats.unverified}</p>
                         </div>
-                        <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                            <ShieldAlert className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+                        <div className="w-12 h-12 rounded-xl bg-[#F56304]/10 dark:bg-[#F56304]/20 flex items-center justify-center">
+                            <ShieldAlert className="w-6 h-6 text-[#F56304] dark:text-[#F56304]" />
                         </div>
                     </div>
                 </Card>
@@ -401,7 +401,7 @@ export default function CompaniesList() {
                                                     Verified
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium border border-amber-300 dark:border-amber-700 rounded-lg bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
+                                                <span className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium border border-[#F56304]/30 dark:border-[#F56304]/50 rounded-lg bg-[#F56304]/10 dark:bg-[#F56304]/20 text-[#F56304] dark:text-[#F56304]">
                                                     <XCircle className="w-3.5 h-3.5" />
                                                     Not Verified
                                                 </span>
@@ -421,10 +421,7 @@ export default function CompaniesList() {
 
                                                 {/* Edit */}
                                                 <button
-                                                    onClick={() => {
-                                                        setUpdateCompanyId(company.id);
-                                                        setUpdateCompanyData(company);
-                                                    }}
+                                                    onClick={() => navigate(`/companies/${company.id}/edit`)}
                                                     className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                                                 >
                                                     <Pencil className="w-4 h-4" />

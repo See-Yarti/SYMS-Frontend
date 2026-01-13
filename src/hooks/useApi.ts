@@ -4,19 +4,8 @@ import {
   useQuery,
   useMutation,
   useInfiniteQuery,
-  QueryClient,
 } from '@tanstack/react-query';
-
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 0,              // Always refetch after invalidation
-      retry: false,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-    },
-  },
-});
+import { queryClient } from '@/Provider';
 
 // Fetch data (simple GET)
 export const useFetchData = <T = unknown>(

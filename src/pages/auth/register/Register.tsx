@@ -23,7 +23,7 @@ const Register = () => {
         </div>
 
         <div className="space-y-2 text-center">
-          <Label className="text-3xl font-bold bg-yellow-400 bg-clip-text text-transparent">
+          <Label className="text-3xl font-bold bg-[#F56304] bg-clip-text text-transparent">
             Company Registration
           </Label>
           <p className="text-muted-foreground text-lg">

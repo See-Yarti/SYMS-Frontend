@@ -13,8 +13,12 @@ interface Booking {
   grandTotal: number;
   commission: number;
   commissionPercentage: number;
+  commissionType?: string;
+  commissionValue?: string;
+  commissionRate?: string;
   taxTotal: number;
   netAmount: number;
+  amountOwed?: string | number; // Amount company owes to YalaRide
   status: string;
 }
 
@@ -65,7 +69,13 @@ interface InvoiceData {
       taxableAmount: number;
     }>;
     paymentCollectionSummary: any;
-    totals: any;
+    totals: {
+      totalCommission?: string | number;
+      totalPrepaid?: string | number;
+      taxOnPrepaid?: string | number;
+      netPayable?: string | number;
+      totalOwes?: string | number; // Total amount company owes to YalaRide
+    };
   };
   timestamp?: string;
 }
@@ -107,6 +117,7 @@ const addTableHeaders = (worksheet: ExcelJS.Worksheet, currentRow: number) => {
     'Commission %',
     'Tax Total',
     'Net Amount',
+    'Amount Owed',
     'Status'
   ];
 
@@ -149,11 +160,13 @@ const addBookingRow = (worksheet: ExcelJS.Worksheet, booking: Booking, currentRo
   row.getCell(11).numFmt = '$#,##0.00';
   row.getCell(12).value = booking.netAmount;
   row.getCell(12).numFmt = '$#,##0.00';
-  row.getCell(13).value = booking.status;
+  row.getCell(13).value = typeof booking.amountOwed === 'string' ? parseFloat(booking.amountOwed) : (booking.amountOwed || 0);
+  row.getCell(13).numFmt = '$#,##0.00';
+  row.getCell(14).value = booking.status;
 
   // Alternate row colors
   if (index % 2 === 0) {
-    for (let i = 1; i <= 13; i++) {
+    for (let i = 1; i <= 14; i++) {
       row.getCell(i).fill = {
         type: 'pattern',
         pattern: 'solid',
@@ -163,7 +176,7 @@ const addBookingRow = (worksheet: ExcelJS.Worksheet, booking: Booking, currentRo
   }
 
   // Add borders
-  for (let i = 1; i <= 13; i++) {
+  for (let i = 1; i <= 14; i++) {
     row.getCell(i).border = {
       top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
       left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
@@ -181,6 +194,7 @@ const addLocationTotalsRow = (worksheet: ExcelJS.Worksheet, currentRow: number, 
   commission: number;
   tax: number;
   netAmount: number;
+  amountOwed?: number;
   count: number;
 }) => {
   const totalsRow = worksheet.getRow(currentRow);
@@ -198,6 +212,11 @@ const addLocationTotalsRow = (worksheet: ExcelJS.Worksheet, currentRow: number, 
   totalsRow.getCell(12).value = totals.netAmount;
   totalsRow.getCell(12).numFmt = '$#,##0.00';
   totalsRow.getCell(12).font = { bold: true };
+  if (totals.amountOwed !== undefined) {
+    totalsRow.getCell(13).value = totals.amountOwed;
+    totalsRow.getCell(13).numFmt = '$#,##0.00';
+    totalsRow.getCell(13).font = { bold: true };
+  }
 
   // Style totals row
   totalsRow.fill = {
@@ -244,6 +263,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
     { width: 12 }, // Commission %
     { width: 12 }, // Tax Total
     { width: 12 }, // Net Amount
+    { width: 12 }, // Amount Owed
     { width: 12 }, // Status
   ];
 
@@ -252,14 +272,14 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
   // Header Section - YELLA RIDE Logo/Title
   const headerRow1 = worksheet.getRow(currentRow);
   headerRow1.getCell(1).value = 'YELLA RIDE';
-  headerRow1.getCell(1).font = { size: 24, bold: true, color: { argb: 'FFFFCC00' } }; // Yellow color
+  headerRow1.getCell(1).font = { size: 24, bold: true, color: { argb: 'FFF56304' } }; // Orange color #F56304
   headerRow1.getCell(1).fill = {
     type: 'pattern',
     pattern: 'solid',
     fgColor: { argb: 'FF2C3E50' } // Dark blue-gray background (lighter than black)
   };
   headerRow1.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
-  worksheet.mergeCells(currentRow, 1, currentRow, 13);
+  worksheet.mergeCells(currentRow, 1, currentRow, 14);
   headerRow1.height = 30;
   currentRow++;
 
@@ -267,7 +287,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
   headerRow2.getCell(1).value = 'INVOICE REPORT';
   headerRow2.getCell(1).font = { size: 18, bold: true, color: { argb: 'FF34495E' } };
   headerRow2.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
-  worksheet.mergeCells(currentRow, 1, currentRow, 13);
+  worksheet.mergeCells(currentRow, 1, currentRow, 14);
   headerRow2.height = 25;
   currentRow++;
 
@@ -284,7 +304,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
     fgColor: { argb: 'FFECF0F1' } // Light gray background
   };
   companyInfoHeader.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
-  worksheet.mergeCells(currentRow, 1, currentRow, 13);
+  worksheet.mergeCells(currentRow, 1, currentRow, 14);
   companyInfoHeader.height = 20;
   currentRow++;
 
@@ -317,7 +337,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
       fgColor: { argb: 'FFECF0F1' } // Light gray background
     };
     locationInfoHeader.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
-    worksheet.mergeCells(currentRow, 1, currentRow, 13);
+    worksheet.mergeCells(currentRow, 1, currentRow, 14);
     locationInfoHeader.height = 20;
     currentRow++;
 
@@ -350,7 +370,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
     fgColor: { argb: 'FFECF0F1' } // Light gray background
   };
   periodInfoHeader.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
-  worksheet.mergeCells(currentRow, 1, currentRow, 13);
+  worksheet.mergeCells(currentRow, 1, currentRow, 14);
   periodInfoHeader.height = 20;
   currentRow++;
 
@@ -387,7 +407,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
     fgColor: { argb: 'FFECF0F1' } // Light gray background
   };
   summaryHeader.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
-  worksheet.mergeCells(currentRow, 1, currentRow, 13);
+  worksheet.mergeCells(currentRow, 1, currentRow, 14);
   summaryHeader.height = 20;
   currentRow++;
 
@@ -418,6 +438,15 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
     worksheet.getRow(currentRow).getCell(1).font = { bold: true };
     worksheet.getRow(currentRow).getCell(2).value = formatCurrency(data.data.totals.netPayable || 0);
     currentRow++;
+
+    if (data.data.totals.totalOwes !== undefined && data.data.totals.totalOwes !== null) {
+      worksheet.getRow(currentRow).getCell(1).value = 'Total Amount Owed to YalaRide:';
+      worksheet.getRow(currentRow).getCell(1).font = { bold: true };
+      const totalOwes = typeof data.data.totals.totalOwes === 'string' ? parseFloat(data.data.totals.totalOwes) : (data.data.totals.totalOwes || 0);
+      worksheet.getRow(currentRow).getCell(2).value = formatCurrency(totalOwes);
+      worksheet.getRow(currentRow).getCell(2).font = { bold: true, color: { argb: 'FFF56304' } }; // Orange color for amount owed
+      currentRow++;
+    }
   }
 
   // Empty rows
@@ -432,6 +461,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
       commission: 0,
       tax: 0,
       netAmount: 0,
+      amountOwed: 0,
       count: 0
     };
 
@@ -446,7 +476,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
         fgColor: { argb: 'FF3498DB' } // Blue background
       };
       locationHeader.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
-      worksheet.mergeCells(currentRow, 1, currentRow, 13);
+      worksheet.mergeCells(currentRow, 1, currentRow, 14);
       locationHeader.height = 22;
       currentRow++;
 
@@ -463,6 +493,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
         commission: 0,
         tax: 0,
         netAmount: 0,
+        amountOwed: 0,
         count: locationGroup.bookings.length
       };
 
@@ -473,6 +504,8 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
         locationTotals.commission += booking.commission || 0;
         locationTotals.tax += booking.taxTotal || 0;
         locationTotals.netAmount += booking.netAmount || 0;
+        const owedAmount = typeof booking.amountOwed === 'string' ? parseFloat(booking.amountOwed) : (booking.amountOwed || 0);
+        locationTotals.amountOwed += owedAmount;
         
         currentRow++;
       });
@@ -486,6 +519,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
       overallTotals.commission += locationTotals.commission;
       overallTotals.tax += locationTotals.tax;
       overallTotals.netAmount += locationTotals.netAmount;
+      overallTotals.amountOwed = (overallTotals.amountOwed || 0) + locationTotals.amountOwed;
       overallTotals.count += locationTotals.count;
 
       // Empty rows between locations (except last)
@@ -509,7 +543,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
       fgColor: { argb: 'FF2C3E50' } // Dark blue-gray background
     };
     overallTotalsHeader.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
-    worksheet.mergeCells(currentRow, 1, currentRow, 13);
+    worksheet.mergeCells(currentRow, 1, currentRow, 14);
     overallTotalsHeader.height = 22;
     currentRow++;
 
@@ -532,6 +566,9 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
     overallTotalsRow.getCell(12).value = overallTotals.netAmount;
     overallTotalsRow.getCell(12).numFmt = '$#,##0.00';
     overallTotalsRow.getCell(12).font = { bold: true };
+    overallTotalsRow.getCell(13).value = overallTotals.amountOwed;
+    overallTotalsRow.getCell(13).numFmt = '$#,##0.00';
+    overallTotalsRow.getCell(13).font = { bold: true };
 
     // Style overall totals row
     overallTotalsRow.fill = {
@@ -540,7 +577,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
       fgColor: { argb: 'FFFFF4E6' } // Very light orange/cream
     };
 
-    for (let i = 1; i <= 13; i++) {
+    for (let i = 1; i <= 14; i++) {
       overallTotalsRow.getCell(i).border = {
         top: { style: 'medium', color: { argb: 'FFD5A6BD' } },
         left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
@@ -562,7 +599,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
       fgColor: { argb: 'FFECF0F1' } // Light gray background
     };
     bookingDetailsHeader.getCell(1).alignment = { horizontal: 'left', vertical: 'middle' };
-    worksheet.mergeCells(currentRow, 1, currentRow, 13);
+    worksheet.mergeCells(currentRow, 1, currentRow, 14);
     bookingDetailsHeader.height = 20;
     currentRow++;
 
@@ -579,6 +616,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
     let totalCommission = 0;
     let totalTax = 0;
     let totalNetAmount = 0;
+    let totalAmountOwed = 0;
 
     allBookings.forEach((booking, index) => {
       addBookingRow(worksheet, booking, currentRow, index);
@@ -587,6 +625,8 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
       totalCommission += booking.commission || 0;
       totalTax += booking.taxTotal || 0;
       totalNetAmount += booking.netAmount || 0;
+      const owedAmount = typeof booking.amountOwed === 'string' ? parseFloat(booking.amountOwed) : (booking.amountOwed || 0);
+      totalAmountOwed += owedAmount;
       
       currentRow++;
     });
@@ -610,6 +650,9 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
     totalsRow.getCell(12).value = totalNetAmount;
     totalsRow.getCell(12).numFmt = '$#,##0.00';
     totalsRow.getCell(12).font = { bold: true };
+    totalsRow.getCell(13).value = totalAmountOwed;
+    totalsRow.getCell(13).numFmt = '$#,##0.00';
+    totalsRow.getCell(13).font = { bold: true };
 
     // Style totals row
     totalsRow.fill = {
@@ -618,7 +661,7 @@ export const exportInvoiceToExcel = async (data: InvoiceData, filename: string) 
       fgColor: { argb: 'FFFFF4E6' } // Very light orange/cream
     };
 
-    for (let i = 1; i <= 13; i++) {
+    for (let i = 1; i <= 14; i++) {
       totalsRow.getCell(i).border = {
         top: { style: 'medium', color: { argb: 'FFD5A6BD' } },
         left: { style: 'thin', color: { argb: 'FFE0E0E0' } },

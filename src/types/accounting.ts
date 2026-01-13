@@ -32,6 +32,7 @@ export interface AccountingSummary {
   totalRefund: string;
   totalPayout: string;
   totalCommission: string;
+  totalOwes: string;
   totalRecords: number;
 }
 

@@ -5,19 +5,8 @@ import {
   useQuery,
   useMutation,
   useInfiniteQuery,
-  QueryClient,
 } from '@tanstack/react-query';
-
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 0,
-      retry: false,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-    },
-  },
-});
+import { queryClient } from '@/Provider';
 
 // Helper function to convert object to FormData
 const toFormData = (data: any) => {

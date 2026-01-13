@@ -2,8 +2,9 @@
 
 import { axiosInstance } from '@/lib/API';
 import { useAppSelector } from '@/store';
-import { Booking, BookingApiResult, BookingMeta, BookingDetail } from '@/types/booking';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { Booking, BookingApiResult, BookingMeta, BookingDetail, CancelBookingPayload, CancelBookingResponse } from '@/types/booking';
+import { useQuery, useMutation, keepPreviousData } from '@tanstack/react-query';
+import { queryClient } from '@/Provider';
 
 export type BookingQueryParams = {
 	search?: string;
@@ -131,5 +132,26 @@ export const useBookingById = (bookingId: string | undefined) => {
 		enabled: !!bookingId,
 		retry: false,
 		staleTime: 60 * 1000,
+	});
+};
+
+// Hook to cancel a booking
+export const useCancelBooking = () => {
+	return useMutation<CancelBookingResponse, Error, { bookingId: string; companyId: string; payload: CancelBookingPayload }>({
+		mutationFn: async ({ bookingId, companyId, payload }) => {
+			if (!companyId) {
+				throw new Error('Company ID is required');
+			}
+			// PATCH /api/booking/cancel-booking/:bookingId/:companyId
+			const response = await axiosInstance.patch(`/booking/cancel-booking/${bookingId}/${companyId}`, payload);
+			// API returns { success: true, data: {...} }, extract the data
+			return response.data?.data || response.data;
+		},
+		onSuccess: (_data, variables) => {
+			// Invalidate booking queries
+			queryClient.invalidateQueries({ queryKey: ['booking', variables.bookingId] });
+			queryClient.invalidateQueries({ queryKey: ['bookings'] });
+		},
+		retry: false,
 	});
 };

@@ -4,7 +4,6 @@ import { axiosInstance } from '@/lib/API';
 import {
   useQuery,
   useMutation,
-  QueryClient,
   keepPreviousData,
 } from '@tanstack/react-query';
 import { useAppSelector } from '@/store';
@@ -14,6 +13,7 @@ import {
   UpdateOperatorPayload,
 } from '@/types/company';
 import { selectCompanyId } from '@/store/features/auth.slice';
+import { queryClient } from '@/Provider';
 
 // Shared query options
 const defaultQueryOptions = {
@@ -22,12 +22,6 @@ const defaultQueryOptions = {
   refetchOnWindowFocus: false,
   refetchOnReconnect: false,
 };
-
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: defaultQueryOptions,
-  },
-});
 
 export type OperatorQueryParams = {
   search?: string;

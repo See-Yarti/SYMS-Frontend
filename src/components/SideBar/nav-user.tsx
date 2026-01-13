@@ -43,13 +43,12 @@ export function NavUser() {
   const displayRole = getUserRole();
 
   const handleLogout = async () => {
-    try {
-      localStorage.removeItem('persist:root');
-      await dispatch(logoutUser()).unwrap();
-      navigate('/auth/login');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
+    // Navigate immediately for fast logout experience
+    navigate('/auth/login');
+    // Dispatch logout in background - don't wait for it
+    dispatch(logoutUser()).catch(() => {
+      // Silently ignore errors - user is already redirected
+    });
   };
 
   if (!user) {

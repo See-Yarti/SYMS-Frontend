@@ -284,8 +284,8 @@ const OperatorsPage: React.FC = () => {
                           <Tooltip>
                             <TooltipTrigger>
                               <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#F56304] opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#F56304]"></span>
                               </span>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -397,7 +397,7 @@ const OperatorsPage: React.FC = () => {
                   <div className="flex items-center gap-2">
                     {getRoleBadge(selectedOperator.operatorRole)}
                     {selectedOperator.user.isFirstLogin && (
-                      <Badge variant="outline" className="text-yellow-600">
+                      <Badge variant="outline" className="text-[#F56304]">
                         Pending First Login
                       </Badge>
                     )}

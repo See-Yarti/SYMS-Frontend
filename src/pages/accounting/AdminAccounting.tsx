@@ -1,6 +1,7 @@
 // src/pages/accounting/AdminAccounting.tsx
-import React, { useState, useMemo } from 'react';
-import { useAdminAccounting, fetchInvoice, fetchInvoiceJson } from '@/hooks/useAccounting';
+import React, { useState, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAdminAccounting, useCompanyAccounting, fetchInvoice, fetchInvoiceJson } from '@/hooks/useAccounting';
 import { useGetCompanies } from '@/hooks/useCompanyApi';
 import { useGetLocations } from '@/hooks/useLocationApi';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ import {
   Sparkles,
   Zap,
   ClipboardList,
+  AlertCircle,
 } from 'lucide-react';
 import { exportInvoiceToExcel } from '@/utils/excelExport';
 import { AccountingItem, AccountingType } from '@/types/accounting';
@@ -40,9 +42,9 @@ const typeStyles: Record<AccountingType, string> = {
   BOOKING_COMPLETED: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700',
   NO_SHOW: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700',
   FREE_CANCEL: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700',
-  LATE_CANCEL: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700',
+  LATE_CANCEL: 'bg-[#F56304]/10 dark:bg-[#F56304]/20 text-[#F56304] dark:text-[#F56304] border-[#F56304]/30 dark:border-[#F56304]/50',
   CUSTOMER_FAULT: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-700',
-  OPERATOR_FAULT: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700',
+  OPERATOR_FAULT: 'bg-[#F56304]/10 dark:bg-[#F56304]/20 text-[#F56304] dark:text-[#F56304] border-[#F56304]/30 dark:border-[#F56304]/50',
   PARTIAL_USE: 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-700',
 };
 
@@ -82,6 +84,8 @@ const formatDate = (value: string) => {
 };
 
 const AdminAccounting: React.FC = () => {
+  const navigate = useNavigate();
+  
   // Quick search state
   const [quickSearchQuery, setQuickSearchQuery] = useState('');
 
@@ -118,14 +122,19 @@ const AdminAccounting: React.FC = () => {
 
   // UI View State
   const [showResults, setShowResults] = useState(false);
+  const resultsRef = useRef<HTMLDivElement>(null);
 
-  // 🔑 Track accounting view scope (only company is supported by backend)
+  // 🔑 Track accounting view scope (company and location)
   const [viewCompanyId, setViewCompanyId] = useState<string | null>(null);
+  const [viewLocationId, setViewLocationId] = useState<string | null>(null);
+  const [viewDateFrom, setViewDateFrom] = useState<string>('');
+  const [viewDateTo, setViewDateTo] = useState<string>('');
 
-  // Fetch companies for dropdown
+  // Fetch only verified companies for dropdown
   const { data: companiesData } = useGetCompanies({
     limit: 1000,
     page: 1,
+    isVerified: true, // Only show verified companies
   });
   const companies = companiesData?.data?.companies ?? [];
 
@@ -171,19 +180,44 @@ const AdminAccounting: React.FC = () => {
     return { dateFrom, dateTo };
   };
 
-  // 🔥 API params with companyId support
-  const params = useMemo(() => {
+  // 🔥 API params for company accounting (when showResults is true)
+  const companyAccountingParams = useMemo(() => {
+    if (!showResults || !viewCompanyId || !viewDateFrom || !viewDateTo) {
+      return null;
+    }
+    return {
+      companyId: viewCompanyId,
+      locationId: viewLocationId || null,
+      dateFrom: viewDateFrom,
+      dateTo: viewDateTo,
+      page: appliedFilters.page,
+      limit: appliedFilters.limit,
+    };
+  }, [showResults, viewCompanyId, viewLocationId, viewDateFrom, viewDateTo, appliedFilters.page, appliedFilters.limit]);
+
+  // Use company accounting API when showResults is true
+  const { data: companyData, isLoading: companyLoading, isError: companyError, refetch: companyRefetch } = useCompanyAccounting(
+    companyAccountingParams || { companyId: '', dateFrom: '', dateTo: '' }
+  );
+  
+  // Admin accounting params (when showResults is false)
+  const adminParams = useMemo(() => {
     const { dateFrom, dateTo } = getDateRange(dateRangeFilter);
     return {
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
       page: appliedFilters.page,
       limit: appliedFilters.limit,
-      ...(showResults && viewCompanyId && { companyId: viewCompanyId }),
     };
-  }, [appliedFilters, dateRangeFilter, showResults, viewCompanyId]);
+  }, [appliedFilters, dateRangeFilter]);
 
-  const { data, isLoading, isError, refetch } = useAdminAccounting(params);
+  const { data: adminData, isLoading: adminLoading, isError: adminError, refetch: adminRefetch } = useAdminAccounting(adminParams);
+
+  // Use company data when showResults is true, otherwise use admin data
+  const data = showResults ? companyData : adminData;
+  const isLoading = showResults ? companyLoading : adminLoading;
+  const isError = showResults ? companyError : adminError;
+  const refetch = showResults ? companyRefetch : adminRefetch;
 
   const handleResetFilters = () => {
     setTableSearchQuery('');
@@ -196,6 +230,9 @@ const AdminAccounting: React.FC = () => {
       limit: 20,
     });
     setViewCompanyId(null);
+    setViewLocationId(null);
+    setViewDateFrom('');
+    setViewDateTo('');
     setShowResults(false);
   };
 
@@ -209,17 +246,36 @@ const AdminAccounting: React.FC = () => {
     setShowResults(true);
   };
 
-  // 🔑 View accounting data for selected company (API handles filtering)
+  // 🔑 View accounting data for selected company/location - Navigate to results page
   const handleViewAccounting = () => {
     if (!selectedCompanyId || selectedCompanyId === 'all') {
       toast.error('Please select a company');
       return;
     }
 
-    setViewCompanyId(selectedCompanyId);
-    setAppliedFilters(prev => ({ ...prev, page: 1 })); // reset to page 1
-    setShowResults(true);
-    toast.success('Showing accounting data for selected company');
+    if (!invoiceDateFrom || !invoiceDateTo) {
+      toast.error('Please select date range');
+      return;
+    }
+
+    if (invoiceMode === 'single' && (!selectedLocationId || selectedLocationId === 'all')) {
+      toast.error('Please select a location');
+      return;
+    }
+
+    // Build query params
+    const params = new URLSearchParams();
+    params.set('companyId', selectedCompanyId);
+    params.set('dateFrom', invoiceDateFrom);
+    params.set('dateTo', invoiceDateTo);
+    if (invoiceMode === 'single' && selectedLocationId && selectedLocationId !== 'all') {
+      params.set('locationId', selectedLocationId);
+    }
+    params.set('page', '1');
+    params.set('limit', '20');
+
+    // Navigate to results page
+    navigate(`/admin-accounting/results?${params.toString()}`);
   };
 
   const handleGenerateInvoice = async () => {
@@ -650,9 +706,9 @@ const AdminAccounting: React.FC = () => {
           </Card>
         </>
       ) : (
-        <>
+        <div ref={resultsRef}>
           {summary && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <Card className="border border-blue-200 dark:border-blue-900/50 shadow-sm bg-card">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -701,7 +757,23 @@ const AdminAccounting: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <Card className="border border-amber-200 dark:border-amber-900/50 shadow-sm bg-card">
+              <Card className="border border-orange-200 dark:border-orange-900/50 shadow-sm bg-card">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-normal text-muted-foreground">Total Owes</p>
+                      <p className="text-3xl font-medium text-foreground mt-1">
+                        {formatCurrency(summary.totalOwes || '0.00')}
+                      </p>
+                    </div>
+                    <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
+                      <AlertCircle className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border border-[#F56304]/30 dark:border-[#F56304]/50 shadow-sm bg-card">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -710,8 +782,8 @@ const AdminAccounting: React.FC = () => {
                         {summary.totalRecords}
                       </p>
                     </div>
-                    <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
-                      <ClipboardList className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                    <div className="p-3 bg-[#F56304]/10 dark:bg-[#F56304]/20 rounded-xl">
+                      <ClipboardList className="h-6 w-6 text-[#F56304] dark:text-[#F56304]" />
                     </div>
                   </div>
                 </CardContent>
@@ -903,7 +975,7 @@ const AdminAccounting: React.FC = () => {
               )}
             </CardContent>
           </Card>
-        </>
+        </div>
       )}
     </div>
   );

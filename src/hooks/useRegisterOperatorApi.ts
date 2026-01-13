@@ -1,6 +1,6 @@
 import { axiosInstance } from '@/lib/API';
 import { useMutation } from '@tanstack/react-query';
-import { queryClient } from './useApi'; // Import your central queryClient
+import { queryClient } from '@/Provider';
 
 // --- File Upload with Auto-Refresh ---
 export const useUploadFile = <TResponse = unknown>(

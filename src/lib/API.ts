@@ -82,15 +82,11 @@ axiosInstance.interceptors.response.use(
         
         store.dispatch(AuthActions.updateAccessToken(newAccessToken));
         store.dispatch(AuthActions.updateRefreshToken(newRefreshToken));
-
-        failedQueue.forEach((prom, index) => {
-          setTimeout(() => {
-            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-            prom.resolve(axiosInstance(originalRequest));
-          }, index * 500);
-        });
-
+        
+        // Process queued requests - they will retry with their own original requests
         processQueue(null, newAccessToken);
+        
+        // Retry the original request that triggered the refresh
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {

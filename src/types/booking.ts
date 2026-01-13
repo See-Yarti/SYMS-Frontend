@@ -168,3 +168,37 @@ export type BookingDetail = {
   createdAt: string;
   updatedAt: string;
 };
+
+// Cancellation types
+export type CancelType = 
+  | 'FREE_CANCEL'
+  | 'LATE_CANCEL'
+  | 'NO_SHOW'
+  | 'CUSTOMER_FAULT'
+  | 'OPERATOR_FAULT'
+  | 'PARTIAL_USE';
+
+export interface CancelBookingPayload {
+  cancelType: CancelType;
+  note?: string;
+}
+
+export interface CancelBookingAccounting {
+  cancelType: CancelType;
+  commissionType: 'PERCENTAGE' | 'FIXED';
+  commissionValue?: string; // e.g., "10.00%"
+  commissionRate: string; // e.g., "10.00"
+  customerRefund: string;
+  operatorPayout: string;
+  yalaRideCommission: string;
+  commissionAmount?: string;
+  amountOwed: string;
+}
+
+export interface CancelBookingResponse {
+  bookingId: string;
+  status: 'CANCELLED';
+  cancelledBy: 'COMPANY' | 'CUSTOMER' | 'ADMIN';
+  cancelledAt: string;
+  accounting: CancelBookingAccounting;
+}

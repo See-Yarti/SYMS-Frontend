@@ -63,7 +63,7 @@ const FUEL_TYPES = [
 const CATEGORY_COLORS: Record<string, { bg: string; text: string; label: string }> = {
   'E': { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'Economy' },
   'X': { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Special' },
-  'L': { bg: 'bg-amber-100', text: 'text-amber-700', label: 'Luxury' },
+  'L': { bg: 'bg-[#F56304]/10', text: 'text-[#F56304]', label: 'Luxury' },
   'F': { bg: 'bg-sky-100', text: 'text-sky-700', label: 'Full Size' },
   'S': { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Standard' },
   'I': { bg: 'bg-blue-100', text: 'text-blue-700', label: 'SUV' },
@@ -307,14 +307,14 @@ const CarClassList = () => {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         {/* Total Classes */}
-        <Card className="p-5 bg-card border border-amber-200 dark:border-amber-900/50 shadow-sm rounded-xl">
+        <Card className="p-5 bg-card border border-[#F56304]/30 dark:border-[#F56304]/50 shadow-sm rounded-xl">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground font-medium">Total Classes</p>
               <p className="text-3xl font-bold text-foreground mt-1">{totalClasses}</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-              <Car className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+            <div className="w-12 h-12 rounded-xl bg-[#F56304]/10 dark:bg-[#F56304]/20 flex items-center justify-center">
+              <Car className="w-6 h-6 text-[#F56304] dark:text-[#F56304]" />
             </div>
           </div>
         </Card>
@@ -685,12 +685,12 @@ const CarClassList = () => {
                   </span>
                 )}
                 {fuel && (
-                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200 rounded-full">
+                  <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-[#F56304]/10 dark:bg-[#F56304]/20 text-[#F56304] dark:text-[#F56304] rounded-full">
                     {FUEL_TYPES.find(f => f.code === fuel)?.name || fuel}
                     <button
                       type="button"
                       onClick={() => addSetValue('fuel', '', { shouldValidate: true })}
-                      className="ml-1.5 w-4 h-4 flex items-center justify-center rounded-full hover:bg-yellow-200 dark:hover:bg-yellow-800 transition-colors"
+                      className="ml-1.5 w-4 h-4 flex items-center justify-center rounded-full hover:bg-[#F56304]/20 dark:hover:bg-[#F56304]/30 transition-colors"
                     >
                       <span className="text-xs font-bold">×</span>
                     </button>

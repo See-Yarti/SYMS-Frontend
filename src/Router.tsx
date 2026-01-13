@@ -32,7 +32,9 @@ import TaxesPage from './pages/rate/TaxesPage';
 import AllBookings from './pages/bookings';
 import BookingDetails from './pages/bookings/BookingDetails';
 import AdminAccounting from './pages/accounting/AdminAccounting';
+import AdminAccountingResults from './pages/accounting/AdminAccountingResults';
 import OperatorAccounting from './pages/accounting/OperatorAccounting';
+import OperatorAccountingResults from './pages/accounting/OperatorAccountingResults';
 
 const router = createBrowserRouter([
   {
@@ -109,6 +111,10 @@ const router = createBrowserRouter([
                 element: <CompanyFormWrapper />,
               },
               {
+                path: ':companyId/edit',
+                element: <CompanyFormWrapper />,
+              },
+              {
                 path: ':companyId',
                 element: <CompanyDetail />,
               },
@@ -146,8 +152,16 @@ const router = createBrowserRouter([
             element: <AdminAccounting />
           },
           {
+            path: 'admin-accounting/results',
+            element: <AdminAccountingResults />
+          },
+          {
             path: 'operator-accounting',
             element: <OperatorAccounting />
+          },
+          {
+            path: 'operator-accounting/results',
+            element: <OperatorAccountingResults />
           }
         ],
       },

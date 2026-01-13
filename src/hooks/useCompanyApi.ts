@@ -4,7 +4,6 @@ import { axiosInstance } from '@/lib/API';
 import {
   useQuery,
   useMutation,
-  QueryClient,
   keepPreviousData,
 } from '@tanstack/react-query';
 import {
@@ -13,20 +12,15 @@ import {
   UnverifyCompanyPayload,
   VerificationResponse,
 } from '@/types/company';
+import { queryClient } from '@/Provider';
 
-// Shared query optionse
+// Shared query options
 const defaultQueryOptions = {
   retry: false,
   staleTime: 60 * 1000, // 1 minute
   refetchOnWindowFocus: false,
   refetchOnReconnect: false,
 };
-
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: defaultQueryOptions,
-  },
-});
 
 // ADVANCED QUERY HOOK
 export type CompanyQueryParams = {
@@ -182,9 +176,9 @@ export const useDeleteCompany = () => {
 export interface UpdateCompanyPayload {
   name?: string;
   description?: string;
-  taxNumber?: string;
-  tradeLicenseIssueNumber?: string;
   tradeLicenseExpiryDate?: string;
+  companyKey?: string;
+  // Files will be sent as FormData
 }
 
 export interface UpdateCompanyResponse {
@@ -194,9 +188,17 @@ export interface UpdateCompanyResponse {
 }
 
 export const useUpdateCompany = () => {
-  return useMutation<UpdateCompanyResponse, Error, { companyId: string; payload: UpdateCompanyPayload }>({
+  return useMutation<UpdateCompanyResponse, Error, { companyId: string; payload: FormData | UpdateCompanyPayload }>({
     mutationFn: async ({ companyId, payload }) => {
-      const { data } = await axiosInstance.patch(`/company/update/${companyId}`, payload);
+      // Check if payload is FormData (has files) or plain object
+      const isFormData = payload instanceof FormData;
+      const { data } = await axiosInstance.patch(
+        `/company/update/${companyId}`, 
+        payload,
+        {
+          headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : { 'Content-Type': 'application/json' }
+        }
+      );
       return data;
     },
     onSuccess: (_data, variables) => {

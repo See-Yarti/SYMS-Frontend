@@ -8,8 +8,14 @@ import {
   OverrideCommissionBody,
   GenericOk,
   Tier,
+  StatusCommissionSettingsPayload,
+  SetStatusCommissionSettingsResponse,
+  FixedCancellationAmountsPayload,
+  SetFixedCancellationAmountsResponse,
+  EdgeCaseHandlingPayload,
+  SetEdgeCaseHandlingResponse,
 } from '@/types/company';
-import { queryClient } from './useCompanyApi';
+import { queryClient } from '@/Provider';
 
 // ------- QUERIES -------
 
@@ -90,6 +96,54 @@ export const useStartCompanySubscription = (companyId: string) =>
 // Convenience: read single plan (optional)
 export const getPlanByTier = (configs: PlanConfigsResponse | undefined, tier: Tier) =>
   configs?.data.find((c) => c.tier === tier);
+
+// Set status commission settings
+export const useSetStatusCommissionSettings = (companyId: string) =>
+  useMutation<SetStatusCommissionSettingsResponse, Error, StatusCommissionSettingsPayload>({
+    mutationFn: async (payload) => {
+      const { data } = await axiosInstance.post(
+        `/company-settings/${companyId}/status-commission-settings`,
+        payload
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-settings', companyId] });
+      queryClient.invalidateQueries({ queryKey: ['company', companyId] });
+    },
+  });
+
+// Set fixed cancellation amounts
+export const useSetFixedCancellationAmounts = (companyId: string) =>
+  useMutation<SetFixedCancellationAmountsResponse, Error, FixedCancellationAmountsPayload>({
+    mutationFn: async (payload) => {
+      const { data } = await axiosInstance.post(
+        `/company-settings/${companyId}/fixed-cancellation-amounts`,
+        payload
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-settings', companyId] });
+      queryClient.invalidateQueries({ queryKey: ['company', companyId] });
+    },
+  });
+
+// Set edge case handling
+export const useSetEdgeCaseHandling = (companyId: string) =>
+  useMutation<SetEdgeCaseHandlingResponse, Error, EdgeCaseHandlingPayload>({
+    mutationFn: async (payload) => {
+      const { data } = await axiosInstance.post(
+        `/company-settings/${companyId}/edge-case-handling`,
+        payload
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company-settings', companyId] });
+      queryClient.invalidateQueries({ queryKey: ['company', companyId] });
+    },
+  });
 
 
 // --- Delete commission override ---

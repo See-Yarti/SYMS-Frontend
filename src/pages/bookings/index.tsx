@@ -30,8 +30,8 @@ import { useGetCompanies } from '@/hooks/useCompanyApi';
 
 const statusStyles: Record<string, { bg: string; text: string; icon?: React.ReactNode; label: string }> = {
   PENDING: {
-    bg: 'bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700',
-    text: 'text-amber-600 dark:text-amber-300',
+    bg: 'bg-[#F56304]/10 dark:bg-[#F56304]/20 border border-[#F56304]/30 dark:border-[#F56304]/50',
+    text: 'text-[#F56304] dark:text-[#F56304]',
     icon: <Clock className="w-3.5 h-3.5" />,
     label: 'Pending',
   },
@@ -176,10 +176,10 @@ const AllBookings: React.FC = () => {
     limit,
   });
 
-  // Stats data - fetch all bookings for stats
+  // Stats data - fetch all bookings for stats (max limit 100 as per server validation)
   const { data: statsData } = useAllBookings({
     page: 1,
-    limit: 10000,
+    limit: 100,
   });
 
   React.useEffect(() => {
@@ -285,14 +285,14 @@ const AllBookings: React.FC = () => {
         </Card>
 
         {/* Pending Payment */}
-        <Card className="p-5 bg-card border border-amber-200 dark:border-amber-900/50 shadow-sm rounded-xl">
+        <Card className="p-5 bg-card border border-[#F56304]/30 dark:border-[#F56304]/50 shadow-sm rounded-xl">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-muted-foreground font-normal">Pending Payment</p>
               <p className="text-3xl font-semibold text-foreground mt-1">{stats.pendingPayment}</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-              <Clock className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+            <div className="w-12 h-12 rounded-xl bg-[#F56304]/10 dark:bg-[#F56304]/20 flex items-center justify-center">
+              <Clock className="w-6 h-6 text-[#F56304] dark:text-[#F56304]" />
             </div>
           </div>
         </Card>

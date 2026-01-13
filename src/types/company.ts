@@ -129,6 +129,70 @@ export interface OperatorProfileFlat {
 export type CommissionSource = 'BASE' | 'TIER' | 'OVERRIDE';
 export type Tier = 'BASIC' | 'GOLD' | 'PREMIUM' | 'DIAMOND';
 
+export interface StatusCommissionSetting {
+  type: 'PERCENTAGE' | 'FIXED' | null;
+  percentageRate?: number;
+  fixedAmount?: number;
+  splitPercentage?: number;
+  penaltyPercentage?: number;
+  yalaRidePercentage?: number;
+}
+
+export interface StatusCommissionSettingsPayload {
+  COMPLETED?: StatusCommissionSetting;
+  LATE_CANCEL?: StatusCommissionSetting;
+  NO_SHOW?: StatusCommissionSetting;
+  CUSTOMER_FAULT?: StatusCommissionSetting;
+  OPERATOR_FAULT?: StatusCommissionSetting;
+  FREE_CANCEL?: StatusCommissionSetting;
+  PARTIAL_USE?: StatusCommissionSetting;
+}
+
+export interface SetStatusCommissionSettingsResponse {
+  success: boolean;
+  message: string;
+  data: {
+    companyId: string;
+    baseCommissionRate: string;
+    settings: CompanySettingsPayload;
+  };
+  timestamp: string;
+}
+
+export interface FixedCancellationAmountsPayload {
+  useAllAmount?: number; // Global amount for all types
+  lateCancel?: number; // Per-type amounts
+  noShow?: number;
+  customerFault?: number;
+  partialUse?: number;
+}
+
+export interface SetFixedCancellationAmountsResponse {
+  success: boolean;
+  message: string;
+  data: {
+    companyId: string;
+    baseCommissionRate: string;
+    settings: CompanySettingsPayload;
+  };
+  timestamp: string;
+}
+
+export interface EdgeCaseHandlingPayload {
+  edgeCaseHandling: 'CAP' | 'OWE';
+}
+
+export interface SetEdgeCaseHandlingResponse {
+  success: boolean;
+  message: string;
+  data: {
+    companyId: string;
+    baseCommissionRate: string;
+    settings: CompanySettingsPayload;
+  };
+  timestamp: string;
+}
+
 export interface CompanySettingsPayload {
   effectiveCommissionRate: string; // e.g. "10.00"
   commissionSource: CommissionSource;
@@ -136,6 +200,21 @@ export interface CompanySettingsPayload {
   subscriptionEndsAt: string | null; // ISO
   overrideCommissionRate: string | null; // e.g. "8.50"
   overrideEndsAt: string | null; // ISO
+  statusCommissionSettings?: {
+    COMPLETED?: StatusCommissionSetting | null;
+    LATE_CANCEL?: StatusCommissionSetting | null;
+    NO_SHOW?: StatusCommissionSetting | null;
+    CUSTOMER_FAULT?: StatusCommissionSetting | null;
+    OPERATOR_FAULT?: StatusCommissionSetting | null;
+    FREE_CANCEL?: StatusCommissionSetting | null;
+    PARTIAL_USE?: StatusCommissionSetting | null;
+  };
+  fixedCancellationAmount?: string | null;
+  fixedCancellationAmountLateCancel?: string | null;
+  fixedCancellationAmountNoShow?: string | null;
+  fixedCancellationAmountCustomerFault?: string | null;
+  fixedCancellationAmountPartialUse?: string | null;
+  edgeCaseHandling?: 'CAP' | 'OWE';
 }
 
 export interface CompanySettingsResponse {

@@ -1,14 +1,13 @@
 // src/pages/accounting/OperatorAccounting.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '@/store';
 import { useOperatorAccounting, fetchInvoice, fetchInvoiceJson } from '@/hooks/useAccounting';
 import { useGetActiveLocations } from '@/hooks/useLocationApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -16,86 +15,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { 
-  Calculator, 
-  DollarSign, 
-  TrendingUp, 
-  TrendingDown, 
+import {
   RefreshCw,
-  Calendar,
   Receipt,
-  Briefcase,
   Download,
   MapPin,
-  FileSpreadsheet
+  Search,
+  Sparkles,
+  Zap,
 } from 'lucide-react';
 import { exportInvoiceToExcel } from '@/utils/excelExport';
-import { AccountingItem, AccountingType } from '@/types/accounting';
-import { cn } from '@/lib/utils';
 import { PageLoadingSkeleton } from '@/components/ui/loading';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
-const typeStyles: Record<AccountingType, string> = {
-  BOOKING_COMPLETED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  NO_SHOW: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-  FREE_CANCEL: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  LATE_CANCEL: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
-  CUSTOMER_FAULT: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-  OPERATOR_FAULT: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-  PARTIAL_USE: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
-};
-
-const formatCurrency = (value: string | number) => {
-  const numValue = typeof value === 'string' ? parseFloat(value) : value;
-  if (isNaN(numValue)) return '$0.00';
-  
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(numValue);
-};
-
-const formatDateTime = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
-};
-
-const formatDate = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }).format(date);
-};
 
 const OperatorAccounting: React.FC = () => {
+  const navigate = useNavigate();
   const { otherInfo } = useAppSelector((state) => state.auth);
   const companyId = otherInfo?.companyId || '';
 
-  const [dateFrom, setDateFrom] = useState(() => {
-    const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    return firstDay.toISOString().split('T')[0];
-  });
-  const [dateTo, setDateTo] = useState(() => {
-    const today = new Date();
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    return lastDay.toISOString().split('T')[0];
-  });
-  const [, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  // Quick search state
+  const [quickSearchQuery, setQuickSearchQuery] = useState('');
+
+  // Date range filter state
+  const [dateRangeFilter, setDateRangeFilter] = useState<string>('last30');
+
   const [appliedFilters, setAppliedFilters] = useState({
     dateFrom: '',
     dateTo: '',
@@ -104,7 +49,7 @@ const OperatorAccounting: React.FC = () => {
   });
 
   // Invoice generation state
-  const [invoiceMode, setInvoiceMode] = useState<'company-only' | 'company-location'>('company-only');
+  const [invoiceMode, setInvoiceMode] = useState<'all' | 'single'>('all');
   const [selectedLocationId, setSelectedLocationId] = useState<string>('all');
   const [invoiceDateFrom, setInvoiceDateFrom] = useState(() => {
     const today = new Date();
@@ -117,54 +62,103 @@ const OperatorAccounting: React.FC = () => {
     return lastDay.toISOString().split('T')[0];
   });
 
-  const [invoiceData, setInvoiceData] = useState<any>(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
-  const [invoiceError, setInvoiceError] = useState<Error | null>(null);
+  const [, setInvoiceError] = useState<Error | null>(null);
+
+  // UI View State - removed showResults since we navigate to separate page
 
   // Fetch active locations for the company
   const { data: activeLocationsData } = useGetActiveLocations(companyId);
-  // Active locations API returns data directly as array
   const allLocations = Array.isArray(activeLocationsData?.data) ? activeLocationsData.data : [];
 
-  const params = useMemo(() => ({
-    dateFrom: appliedFilters.dateFrom || undefined,
-    dateTo: appliedFilters.dateTo || undefined,
-    page: appliedFilters.page,
-    limit: appliedFilters.limit,
-  }), [appliedFilters]);
+  // Reset location when mode changes
+  React.useEffect(() => {
+    setSelectedLocationId('all');
+  }, [invoiceMode]);
 
-  const { data, isLoading, isError, refetch } = useOperatorAccounting(companyId, params);
-
-  const handleApplyFilters = () => {
-    setAppliedFilters({
-      dateFrom,
-      dateTo,
-      page: 1,
-      limit,
-    });
-  };
-
-  const handleResetFilters = () => {
+  // Calculate date range based on filter
+  const getDateRange = (filter: string) => {
     const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    const newDateFrom = firstDay.toISOString().split('T')[0];
-    const newDateTo = lastDay.toISOString().split('T')[0];
-    
-    setDateFrom(newDateFrom);
-    setDateTo(newDateTo);
-    setPage(1);
-    setLimit(20);
-    setAppliedFilters({
-      dateFrom: newDateFrom,
-      dateTo: newDateTo,
-      page: 1,
-      limit: 20,
-    });
+    let dateFrom = '';
+    let dateTo = today.toISOString().split('T')[0];
+
+    switch (filter) {
+      case 'last7':
+        dateFrom = new Date(today.setDate(today.getDate() - 7)).toISOString().split('T')[0];
+        break;
+      case 'last30':
+        dateFrom = new Date(today.setDate(today.getDate() - 30)).toISOString().split('T')[0];
+        break;
+      case 'last90':
+        dateFrom = new Date(today.setDate(today.getDate() - 90)).toISOString().split('T')[0];
+        break;
+      case 'thisMonth':
+        dateFrom = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        dateTo = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0];
+        break;
+      case 'lastMonth':
+        dateFrom = new Date(today.getFullYear(), today.getMonth() - 1, 1).toISOString().split('T')[0];
+        dateTo = new Date(today.getFullYear(), today.getMonth(), 0).toISOString().split('T')[0];
+        break;
+      default:
+        dateFrom = '';
+        dateTo = '';
+    }
+
+    return { dateFrom, dateTo };
   };
 
-  const handleExport = () => {
-    toast.info('Export functionality will be implemented soon');
+  // No need to fetch data on initial page - only fetch when navigating to results
+  const { isLoading, isError, refetch } = useOperatorAccounting(companyId, { dateFrom: undefined, dateTo: undefined });
+
+
+  const handleQuickSearch = () => {
+    if (!quickSearchQuery.trim()) {
+      toast.error('Please enter a search term');
+      return;
+    }
+
+    // Get current date range or use default
+    const { dateFrom, dateTo } = getDateRange(dateRangeFilter);
+    const searchDateFrom = appliedFilters.dateFrom || dateFrom;
+    const searchDateTo = appliedFilters.dateTo || dateTo;
+
+    // Build query params
+    const params = new URLSearchParams();
+    if (searchDateFrom) params.set('dateFrom', searchDateFrom);
+    if (searchDateTo) params.set('dateTo', searchDateTo);
+    params.set('search', quickSearchQuery);
+    params.set('page', '1');
+    params.set('limit', '20');
+
+    // Navigate to results page
+    navigate(`/operator-accounting/results?${params.toString()}`);
+  };
+
+  // View accounting data for selected location/date range - Navigate to results page
+  const handleViewAccounting = () => {
+    if (!invoiceDateFrom || !invoiceDateTo) {
+      toast.error('Please select date range');
+      return;
+    }
+
+    if (invoiceMode === 'single' && (!selectedLocationId || selectedLocationId === 'all')) {
+      toast.error('Please select a location');
+      return;
+    }
+
+    // Build query params
+    const params = new URLSearchParams();
+    params.set('dateFrom', invoiceDateFrom);
+    params.set('dateTo', invoiceDateTo);
+    if (invoiceMode === 'single' && selectedLocationId && selectedLocationId !== 'all') {
+      params.set('locationId', selectedLocationId);
+    }
+    params.set('page', '1');
+    params.set('limit', '20');
+
+    // Navigate to results page
+    navigate(`/operator-accounting/results?${params.toString()}`);
   };
 
   const handleGenerateInvoice = async () => {
@@ -172,26 +166,23 @@ const OperatorAccounting: React.FC = () => {
       toast.error('Company ID not found');
       return;
     }
-    
-    // Only require location if mode is company-location
-    if (invoiceMode === 'company-location' && (!selectedLocationId || selectedLocationId === 'all')) {
+
+    if (invoiceMode === 'single' && (!selectedLocationId || selectedLocationId === 'all')) {
       toast.error('Please select an operational location');
       return;
     }
-    
+
     if (!invoiceDateFrom || !invoiceDateTo) {
       toast.error('Please select date range');
       return;
     }
-    
+
     setInvoiceLoading(true);
     setInvoiceError(null);
-    setInvoiceData(null);
-    
+
     try {
-      // Pass null for locationId if company-only mode
-      const locationId = invoiceMode === 'company-location' ? selectedLocationId : null;
-      const data = await fetchInvoice(
+      const locationId = invoiceMode === 'single' ? selectedLocationId : null;
+      const invoiceResponse = await fetchInvoice(
         companyId,
         locationId,
         {
@@ -199,33 +190,43 @@ const OperatorAccounting: React.FC = () => {
           to: invoiceDateTo,
         }
       );
-      setInvoiceData(data);
-      toast.success('Invoice generated successfully');
+
+      // Handle PDF response - fetchInvoice returns an object with download method for PDF
+      if (invoiceResponse && typeof invoiceResponse === 'object' && 'download' in invoiceResponse && typeof (invoiceResponse as any).download === 'function') {
+        // PDF blob with download method - call it to download
+        (invoiceResponse as any).download();
+        toast.success('Invoice generated and downloaded successfully');
+      } else if (invoiceResponse instanceof Blob) {
+        // Direct blob response (fallback)
+        const url = window.URL.createObjectURL(invoiceResponse);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = locationId
+          ? `invoice-${companyId}-${locationId}-${invoiceDateFrom}-${invoiceDateTo}.pdf`
+          : `invoice-${companyId}-all-locations-${invoiceDateFrom}-${invoiceDateTo}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        toast.success('Invoice generated and downloaded successfully');
+      } else {
+        toast.success('Invoice generated successfully');
+      }
     } catch (error: any) {
       setInvoiceError(error);
-      
-      // Extract error message from response - check multiple locations
       let errorMessage = 'Failed to generate invoice';
-      
-      // First check error.response.data.message (most common for backend errors)
       if (error?.response?.data?.message) {
         errorMessage = error.response.data.message;
-      }
-      // Then check error.response.data.error
-      else if (error?.response?.data?.error) {
+      } else if (error?.response?.data?.error) {
         errorMessage = error.response.data.error;
-      }
-      // Then check error.message (the Error object's message)
-      else if (error?.message) {
+      } else if (error?.message) {
         errorMessage = error.message;
       }
-      
-      // Show user-friendly error message via toast
+
       if (error?.response?.status === 500) {
         if (errorMessage.includes('puppeteer') || errorMessage.includes('browser process')) {
           toast.error('Server error: PDF generation service is temporarily unavailable. Please contact support.');
         } else {
-          // Show the actual backend error message (without "Server error:" prefix)
           toast.error(errorMessage);
         }
       } else if (error?.response?.status === 404) {
@@ -238,64 +239,24 @@ const OperatorAccounting: React.FC = () => {
     }
   };
 
-  const handleDownloadInvoice = () => {
-    if (!invoiceData) {
-      toast.error('No invoice data available');
-      return;
-    }
-    
-    // If invoice data has a download method (from blob response)
-    if (invoiceData.type === 'pdf' && invoiceData.download) {
-      try {
-        invoiceData.download();
-        toast.success('Invoice downloaded successfully');
-      } catch {
-        toast.error('Failed to download invoice');
-      }
-      return;
-    }
-    
-    // Fallback: try to create download from blob
-    if (invoiceData.blob) {
-      try {
-        const url = window.URL.createObjectURL(invoiceData.blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = invoiceMode === 'company-location' && selectedLocationId !== 'all'
-          ? `invoice-${companyId}-${selectedLocationId}-${invoiceDateFrom}-${invoiceDateTo}.pdf`
-          : `invoice-${companyId}-all-locations-${invoiceDateFrom}-${invoiceDateTo}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        toast.success('Invoice downloaded successfully');
-      } catch {
-        toast.error('Failed to download invoice');
-      }
-    } else {
-      toast.error('Invoice data format not supported');
-    }
-  };
-
   const handleExportToExcel = async () => {
     if (!companyId) {
       toast.error('Company ID not found');
       return;
     }
-    
-    // Only require location if mode is company-location
-    if (invoiceMode === 'company-location' && (!selectedLocationId || selectedLocationId === 'all')) {
+
+    if (invoiceMode === 'single' && (!selectedLocationId || selectedLocationId === 'all')) {
       toast.error('Please select an operational location');
       return;
     }
-    
+
     if (!invoiceDateFrom || !invoiceDateTo) {
       toast.error('Please select date range');
       return;
     }
-    
+
     try {
-      const locationId = invoiceMode === 'company-location' ? selectedLocationId : null;
+      const locationId = invoiceMode === 'single' ? selectedLocationId : null;
       const jsonData = await fetchInvoiceJson(
         companyId,
         locationId,
@@ -304,11 +265,11 @@ const OperatorAccounting: React.FC = () => {
           to: invoiceDateTo,
         }
       );
-      
+
       const filename = locationId
         ? `invoice-${companyId}-${locationId}-${invoiceDateFrom}-${invoiceDateTo}.xlsx`
         : `invoice-${companyId}-all-locations-${invoiceDateFrom}-${invoiceDateTo}.xlsx`;
-      
+
       await exportInvoiceToExcel(jsonData, filename);
       toast.success('Excel file exported successfully');
     } catch (error: any) {
@@ -317,21 +278,15 @@ const OperatorAccounting: React.FC = () => {
     }
   };
 
+
   if (isLoading) {
     return (
       <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Calculator className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Company Accounting</h1>
-              <p className="text-sm text-muted-foreground">
-                View your company's financial transactions
-              </p>
-            </div>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Company Accounting</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            View your company's financial transactions
+          </p>
         </div>
         <PageLoadingSkeleton />
       </div>
@@ -341,20 +296,13 @@ const OperatorAccounting: React.FC = () => {
   if (isError) {
     return (
       <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Calculator className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Company Accounting</h1>
-              <p className="text-sm text-muted-foreground">
-                View your company's financial transactions
-              </p>
-            </div>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Company Accounting</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            View your company's financial transactions
+          </p>
         </div>
-        <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-destructive">
+        <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4 text-red-800 dark:text-red-200">
           <div className="flex items-center gap-2 mb-2">
             <RefreshCw className="h-4 w-4" />
             <span className="font-medium">Unable to load accounting data</span>
@@ -371,379 +319,193 @@ const OperatorAccounting: React.FC = () => {
     );
   }
 
-  const accountingData = data?.data;
-  const items = accountingData?.items || [];
-  const summary = accountingData?.summary;
-  const meta = accountingData;
+  // No need to process data here - results are shown on separate page
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 min-h-screen">
+      {/* Always Visible Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary/10">
-            <Calculator className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Company Accounting</h1>
-            <p className="text-sm text-muted-foreground">
-              View your company's financial transactions
-            </p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Company Accounting</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            View your company's financial transactions
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleResetFilters}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Reset filters
-          </Button>
-          <Button variant="outline" onClick={handleExport}>
-            <Receipt className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-        </div>
+
       </div>
 
-      {/* Invoice Generation Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Receipt className="h-5 w-5 text-muted-foreground" />
-            <CardTitle className="text-lg">Generate Invoice</CardTitle>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Generate PDF invoice for your company. You can select all locations or a specific location.
-          </p>
-        </CardHeader>
-        <CardContent>
-          {/* Invoice Mode Selection */}
-          <div className="mb-4 space-y-2">
-            <Label>Invoice Type</Label>
-            <div className="flex gap-4">
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="invoice-mode"
-                  value="company-only"
-                  checked={invoiceMode === 'company-only'}
-                  onChange={(e) => setInvoiceMode(e.target.value as 'company-only' | 'company-location')}
-                  className="h-4 w-4"
-                />
-                <span className="text-sm">Company Only (All Locations)</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="invoice-mode"
-                  value="company-location"
-                  checked={invoiceMode === 'company-location'}
-                  onChange={(e) => setInvoiceMode(e.target.value as 'company-only' | 'company-location')}
-                  className="h-4 w-4"
-                />
-                <span className="text-sm">Company + Single Location</span>
-              </label>
+      {/* Invoice Generator Section */}
+          <Card className="overflow-hidden border-0 shadow-sm">
+            <div className="bg-stone-900 dark:bg-stone-800 px-6 py-4 flex items-center gap-3">
+              <div className="p-2 bg-orange-500 rounded-lg">
+                <Sparkles className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-white">Invoice Generator</h2>
+                <p className="text-sm text-gray-400">Create professional invoices in seconds</p>
+              </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Operational Location Select - Only shown when mode is company-location */}
-            {invoiceMode === 'company-location' && (
-              <div className="space-y-2">
-                <Label htmlFor="invoice-location">Operational Location *</Label>
-                <Select 
-                  value={selectedLocationId} 
-                  onValueChange={setSelectedLocationId}
-                  disabled={!companyId}
+            <CardContent className="p-6 bg-card">
+              <div className="mb-2">
+                <Label className="text-sm font-medium text-foreground">Invoice Scope</Label>
+              </div>
+
+              <div className="mb-6 flex items-center gap-4">
+                <div className="inline-flex h-14 px-3 py-1.5 rounded-lg border border-border p-1 bg-muted/50">
+                  <button
+                    onClick={() => setInvoiceMode('all')}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all",
+                      invoiceMode === 'all'
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <MapPin className="h-4 w-4" />
+                    All Locations
+                  </button>
+                  <button
+                    onClick={() => setInvoiceMode('single')}
+                    className={cn(
+                      "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all",
+                      invoiceMode === 'single'
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <MapPin className="h-4 w-4" />
+                    Single Location
+                  </button>
+                </div>
+
+                <div className="ml-auto">
+                  <Button
+                    onClick={handleViewAccounting}
+                    className="bg-orange-500 rounded-xl hover:bg-orange-600 h-11 text-sm font-semibold text-white px-6"
+                  >
+                    <Search className="mr-2 h-4 w-4" />
+                    Search
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex items-end gap-4">
+                {invoiceMode === 'single' && (
+                  <div className="flex-1 space-y-2">
+                    <Label className="text-sm font-normal text-muted-foreground">Location</Label>
+                    <Select
+                      value={selectedLocationId}
+                      onValueChange={setSelectedLocationId}
+                      disabled={!companyId}
+                    >
+                      <SelectTrigger className="bg-card border-border">
+                        <SelectValue placeholder="Select Location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Select Location</SelectItem>
+                        {allLocations.map((location: any) => (
+                          <SelectItem key={location.id} value={location.id}>
+                            {location.title || location.city}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="flex-1 space-y-2">
+                  <Label className="text-sm font-normal text-muted-foreground">Start Date</Label>
+                  <Input
+                    type="date"
+                    value={invoiceDateFrom}
+                    max={invoiceDateTo || undefined}
+                    onChange={(e) => setInvoiceDateFrom(e.target.value)}
+                    className="bg-card border-border"
+                  />
+                </div>
+
+                <div className="flex-1 space-y-2">
+                  <Label className="text-sm font-normal text-muted-foreground">End Date</Label>
+                  <Input
+                    type="date"
+                    value={invoiceDateTo}
+                    min={invoiceDateFrom || undefined}
+                    onChange={(e) => setInvoiceDateTo(e.target.value)}
+                    className="bg-card border-border"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 mt-4">
+                <Button
+                  onClick={handleGenerateInvoice}
+                  disabled={!companyId || invoiceLoading || !invoiceDateFrom || !invoiceDateTo}
+                  className="bg-orange-500 hover:bg-orange-600 text-white"
                 >
-                  <SelectTrigger id="invoice-location">
-                    <SelectValue placeholder="Select location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Select location</SelectItem>
-                    {allLocations.map((location: any) => (
-                      <SelectItem key={location.id} value={location.id}>
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          <span>{location.title || location.city}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  {invoiceLoading ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Receipt className="mr-2 h-4 w-4" />
+                      Generate Invoice
+                    </>
+                  )}
+                </Button>
+                <Button
+                  onClick={handleExportToExcel}
+                  variant="outline"
+                  disabled={!companyId || !invoiceDateFrom || !invoiceDateTo}
+                  className="border-gray-300 bg-white dark:text-black"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Export to Excel
+                </Button>
               </div>
-            )}
-
-            {/* Date From */}
-            <div className="space-y-2">
-              <Label htmlFor="invoice-date-from">Date From</Label>
-              <Input
-                id="invoice-date-from"
-                type="date"
-                value={invoiceDateFrom}
-                max={invoiceDateTo || undefined}
-                onChange={(e) => setInvoiceDateFrom(e.target.value)}
-              />
-            </div>
-
-            {/* Date To */}
-            <div className="space-y-2">
-              <Label htmlFor="invoice-date-to">Date To</Label>
-              <Input
-                id="invoice-date-to"
-                type="date"
-                value={invoiceDateTo}
-                min={invoiceDateFrom || undefined}
-                onChange={(e) => setInvoiceDateTo(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 mt-4">
-            <Button
-              onClick={handleGenerateInvoice}
-              disabled={
-                !companyId || 
-                (invoiceMode === 'company-location' && (!selectedLocationId || selectedLocationId === 'all')) ||
-                !invoiceDateFrom || 
-                !invoiceDateTo || 
-                invoiceLoading
-              }
-            >
-              {invoiceLoading ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Receipt className="mr-2 h-4 w-4" />
-                  Generate Invoice
-                </>
-              )}
-            </Button>
-            {invoiceData && (
-              <Button onClick={handleDownloadInvoice} variant="outline">
-                <Download className="mr-2 h-4 w-4" />
-                Download PDF
-              </Button>
-            )}
-            <Button
-              onClick={handleExportToExcel}
-              variant="outline"
-              disabled={
-                !companyId || 
-                (invoiceMode === 'company-location' && (!selectedLocationId || selectedLocationId === 'all')) ||
-                !invoiceDateFrom || 
-                !invoiceDateTo
-              }
-            >
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
-              Export to Excel
-            </Button>
-          </div>
-
-          {/* Success Message */}
-          {invoiceData && invoiceData.type === 'pdf' && !invoiceError && (
-            <div className="mt-4 rounded-lg border border-green-200 bg-green-50 dark:bg-green-900/10 dark:border-green-800 p-4 text-green-800 dark:text-green-200">
-              <div className="flex items-center gap-2 mb-2">
-                <Receipt className="h-4 w-4" />
-                <span className="font-medium">Invoice Generated Successfully</span>
-              </div>
-              <p className="text-sm">
-                PDF invoice has been generated. Click "Download Invoice" to save it.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-muted-foreground" />
-            <CardTitle className="text-lg">Filters</CardTitle>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Filter your company's accounting records by date range.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="date-from">Date From</Label>
-              <Input
-                id="date-from"
-                type="date"
-                value={dateFrom}
-                max={dateTo || undefined}
-                onChange={(e) => setDateFrom(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="date-to">Date To</Label>
-              <Input
-                id="date-to"
-                type="date"
-                value={dateTo}
-                min={dateFrom || undefined}
-                onChange={(e) => setDateTo(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="flex justify-end mt-4">
-            <Button 
-              onClick={handleApplyFilters} 
-              disabled={!dateFrom || !dateTo}
-            >
-              <Calendar className="mr-2 h-4 w-4" />
-              Apply Filters
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Summary Cards */}
-      {summary && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Refund</CardTitle>
-              <TrendingDown className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                {formatCurrency(summary.totalRefund)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Customer refunds for your company
-              </p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Payout</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {formatCurrency(summary.totalPayout)}
+          {/* Quick Search by ID Section */}
+          <Card className="overflow-hidden border-0 shadow-sm">
+            <div className="bg-gradient-to-r from-orange-400 to-orange-300 dark:from-orange-600 dark:to-orange-500 px-6 py-4 flex items-center gap-3">
+              <div className="p-2 bg-white dark:bg-white/90 rounded-lg">
+                <Zap className="h-5 w-5 text-[#FE6603]" />
               </div>
-              <p className="text-xs text-muted-foreground">
-                Your company's payouts
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Commission</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {formatCurrency(summary.totalCommission)}
+              <div>
+                <h2 className="text-lg font-semibold text-white">Quick Search by ID</h2>
+                <p className="text-sm text-white/80">Find a specific transaction instantly</p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Yella commission from your company
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Records</CardTitle>
-              <Briefcase className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {summary.totalRecords}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Your company's financial records
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Accounting Items Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Receipt className="h-5 w-5 text-muted-foreground" />
-            <CardTitle className="text-lg">Company Financial Records</CardTitle>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Showing {items.length} of {meta?.total || 0} records for your company
-          </p>
-        </CardHeader>
-        <CardContent>
-          {items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Calculator className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No accounting records found</h3>
-              <p className="text-sm text-muted-foreground max-w-md">
-                Try adjusting your date filters. We will show accounting records that match your criteria as soon as they are available.
-              </p>
             </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Booking ID</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Pickup Date</TableHead>
-                    <TableHead>Drop Date</TableHead>
-                    <TableHead className="text-right">Customer Refund</TableHead>
-                    <TableHead className="text-right">Operator Payout</TableHead>
-                    <TableHead className="text-right">Commission</TableHead>
-                    <TableHead>Created</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {items.map((item: AccountingItem) => (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <Badge className={cn('accounting-type-badge', typeStyles[item.type])}>
-                          {item.type.replace('_', ' ')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {item.bookingid.slice(0, 8)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {item.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {formatDate(item.pickupat)}
-                      </TableCell>
-                      <TableCell>
-                        {formatDate(item.dropat)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatCurrency(item.customerrefund)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatCurrency(item.operatorpayout)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatCurrency(item.yellacommission)}
-                      </TableCell>
-                      <TableCell>
-                        {formatDateTime(item.createdat)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+
+            <CardContent className="p-6 bg-card">
+              <div className="flex items-center gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Enter transaction ID..."
+                    value={quickSearchQuery}
+                    onChange={(e) => setQuickSearchQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleQuickSearch()}
+                    className="pl-10 bg-card border-border"
+                  />
+                </div>
+                <Button
+                  onClick={handleQuickSearch}
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-6"
+                >
+                  <Search className="mr-2 h-4 w-4" />
+                  Search
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground mt-3">
+                Search for individual records by ID. For bulk data export, use the filters below.
+              </p>
+            </CardContent>
+          </Card>
     </div>
   );
 };

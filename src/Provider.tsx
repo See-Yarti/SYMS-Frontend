@@ -8,8 +8,17 @@ import { ThemeProvider } from './theme-provider';
 
 // Provider Props
 type ProviderProps = { children: React.ReactNode };
-// client for queries
-const queryClient = new QueryClient();
+// client for queries - single instance for entire app
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 0,              // Always refetch after invalidation
+      retry: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
+  },
+});
 const Provider = (props: ProviderProps) => {
   return (
     <ThemeProvider

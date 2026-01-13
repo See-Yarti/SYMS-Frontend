@@ -1,11 +1,11 @@
-// src/hoo/useLocationApi.ts:
+// src/hooks/useLocationApi.ts:
 
 import { axiosInstance } from '@/lib/API';
 import {
   useQuery,
   useMutation,
-  QueryClient,
 } from '@tanstack/react-query';
+import { queryClient } from '@/Provider';
 
 // Shared query options
 const defaultQueryOptions = {
@@ -14,12 +14,6 @@ const defaultQueryOptions = {
   refetchOnWindowFocus: false,
   refetchOnReconnect: false,
 };
-
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: defaultQueryOptions,
-  },
-});
 
 // Location Hooks
 

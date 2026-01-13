@@ -7,14 +7,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
-    User, Building2, FileText, Mail, MapPin, Phone,
+    User, Building2, FileText, Mail, MapPin,
     Info, Check, Lock, Eye, EyeOff, Globe, Building,
     Calendar as CalendarIcon, Hash, Sparkles, RefreshCw,
     ArrowLeft, Save, Upload, AlertCircle, CheckCircle2
 } from 'lucide-react';
 import { Icons } from '@/components/icons';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import PhoneInput from 'react-phone-number-input';
 import "react-phone-number-input/style.css";
 import { Country, State, City } from 'country-state-city';
@@ -26,7 +26,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { useUploadFile } from '@/hooks/useApi';
-import { useCheckCompanyKey, useSuggestCompanyKeys } from '@/hooks/useCompanyApi';
+import { useCheckCompanyKey, useSuggestCompanyKeys, useGetCompany, useUpdateCompany } from '@/hooks/useCompanyApi';
 import { Card } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Textarea } from '@/components/ui/textarea';
@@ -42,9 +42,10 @@ import {
     DialogFooter,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 
-// Form schema
-const registerSchema = z.object({
+// Form schema for create mode
+const createSchema = z.object({
     operatorName: z.string()
         .min(1, { message: 'Full name is required' })
         .max(100, { message: 'Name must be less than 100 characters' }),
@@ -64,7 +65,8 @@ const registerSchema = z.object({
         .max(100, { message: 'Company name must be less than 100 characters' }),
     companyKey: z.string()
         .min(2, { message: 'Company key must be at least 2 characters' })
-        .max(10, { message: 'Company key must be at most 10 characters' }),
+        .max(3, { message: 'Company key must be at most 3 characters' })
+        .regex(/^[A-Z]+$/, { message: 'Company key must contain only uppercase alphabets (A-Z), no numbers or special characters' }),
     companyAddress: z.object({
         addressLabel: z.string().default('Head Office'),
         street: z.string().min(1, { message: 'Street address is required' }),
@@ -90,7 +92,57 @@ const registerSchema = z.object({
     path: ["confirmPassword"]
 });
 
-type RegisterFormValues = z.infer<typeof registerSchema>;
+// Form schema for edit mode (files are optional, passwords are optional)
+const editSchema = z.object({
+    operatorName: z.string()
+        .min(1, { message: 'Full name is required' })
+        .max(100, { message: 'Name must be less than 100 characters' }),
+    operatorEmail: z.string()
+        .email({ message: 'Please enter a valid email address' })
+        .max(100, { message: 'Email must be less than 100 characters' }),
+    password: z.string()
+        .optional()
+        .refine((val) => !val || val.length >= 8, { message: 'Password must be at least 8 characters' })
+        .refine((val) => !val || /[A-Z]/.test(val), { message: 'Must contain at least one uppercase letter' })
+        .refine((val) => !val || /[0-9]/.test(val), { message: 'Must contain at least one number' })
+        .refine((val) => !val || /[^a-zA-Z0-9]/.test(val), { message: 'Must contain at least one special character' }),
+    confirmPassword: z.string().optional(),
+    phoneNumber: z.string().min(1, { message: 'Phone number is required' }),
+    companyName: z.string()
+        .min(1, { message: 'Company name is required' })
+        .max(100, { message: 'Company name must be less than 100 characters' }),
+    companyKey: z.string()
+        .min(2, { message: 'Company key must be at least 2 characters' })
+        .max(3, { message: 'Company key must be at most 3 characters' })
+        .regex(/^[A-Z]+$/, { message: 'Company key must contain only uppercase alphabets (A-Z), no numbers or special characters' }),
+    companyAddress: z.object({
+        addressLabel: z.string().default('Head Office'),
+        street: z.string().min(1, { message: 'Street address is required' }),
+        apartment: z.string().optional(),
+        city: z.string().min(1, { message: 'City is required' }),
+        state: z.string().min(1, { message: 'State/Region is required' }),
+        country: z.string().min(1, { message: 'Country is required' }),
+        postalCode: z.string().optional(),
+        additionalInfo: z.string().optional(),
+    }),
+    companyDescription: z.string()
+        .min(10, { message: 'Description must be at least 10 characters' })
+        .max(500, { message: 'Description must be less than 500 characters' }),
+    companyTaxFile: z.instanceof(File).optional()
+        .refine((file) => !file || file.size <= 5 * 1024 * 1024, 'File size must be less than 5MB'),
+    companyTaxNumber: z.string().min(1, { message: 'Tax number is required' }),
+    companyTradeLicenseFile: z.instanceof(File).optional()
+        .refine((file) => !file || file.size <= 5 * 1024 * 1024, 'File size must be less than 5MB'),
+    companyTradeLicenseIssueNumber: z.string().min(1, { message: 'License issue number is required' }),
+    companyTradeLicenseExpiryDate: z.date({ required_error: 'Expiry date is required' }),
+}).refine(data => !data.password || data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"]
+});
+
+type CreateFormValues = z.infer<typeof createSchema>;
+type EditFormValues = z.infer<typeof editSchema>;
+type RegisterFormValues = CreateFormValues | EditFormValues;
 type CountryType = ReturnType<typeof Country.getAllCountries>[number];
 
 // Step configuration
@@ -103,9 +155,20 @@ const STEPS = [
 
 const CompanyForm: React.FC = () => {
     const navigate = useNavigate();
-    const { mutate: uploadFile, isPending } = useUploadFile<{
+    const location = useLocation();
+    const { companyId } = useParams<{ companyId: string }>();
+    // Check if we're on edit route - more reliable than just checking companyId
+    const isEditMode = !!companyId && location.pathname.includes('/edit');
+    
+    const { mutate: uploadFile, isPending: isCreating } = useUploadFile<{
         message: any; success: boolean
     }>('/company/create');
+    const updateCompany = useUpdateCompany();
+    const isPending = isCreating || updateCompany.isPending;
+    
+    const { data: companyData, isLoading: isLoadingCompany } = useGetCompany(companyId || '');
+    
+    // Initialize step - start at step 1 for both create and edit mode
     const [currentStep, setCurrentStep] = useState(1);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -125,15 +188,80 @@ const CompanyForm: React.FC = () => {
         getValues,
         trigger,
     } = useForm<RegisterFormValues>({
-        resolver: zodResolver(registerSchema),
+        resolver: zodResolver(isEditMode ? editSchema : createSchema),
         mode: 'onChange',
         defaultValues: {
+            companyKey: '',
+            companyName: '',
+            operatorName: '',
+            operatorEmail: '',
+            password: '',
+            confirmPassword: '',
+            phoneNumber: '',
+            companyDescription: '',
+            companyTaxNumber: '',
+            companyTradeLicenseIssueNumber: '',
             companyAddress: {
-                addressLabel: 'Head Office'
+                addressLabel: 'Head Office',
+                street: '',
+                apartment: '',
+                city: '',
+                state: '',
+                country: '',
+                postalCode: '',
+                additionalInfo: '',
             },
             companyTradeLicenseExpiryDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1))
         }
     });
+
+    // Populate form when company data is loaded in edit mode
+    useEffect(() => {
+        if (isEditMode && companyData?.data?.company) {
+            const company = companyData.data.company;
+            const address = company.addresses?.[0]; // Get first address
+            const operator = company.operators?.[0]; // Get first operator
+            
+            // Populate operator info
+            if (operator?.user) {
+                setValue('operatorName', operator.user.name || '');
+                setValue('operatorEmail', operator.user.email || '');
+                setValue('phoneNumber', operator.user.phoneNumber || '');
+            }
+            
+            // Populate company info
+            setValue('companyName', company.name || '');
+            // Get companyKey from company object (it might be stored as companyKey, key, or company_key)
+            const companyKeyValue = (company as any).companyKey || (company as any).key || (company as any).company_key || '';
+            if (companyKeyValue) {
+                setValue('companyKey', companyKeyValue);
+            }
+            setValue('companyDescription', company.description || '');
+            setValue('companyTaxNumber', company.taxNumber || '');
+            setValue('companyTradeLicenseIssueNumber', company.tradeLicenseIssueNumber || '');
+            
+            if (company.tradeLicenseExpiryDate) {
+                setValue('companyTradeLicenseExpiryDate', new Date(company.tradeLicenseExpiryDate));
+            }
+            
+            // Note: We don't populate file fields in edit mode
+            // Files are only sent if user uploads new ones (File objects)
+            // This prevents backend from trying to delete existing files
+            
+            // Populate address info
+            if (address) {
+                setValue('companyAddress.addressLabel', address.addressLabel || 'Head Office');
+                setValue('companyAddress.street', address.street || '');
+                setValue('companyAddress.apartment', address.apartment || '');
+                setValue('companyAddress.city', address.city || '');
+                setValue('companyAddress.state', address.state || '');
+                setValue('companyAddress.country', address.country || '');
+                setValue('companyAddress.postalCode', address.postalCode || address.zipCode || '');
+                setValue('companyAddress.additionalInfo', address.additionalInfo || '');
+            }
+        }
+    }, [isEditMode, companyData, setValue]);
+
 
     const selectedCountry = watch('companyAddress.country');
     const selectedState = watch('companyAddress.state');
@@ -192,11 +320,13 @@ const CompanyForm: React.FC = () => {
 
         getSuggestions({ name: companyName.trim() }, {
             onSuccess: (response) => {
-                if (response.suggestions && response.suggestions.length > 0) {
-                    // Auto-select first suggestion
-                    const newKey = `${response.suggestions[0]}-${new Date().getFullYear()}`;
+                // Response structure: { suggestions: [...] }
+                const suggestionsList = response?.suggestions || [];
+                if (suggestionsList.length > 0) {
+                    // Auto-select first suggestion (2-3 uppercase letters only, no year/hyphen)
+                    const newKey = suggestionsList[0].toUpperCase().substring(0, 3);
                     setValue('companyKey', newKey, { shouldValidate: true });
-                    setSuggestions(response.suggestions);
+                    setSuggestions(suggestionsList);
                     setShowSuggestions(true);
                 }
             },
@@ -209,7 +339,8 @@ const CompanyForm: React.FC = () => {
 
     // Select a suggestion
     const handleSelectSuggestion = (suggestion: string) => {
-        const newKey = `${suggestion}-${new Date().getFullYear()}`;
+        // Only use 2-3 uppercase letters, no year/hyphen
+        const newKey = suggestion.toUpperCase().substring(0, 3);
         setValue('companyKey', newKey, { shouldValidate: true });
         setShowSuggestions(false);
     };
@@ -267,11 +398,22 @@ const CompanyForm: React.FC = () => {
 
     // Validate current step fields
     const validateStep = async (step: number): Promise<boolean> => {
-        let fieldsToValidate: (keyof RegisterFormValues)[] = [];
+        let fieldsToValidate: string[] = [];
 
         switch (step) {
             case 1:
-                fieldsToValidate = ['operatorName', 'operatorEmail', 'phoneNumber', 'password', 'confirmPassword'];
+                if (isEditMode) {
+                    // In edit mode, password fields are optional
+                    fieldsToValidate = ['operatorName', 'operatorEmail', 'phoneNumber'];
+                    // Only validate password if it's provided
+                    const passwordValue = getValues('password' as any);
+                    const confirmPasswordValue = getValues('confirmPassword' as any);
+                    if (passwordValue || confirmPasswordValue) {
+                        fieldsToValidate.push('password', 'confirmPassword');
+                    }
+                } else {
+                    fieldsToValidate = ['operatorName', 'operatorEmail', 'phoneNumber', 'password', 'confirmPassword'];
+                }
                 break;
             case 2:
                 fieldsToValidate = ['companyName', 'companyKey', 'companyDescription'];
@@ -280,11 +422,16 @@ const CompanyForm: React.FC = () => {
                 fieldsToValidate = ['companyAddress'];
                 break;
             case 4:
-                fieldsToValidate = ['companyTaxNumber', 'companyTradeLicenseIssueNumber', 'companyTradeLicenseExpiryDate', 'companyTaxFile', 'companyTradeLicenseFile'];
+                if (isEditMode) {
+                    // In edit mode, files are optional
+                    fieldsToValidate = ['companyTaxNumber', 'companyTradeLicenseIssueNumber', 'companyTradeLicenseExpiryDate'];
+                } else {
+                    fieldsToValidate = ['companyTaxNumber', 'companyTradeLicenseIssueNumber', 'companyTradeLicenseExpiryDate', 'companyTaxFile', 'companyTradeLicenseFile'];
+                }
                 break;
         }
 
-        const result = await trigger(fieldsToValidate);
+        const result = await trigger(fieldsToValidate as any);
         return result;
     };
 
@@ -292,7 +439,8 @@ const CompanyForm: React.FC = () => {
     const handleNext = async () => {
         const isValid = await validateStep(currentStep);
         if (isValid) {
-            setCurrentStep(prev => Math.min(prev + 1, 4));
+            const maxStep = isEditMode ? 4 : 4; // Both modes have step 4 as the last step
+            setCurrentStep(prev => Math.min(prev + 1, maxStep));
         }
     };
 
@@ -303,65 +451,147 @@ const CompanyForm: React.FC = () => {
 
     // Handle form submission
     const handleRegister = (data: RegisterFormValues) => {
-        if (keyCheckData !== undefined && keyCheckData.available === false) {
-            toast.error('Please choose an available company key');
+        // CRITICAL: Only submit if we're on the last step (step 4)
+        if (currentStep !== 4) {
             return;
         }
 
-        const formData = new FormData();
-
-        if (!data.companyAddress.country || !data.companyAddress.state || !data.companyAddress.city) {
-            toast.error('Please complete the company address');
-            return;
-        }
-
-        if (!data.companyTaxFile || !data.companyTradeLicenseFile) {
-            toast.error('Please upload both required documents');
-            return;
-        }
-
-        formData.append('operatorName', data.operatorName);
-        formData.append('operatorEmail', data.operatorEmail);
-        formData.append('password', data.password);
-        formData.append('phoneNumber', data.phoneNumber);
-        formData.append('companyName', data.companyName);
-        formData.append('companyKey', data.companyKey);
-        formData.append('companyDescription', data.companyDescription);
-        formData.append('companyTaxNumber', data.companyTaxNumber);
-        formData.append('companyTradeLicenseIssueNumber', data.companyTradeLicenseIssueNumber);
-        formData.append('companyTradeLicenseExpiryDate', data.companyTradeLicenseExpiryDate.toISOString());
-
-        const addressData = {
-            addressLabel: data.companyAddress.addressLabel || 'Head Office',
-            street: data.companyAddress.street,
-            apartment: data.companyAddress.apartment || '',
-            city: data.companyAddress.city,
-            state: data.companyAddress.state,
-            country: data.companyAddress.country,
-            postalCode: data.companyAddress.postalCode || '',
-            additionalInfo: data.companyAddress.additionalInfo || '',
-        };
-        formData.append('companyAddress', JSON.stringify(addressData));
-
-        formData.append('companyTaxFile', data.companyTaxFile);
-        formData.append('companyTradeLicenseFile', data.companyTradeLicenseFile);
-
-        uploadFile(formData, {
-            onSuccess: () => {
-                setSuccessModalOpen(true);
-            },
-            onError: (error: any) => {
-                let errorMessage = 'Registration failed. Please try again.';
-                if (error?.response?.data?.message) {
-                    errorMessage = error.response.data.message;
-                } else if (error?.response?.data?.error) {
-                    errorMessage = error.response.data.error;
-                } else if (error?.message) {
-                    errorMessage = error.message;
-                }
-                toast.error(errorMessage);
+        if (isEditMode) {
+            // Edit mode - use PATCH API with FormData
+            if (!companyId) return;
+            
+            if (keyCheckData !== undefined && keyCheckData.available === false) {
+                toast.error('Please choose an available company key');
+                return;
             }
-        });
+
+            // Create FormData for file uploads and JSON fields
+            const formData = new FormData();
+            
+            // Add JSON fields
+            formData.append('name', data.companyName);
+            formData.append('description', data.companyDescription);
+            // Format date as YYYY-MM-DD (ISO date format)
+            const expiryDate = data.companyTradeLicenseExpiryDate.toISOString().split('T')[0];
+            formData.append('tradeLicenseExpiryDate', expiryDate);
+            
+            // Add companyKey if it exists and is valid (2-3 uppercase letters)
+            if (data.companyKey && data.companyKey.length >= 2 && data.companyKey.length <= 3) {
+                formData.append('companyKey', data.companyKey.toUpperCase());
+            }
+            
+            // Note: companyAddress is not allowed in update API
+            // Address updates need to be done through a separate endpoint
+            
+            // Add files ONLY if they are new File objects (user uploaded new files)
+            // Don't send files if they haven't changed - this prevents backend from trying to delete old files
+            const taxFile = data.companyTaxFile;
+            const licenseFile = data.companyTradeLicenseFile;
+            
+            // Only append if it's a File object (newly uploaded), not a string (existing URL)
+            if (taxFile && taxFile instanceof File) {
+                formData.append('taxFile', taxFile);
+            }
+            // If taxFile is not a File, don't send it - backend will keep existing file
+            
+            if (licenseFile && licenseFile instanceof File) {
+                formData.append('tradeLicenseFile', licenseFile);
+            }
+            // If licenseFile is not a File, don't send it - backend will keep existing file
+            // Note: idProofFile, passportProofFile, utilityBillFile are not in current form
+            // Add them if needed in the future
+
+            updateCompany.mutate(
+                { companyId, payload: formData },
+                {
+                    onSuccess: () => {
+                        toast.success('Company updated successfully');
+                        navigate('/companies/list');
+                    },
+                    onError: (error: any) => {
+                        let errorMessage = 'Failed to update company. Please try again.';
+                        if (error?.response?.data?.message) {
+                            errorMessage = error.response.data.message;
+                        } else if (error?.response?.data?.error) {
+                            errorMessage = error.response.data.error;
+                        } else if (error?.response?.data?.errors) {
+                            // Handle validation errors array
+                            const errors = error.response.data.errors;
+                            if (Array.isArray(errors) && errors.length > 0) {
+                                errorMessage = errors.map((e: any) => {
+                                    return `${e.field}: ${e.constraints?.join(', ') || e.message || e}`;
+                                }).join('; ');
+                            }
+                        } else if (error?.message) {
+                            errorMessage = error.message;
+                        }
+                        toast.error(errorMessage);
+                    }
+                }
+            );
+        } else {
+            // Create mode - use POST API
+            if (keyCheckData !== undefined && keyCheckData.available === false) {
+                toast.error('Please choose an available company key');
+                return;
+            }
+
+            const formData = new FormData();
+
+            if (!data.companyAddress.country || !data.companyAddress.state || !data.companyAddress.city) {
+                toast.error('Please complete the company address');
+                return;
+            }
+
+            if (!data.companyTaxFile || !data.companyTradeLicenseFile) {
+                toast.error('Please upload both required documents');
+                return;
+            }
+
+            const createData = data as CreateFormValues;
+            formData.append('operatorName', createData.operatorName);
+            formData.append('operatorEmail', createData.operatorEmail);
+            formData.append('password', createData.password);
+            formData.append('phoneNumber', createData.phoneNumber);
+            formData.append('companyName', createData.companyName);
+            formData.append('companyKey', createData.companyKey);
+            formData.append('companyDescription', createData.companyDescription);
+            formData.append('companyTaxNumber', createData.companyTaxNumber);
+            formData.append('companyTradeLicenseIssueNumber', createData.companyTradeLicenseIssueNumber);
+            formData.append('companyTradeLicenseExpiryDate', createData.companyTradeLicenseExpiryDate.toISOString());
+
+            const addressData = {
+                addressLabel: createData.companyAddress.addressLabel || 'Head Office',
+                street: createData.companyAddress.street,
+                apartment: createData.companyAddress.apartment || '',
+                city: createData.companyAddress.city,
+                state: createData.companyAddress.state,
+                country: createData.companyAddress.country,
+                postalCode: createData.companyAddress.postalCode || '',
+                additionalInfo: createData.companyAddress.additionalInfo || '',
+            };
+            formData.append('companyAddress', JSON.stringify(addressData));
+
+            formData.append('companyTaxFile', createData.companyTaxFile);
+            formData.append('companyTradeLicenseFile', createData.companyTradeLicenseFile);
+
+            uploadFile(formData, {
+                onSuccess: () => {
+                    setSuccessModalOpen(true);
+                },
+                onError: (error: any) => {
+                    let errorMessage = 'Registration failed. Please try again.';
+                    if (error?.response?.data?.message) {
+                        errorMessage = error.response.data.message;
+                    } else if (error?.response?.data?.error) {
+                        errorMessage = error.response.data.error;
+                    } else if (error?.message) {
+                        errorMessage = error.message;
+                    }
+                    toast.error(errorMessage);
+                }
+            });
+        }
     };
 
     // Handle save draft
@@ -380,6 +610,7 @@ const CompanyForm: React.FC = () => {
     const renderStepContent = () => {
         switch (currentStep) {
             case 1:
+                
                 return (
                     <div className="space-y-6">
                         {/* Section Header */}
@@ -404,12 +635,12 @@ const CompanyForm: React.FC = () => {
                                     id="operatorName"
                                     type="text"
                                     placeholder="Enter full name"
-                                    {...register('operatorName')}
+                                    {...register('operatorName' as any)}
                                     className="pl-10 h-11 bg-muted border-input"
                                 />
                             </div>
-                            {errors.operatorName && (
-                                <p className="text-sm text-red-500">{errors.operatorName.message}</p>
+                            {(errors as any).operatorName && (
+                                <p className="text-sm text-red-500">{(errors as any).operatorName.message}</p>
                             )}
                         </div>
 
@@ -425,12 +656,12 @@ const CompanyForm: React.FC = () => {
                                         id="operatorEmail"
                                         type="email"
                                         placeholder="operator@company.com"
-                                        {...register('operatorEmail')}
+                                        {...register('operatorEmail' as any)}
                                         className="pl-10 h-11 bg-muted border-input"
                                     />
                                 </div>
-                                {errors.operatorEmail && (
-                                    <p className="text-sm text-red-500">{errors.operatorEmail.message}</p>
+                                {(errors as any).operatorEmail && (
+                                    <p className="text-sm text-red-500">{(errors as any).operatorEmail.message}</p>
                                 )}
                             </div>
 
@@ -448,14 +679,14 @@ const CompanyForm: React.FC = () => {
                                             defaultCountry="AE"
                                             withCountryCallingCode
                                             onChange={field.onChange}
-                                            value={field.value}
+                                            value={field.value || ''}
                                             placeholder="50 123 4567"
                                             className="flex h-11 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm"
                                         />
                                     )}
                                 />
-                                {errors.phoneNumber && (
-                                    <p className="text-sm text-red-500">{errors.phoneNumber.message}</p>
+                                {(errors as any).phoneNumber && (
+                                    <p className="text-sm text-red-500">{(errors as any).phoneNumber.message}</p>
                                 )}
                             </div>
                         </div>
@@ -464,15 +695,16 @@ const CompanyForm: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="password" className="text-sm font-normal">
-                                    Password <span className="text-red-500">*</span>
+                                    Password {!isEditMode && <span className="text-red-500">*</span>}
+                                    {isEditMode && <span className="text-xs text-muted-foreground ml-2">(Optional)</span>}
                                 </Label>
                                 <div className="relative">
                                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                                     <Input
                                         id="password"
                                         type={showPassword ? "text" : "password"}
-                                        placeholder="Create strong password"
-                                        {...register('password')}
+                                        placeholder={isEditMode ? "Leave empty to keep current password" : "Create strong password"}
+                                        {...register('password' as any)}
                                         className="pl-10 pr-10 h-11 bg-muted border-input"
                                     />
                                     <button
@@ -486,22 +718,23 @@ const CompanyForm: React.FC = () => {
                                 <p className="text-xs text-muted-foreground">
                                     Must contain uppercase, number, special character, and be at least 8 characters
                                 </p>
-                                {errors.password && (
-                                    <p className="text-sm text-red-500">{errors.password.message}</p>
+                                {(errors as any).password && (
+                                    <p className="text-sm text-red-500">{(errors as any).password.message}</p>
                                 )}
                             </div>
 
                             <div className="space-y-2">
                                 <Label htmlFor="confirmPassword" className="text-sm font-normal">
-                                    Confirm Password <span className="text-red-500">*</span>
+                                    Confirm Password {!isEditMode && <span className="text-red-500">*</span>}
+                                    {isEditMode && <span className="text-xs text-muted-foreground ml-2">(Optional)</span>}
                                 </Label>
                                 <div className="relative">
                                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                                     <Input
                                         id="confirmPassword"
                                         type={showConfirmPassword ? "text" : "password"}
-                                        placeholder="Re-enter password"
-                                        {...register('confirmPassword')}
+                                        placeholder={isEditMode ? "Re-enter new password if changing" : "Re-enter password"}
+                                        {...register('confirmPassword' as any)}
                                         className="pl-10 pr-10 h-11 bg-muted border-input"
                                     />
                                     <button
@@ -512,8 +745,8 @@ const CompanyForm: React.FC = () => {
                                         {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                                     </button>
                                 </div>
-                                {errors.confirmPassword && (
-                                    <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>
+                                {(errors as any).confirmPassword && (
+                                    <p className="text-sm text-red-500">{(errors as any).confirmPassword.message}</p>
                                 )}
                             </div>
                         </div>
@@ -555,41 +788,69 @@ const CompanyForm: React.FC = () => {
                         <div className="space-y-2 relative">
                             <Label htmlFor="companyKey" className="text-sm font-normal flex items-center gap-2">
                                 Company Key <span className="text-red-500">*</span>
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-[#155DFC] bg-blue-100 dark:bg-blue-900/50 rounded-full">
-                                    <Sparkles className="w-3 h-3" />
-                                    Auto-generated
-                                </span>
+                                {!isEditMode && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-[#155DFC] bg-blue-100 dark:bg-blue-900/50 rounded-full">
+                                        <Sparkles className="w-3 h-3" />
+                                        Auto-generated
+                                    </span>
+                                )}
+                                {isEditMode && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-muted-foreground bg-muted rounded-full">
+                                        Read-only
+                                    </span>
+                                )}
                             </Label>
                             <div className="relative">
                                 <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     id="companyKey"
                                     type="text"
-                                    placeholder="ACME-2025"
+                                    placeholder="ABC"
                                     value={companyKey}
-                                    onChange={(e) => setValue('companyKey', e.target.value.toUpperCase(), { shouldValidate: true })}
-                                    className="pl-10 pr-10 h-11 bg-orange-50 dark:bg-orange-950/30 text-foreground border-orange-300 dark:border-orange-700 uppercase"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={generateCompanyKey}
-                                    disabled={isSuggesting || !companyName}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground disabled:opacity-50"
-                                >
-                                    {isSuggesting ? (
-                                        <Icons.spinner className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <RefreshCw className="h-4 w-4" />
+                                    onChange={(e) => {
+                                        if (!isEditMode) {
+                                            // Filter: only uppercase A-Z, max 3 characters
+                                            const filtered = e.target.value
+                                                .toUpperCase()
+                                                .replace(/[^A-Z]/g, '')
+                                                .substring(0, 3);
+                                            setValue('companyKey', filtered, { shouldValidate: true });
+                                        }
+                                    }}
+                                    disabled={isEditMode}
+                                    readOnly={isEditMode}
+                                    className={cn(
+                                        "pl-10 pr-10 h-11 uppercase",
+                                        isEditMode 
+                                            ? "bg-muted/50 text-muted-foreground border-muted cursor-not-allowed" 
+                                            : "bg-orange-50 dark:bg-orange-950/30 text-foreground border-orange-300 dark:border-orange-700"
                                     )}
-                                </button>
+                                />
+                                {!isEditMode && (
+                                    <button
+                                        type="button"
+                                        onClick={generateCompanyKey}
+                                        disabled={isSuggesting || !companyName}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground disabled:opacity-50"
+                                    >
+                                        {isSuggesting ? (
+                                            <Icons.spinner className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <RefreshCw className="h-4 w-4" />
+                                        )}
+                                    </button>
+                                )}
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                This unique identifier will be used for system integration
+                                {isEditMode 
+                                    ? "Company key cannot be changed after creation"
+                                    : "This unique identifier will be used for system integration"
+                                }
                             </p>
                             {errors.companyKey && (
                                 <p className="text-sm text-red-500">{errors.companyKey.message}</p>
                             )}
-                            {companyKey.length >= 2 && !errors.companyKey && (
+                            {!isEditMode && companyKey.length >= 2 && !errors.companyKey && (
                                 <div className="flex items-center gap-2">
                                     {isCheckingKey ? (
                                         <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -609,7 +870,7 @@ const CompanyForm: React.FC = () => {
                                     ) : null}
                                 </div>
                             )}
-                            {showSuggestions && suggestions.length > 0 && (
+                            {!isEditMode && showSuggestions && suggestions.length > 0 && (
                                 <div className="company-key-suggestions absolute z-50 top-full mt-1 w-full bg-card border border-border rounded-lg shadow-lg max-h-40 overflow-auto">
                                     <div className="p-2">
                                         <p className="text-xs text-muted-foreground mb-2 px-2">Suggestions:</p>
@@ -619,7 +880,7 @@ const CompanyForm: React.FC = () => {
                                                 className="px-3 py-2 hover:bg-muted cursor-pointer rounded flex items-center justify-between"
                                                 onMouseDown={() => handleSelectSuggestion(suggestion)}
                                             >
-                                                <span className="font-medium uppercase">{suggestion}-{new Date().getFullYear()}</span>
+                                                <span className="font-medium uppercase">{suggestion}</span>
                                                 <button className="text-xs text-orange-500 hover:underline">Use</button>
                                             </div>
                                         ))}
@@ -671,7 +932,7 @@ const CompanyForm: React.FC = () => {
                                     name="companyAddress.country"
                                     control={control}
                                     render={({ field }) => (
-                                        <Select onValueChange={field.onChange} value={field.value}>
+                                        <Select onValueChange={field.onChange} value={field.value || ''}>
                                             <SelectTrigger className="h-11 bg-muted border-input">
                                                 <Globe className="w-5 h-5 mr-2 text-muted-foreground" />
                                                 <SelectValue placeholder="Select country" />
@@ -703,7 +964,7 @@ const CompanyForm: React.FC = () => {
                                         return (
                                             <Select
                                                 onValueChange={field.onChange}
-                                                value={field.value}
+                                                value={field.value || ''}
                                                 disabled={!selectedCountry || !states.length}
                                             >
                                                 <SelectTrigger className="h-11 bg-muted border-input">
@@ -751,7 +1012,7 @@ const CompanyForm: React.FC = () => {
                                         return (
                                             <Select
                                                 onValueChange={field.onChange}
-                                                value={field.value}
+                                                value={field.value || ''}
                                                 disabled={!selectedCountry || !selectedState}
                                             >
                                                 <SelectTrigger className="h-11 bg-muted border-input">
@@ -919,7 +1180,7 @@ const CompanyForm: React.FC = () => {
                                         <PopoverContent className="w-auto p-0">
                                             <Calendar
                                                 mode="single"
-                                                selected={field.value}
+                                                selected={field.value || undefined}
                                                 onSelect={field.onChange}
                                                 fromDate={new Date()}
                                             />
@@ -937,8 +1198,9 @@ const CompanyForm: React.FC = () => {
                             {/* Tax Certificate Upload */}
                             <div className="space-y-2">
                                 <Label className="text-sm font-normal">
-                                    Tax Certificate <span className="text-red-500">*</span>
+                                    Tax Certificate {!isEditMode && <span className="text-red-500">*</span>}
                                     <span className="text-xs text-muted-foreground ml-2">(PDF, JPG, PNG - Max 5MB)</span>
+                                    {isEditMode && <span className="text-xs text-muted-foreground ml-2">(Optional - leave empty to keep existing)</span>}
                                 </Label>
                                 <div
                                     {...getTaxRootProps()}
@@ -957,7 +1219,7 @@ const CompanyForm: React.FC = () => {
                                             <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
                                                 <Check className="w-6 h-6 text-green-500" />
                                             </div>
-                                            <p className="font-medium text-sm truncate max-w-full">{watch('companyTaxFile').name}</p>
+                                            <p className="font-medium text-sm truncate max-w-full">{(watch('companyTaxFile') as File)?.name}</p>
                                             <p className="text-xs text-muted-foreground">Click to replace</p>
                                         </div>
                                     ) : (
@@ -980,8 +1242,9 @@ const CompanyForm: React.FC = () => {
                             {/* Trade License Upload */}
                             <div className="space-y-2">
                                 <Label className="text-sm font-normal">
-                                    Trade License <span className="text-red-500">*</span>
+                                    Trade License {!isEditMode && <span className="text-red-500">*</span>}
                                     <span className="text-xs text-muted-foreground ml-2">(PDF, JPG, PNG - Max 5MB)</span>
+                                    {isEditMode && <span className="text-xs text-muted-foreground ml-2">(Optional - leave empty to keep existing)</span>}
                                 </Label>
                                 <div
                                     {...getLicenseRootProps()}
@@ -1000,7 +1263,7 @@ const CompanyForm: React.FC = () => {
                                             <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
                                                 <Check className="w-6 h-6 text-green-500" />
                                             </div>
-                                            <p className="font-medium text-sm truncate max-w-full">{watch('companyTradeLicenseFile').name}</p>
+                                            <p className="font-medium text-sm truncate max-w-full">{(watch('companyTradeLicenseFile') as File)?.name}</p>
                                             <p className="text-xs text-muted-foreground">Click to replace</p>
                                         </div>
                                     ) : (
@@ -1043,8 +1306,12 @@ const CompanyForm: React.FC = () => {
         <div className="min-h-screen p-6">
             {/* Header */}
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-foreground">Companies Management</h1>
-                <p className="text-sm text-muted-foreground mt-1">View and manage all registered companies</p>
+                <h1 className="text-2xl font-bold text-foreground">
+                    {isEditMode ? 'Edit Company' : 'Add New Company'}
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                    {isEditMode ? 'Update company information' : 'View and manage all registered companies'}
+                </p>
             </div>
 
             {/* Back and Save Draft */}
@@ -1068,62 +1335,85 @@ const CompanyForm: React.FC = () => {
                 </Button>
             </div>
 
-            <Card className="bg-card border border-border shadow-sm rounded-xl overflow-hidden mb-5">
-                {/* Stepper */}
-                <div className="px-8 py-6 border-b border-border">
-                    <div className="flex items-center justify-between max-w-2xl mx-auto">
-                        {STEPS.map((step, index) => {
-                            const Icon = step.icon;
-                            const isCompleted = currentStep > step.id;
-                            const isCurrent = currentStep === step.id;
-
-                            return (
-                                <React.Fragment key={step.id}>
-                                    <div className="flex flex-col items-center">
-                                        <div
-                                            className={cn(
-                                                "w-10 h-10 rounded-full flex items-center justify-center transition-all",
-                                                isCompleted
-                                                    ? "bg-green-500 text-white"
-                                                    : isCurrent
-                                                        ? "bg-orange-500 text-white"
-                                                        : "bg-muted text-muted-foreground"
-                                            )}
-                                        >
-                                            {isCompleted ? (
-                                                <Check className="w-5 h-5" />
-                                            ) : (
-                                                <Icon className="w-5 h-5" />
-                                            )}
-                                        </div>
-                                        <span
-                                            className={cn(
-                                                "text-xs mt-2 font-medium",
-                                                isCurrent ? "text-orange-500" : isCompleted ? "text-green-500" : "text-muted-foreground"
-                                            )}
-                                        >
-                                            {step.title}
-                                        </span>
-                                    </div>
-                                    {index < STEPS.length - 1 && (
-                                        <div
-                                            className={cn(
-                                                "flex-1 h-0.5 mx-4",
-                                                currentStep > step.id ? "bg-green-500" : "bg-border"
-                                            )}
-                                        />
-                                    )}
-                                </React.Fragment>
-                            );
-                        })}
+            {isLoadingCompany ? (
+                <Card className="bg-card border border-border shadow-sm rounded-xl overflow-hidden mb-5 p-8">
+                    <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
+                        <span className="text-muted-foreground">Loading company data...</span>
                     </div>
-                </div>
-            </Card>
+                </Card>
+            ) : (
+                <Card className="bg-card border border-border shadow-sm rounded-xl overflow-hidden mb-5">
+                    {/* Stepper */}
+                    <div className="px-8 py-6 border-b border-border">
+                        <div className="flex items-center justify-between max-w-2xl mx-auto">
+                            {STEPS.map((step, index) => {
+                                const Icon = step.icon;
+                                const isCompleted = currentStep > step.id;
+                                const isCurrent = currentStep === step.id;
+
+                                return (
+                                    <React.Fragment key={step.id}>
+                                        <div className="flex flex-col items-center">
+                                            <div
+                                                className={cn(
+                                                    "w-10 h-10 rounded-full flex items-center justify-center transition-all",
+                                                    isCompleted
+                                                        ? "bg-green-500 text-white"
+                                                        : isCurrent
+                                                            ? "bg-orange-500 text-white"
+                                                            : "bg-muted text-muted-foreground"
+                                                )}
+                                            >
+                                                {isCompleted ? (
+                                                    <Check className="w-5 h-5" />
+                                                ) : (
+                                                    <Icon className="w-5 h-5" />
+                                                )}
+                                            </div>
+                                            <span
+                                                className={cn(
+                                                    "text-xs mt-2 font-medium",
+                                                    isCurrent ? "text-orange-500" : isCompleted ? "text-green-500" : "text-muted-foreground"
+                                                )}
+                                            >
+                                                {step.title}
+                                            </span>
+                                        </div>
+                                        {index < STEPS.length - 1 && (
+                                            <div
+                                                className={cn(
+                                                    "flex-1 h-0.5 mx-4",
+                                                    currentStep > step.id ? "bg-green-500" : "bg-border"
+                                                )}
+                                            />
+                                        )}
+                                    </React.Fragment>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </Card>
+            )}
 
             {/* Main Card */}
             <Card className="bg-card border border-border shadow-sm rounded-xl overflow-hidden">
                 {/* Form Content */}
-                <form onSubmit={handleSubmit(handleRegister)}>
+                <form onSubmit={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // CRITICAL: Only submit if we're on step 4 AND the submit button was explicitly clicked
+                    // This prevents auto-submission when pressing Enter in form fields
+                    return false;
+                }} onKeyDown={(e) => {
+                    // Prevent Enter key from submitting form unless on submit button
+                    if (e.key === 'Enter' && e.target instanceof HTMLInputElement) {
+                        // Only allow Enter to submit if we're on step 4 and it's the submit button
+                        if (currentStep !== 4) {
+                            e.preventDefault();
+                        }
+                    }
+                }}>
                     <div className="p-8">
                         {renderStepContent()}
                     </div>
@@ -1144,7 +1434,7 @@ const CompanyForm: React.FC = () => {
                             Step {currentStep} of {STEPS.length}
                         </span>
 
-                        {currentStep < 4 ? (
+                        {(isEditMode ? currentStep < 4 : currentStep < 4) ? (
                             <Button
                                 type="button"
                                 onClick={handleNext}
@@ -1154,17 +1444,25 @@ const CompanyForm: React.FC = () => {
                             </Button>
                         ) : (
                             <Button
-                                type="submit"
-                                disabled={isPending}
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    // Explicitly call handleSubmit only when button is clicked
+                                    if (currentStep === 4) {
+                                        handleSubmit(handleRegister)(e as any);
+                                    }
+                                }}
+                                disabled={isPending || isLoadingCompany}
                                 className="min-w-[140px] bg-orange-500 hover:bg-orange-600 text-white"
                             >
                                 {isPending ? (
                                     <>
                                         <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                                        Submitting...
+                                        {isEditMode ? 'Updating...' : 'Submitting...'}
                                     </>
                                 ) : (
-                                    'Submit Registration'
+                                    isEditMode ? 'Update Company' : 'Submit Registration'
                                 )}
                             </Button>
                         )}

@@ -1,10 +1,27 @@
 // src/pages/bookings/BookingDetails.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useBookingById } from '@/hooks/useBookings';
+import { useBookingById, useCancelBooking } from '@/hooks/useBookings';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PageLoadingSkeleton } from '@/components/ui/loading';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   ArrowLeft,
   Calendar,
@@ -22,18 +39,22 @@ import {
   Navigation,
   Receipt,
   Percent,
+  XCircle,
+  AlertCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { CancelType } from '@/types/booking';
+import { Loader2 } from 'lucide-react';
 
 const paymentStatusStyles: Record<string, { bg: string; text: string }> = {
   PENDING: {
-    bg: 'bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700',
-    text: 'text-amber-600 dark:text-amber-400',
+    bg: 'bg-[#F56304]/10 dark:bg-[#F56304]/20 border border-[#F56304]/30 dark:border-[#F56304]/50',
+    text: 'text-[#F56304] dark:text-[#F56304]',
   },
   UNPAID: {
-    bg: 'bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700',
-    text: 'text-amber-600 dark:text-amber-400',
+    bg: 'bg-[#F56304]/10 dark:bg-[#F56304]/20 border border-[#F56304]/30 dark:border-[#F56304]/50',
+    text: 'text-[#F56304] dark:text-[#F56304]',
   },
   PAID: {
     bg: 'bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700',
@@ -101,7 +122,26 @@ const formatTime = (value?: string | null) => {
 const BookingDetails: React.FC = () => {
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
-  const { data: booking, isLoading, isError, error } = useBookingById(bookingId);
+  const { data: booking, isLoading, isError, error, refetch } = useBookingById(bookingId);
+  const cancelBooking = useCancelBooking();
+  
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [cancelType, setCancelType] = useState<CancelType>('LATE_CANCEL');
+  const [cancelNote, setCancelNote] = useState('');
+  const [cancelResponse, setCancelResponse] = useState<any>(null);
+
+  // Handle edit button click - open cancel dialog for cancelled bookings
+  const handleEditClick = () => {
+    if (booking?.status === 'CANCELLED') {
+      // Pre-populate with existing cancellation data if available
+      // Note: We'll need to get cancelType from booking data if available
+      // For now, we'll set default and let user change it
+      setCancelType('LATE_CANCEL'); // Default, user can change
+      setCancelNote(booking.cancellationReason || '');
+      setCancelResponse(null); // Clear previous response
+      setIsCancelDialogOpen(true);
+    }
+  };
 
   if (isLoading) return <PageLoadingSkeleton />;
 
@@ -177,10 +217,26 @@ const BookingDetails: React.FC = () => {
           <Button variant="outline" size="sm" className="gap-2 rounded-xl h-12 w-14">
             <Share2 className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" className="gap-2 rounded-xl h-12 w-21">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="gap-2 rounded-xl h-12 w-21"
+            onClick={handleEditClick}
+          >
             <Edit className="h-4 w-4" />
             Edit
           </Button>
+          {booking.status !== 'CANCELLED' && (
+            <Button 
+              variant="destructive" 
+              size="sm" 
+              className="gap-2 rounded-xl h-12"
+              onClick={() => setIsCancelDialogOpen(true)}
+            >
+              <XCircle className="h-4 w-4" />
+              Cancel Booking
+            </Button>
+          )}
         </div>
       </div>
 
@@ -497,6 +553,164 @@ const BookingDetails: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {/* Cancellation Dialog */}
+      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {booking?.status === 'CANCELLED' ? 'Update Cancellation Details' : 'Cancel Booking'}
+            </DialogTitle>
+            <DialogDescription>
+              {booking?.status === 'CANCELLED' 
+                ? 'Update the cancellation type and note. This will recalculate the accounting.'
+                : 'Select the cancellation type and provide a note. This action cannot be undone.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="cancelType">Cancellation Type *</Label>
+              <Select value={cancelType} onValueChange={(value) => setCancelType(value as CancelType)}>
+                <SelectTrigger id="cancelType" className="mt-1">
+                  <SelectValue placeholder="Select cancellation type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="FREE_CANCEL">FREE_CANCEL - Full refund, no commission</SelectItem>
+                  <SelectItem value="LATE_CANCEL">LATE_CANCEL - 15% penalty</SelectItem>
+                  <SelectItem value="NO_SHOW">NO_SHOW - 10% fee</SelectItem>
+                  <SelectItem value="CUSTOMER_FAULT">CUSTOMER_FAULT - 20% fee</SelectItem>
+                  <SelectItem value="OPERATOR_FAULT">OPERATOR_FAULT - Full refund, configurable penalty</SelectItem>
+                  <SelectItem value="PARTIAL_USE">PARTIAL_USE - Based on used amount</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="cancelNote">Note (Optional)</Label>
+              <Textarea
+                id="cancelNote"
+                value={cancelNote}
+                onChange={(e) => setCancelNote(e.target.value)}
+                placeholder="Enter cancellation reason..."
+                className="mt-1"
+                rows={3}
+              />
+            </div>
+
+            {cancelResponse && (
+              <Card className="p-4 bg-muted border border-border">
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertCircle className="h-5 w-5 text-[#F56304]" />
+                  <h3 className="font-semibold">Cancellation Accounting</h3>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-muted-foreground">Customer Refund</p>
+                      <p className="font-medium">{formatCurrency(cancelResponse.accounting?.customerRefund)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Operator Payout</p>
+                      <p className="font-medium">{formatCurrency(cancelResponse.accounting?.operatorPayout)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">YalaRide Commission</p>
+                      <p className="font-medium">{formatCurrency(cancelResponse.accounting?.yalaRideCommission)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Commission Amount</p>
+                      <p className="font-medium">{formatCurrency(cancelResponse.accounting?.commissionAmount)}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Commission Type</p>
+                      <p className="font-medium">{cancelResponse.accounting?.commissionType}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Commission Rate</p>
+                      <p className="font-medium">{cancelResponse.accounting?.commissionValue || cancelResponse.accounting?.commissionRate || '—'}</p>
+                    </div>
+                    {cancelResponse.accounting?.commissionAmount && (
+                      <div>
+                        <p className="text-muted-foreground">Commission Amount</p>
+                        <p className="font-medium">{formatCurrency(cancelResponse.accounting.commissionAmount)}</p>
+                      </div>
+                    )}
+                    {cancelResponse.accounting?.amountOwed && parseFloat(cancelResponse.accounting.amountOwed) > 0 && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground">Amount Owed to YalaRide</p>
+                        <p className="font-semibold text-[#F56304]">{formatCurrency(cancelResponse.accounting.amountOwed)}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsCancelDialogOpen(false);
+                setCancelNote('');
+                setCancelResponse(null);
+                // Reset to default values
+                setCancelType('LATE_CANCEL');
+              }}
+            >
+              {cancelResponse ? 'Close' : 'Cancel'}
+            </Button>
+            {!cancelResponse && (
+              <Button
+                onClick={() => {
+                  if (!bookingId) return;
+                  if (!booking?.company?.id) {
+                    toast.error('Company ID not found in booking data');
+                    return;
+                  }
+                  cancelBooking.mutate(
+                    {
+                      bookingId,
+                      companyId: booking.company.id,
+                      payload: {
+                        cancelType,
+                        note: cancelNote || undefined,
+                      },
+                    },
+                    {
+                      onSuccess: (data) => {
+                        setCancelResponse(data);
+                        toast.success(
+                          booking?.status === 'CANCELLED' 
+                            ? 'Cancellation details updated successfully' 
+                            : 'Booking cancelled successfully'
+                        );
+                        refetch();
+                      },
+                      onError: (error: any) => {
+                        const errorMessage = error?.response?.data?.message || error?.message || 'Failed to cancel booking';
+                        toast.error(errorMessage);
+                      },
+                    }
+                  );
+                }}
+                disabled={cancelBooking.isPending}
+                className="bg-[#F56304] hover:bg-[#F56304]/90 text-white"
+              >
+                {cancelBooking.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {booking?.status === 'CANCELLED' ? 'Updating...' : 'Cancelling...'}
+                  </>
+                ) : (
+                  booking?.status === 'CANCELLED' ? 'Update Cancellation' : 'Confirm Cancellation'
+                )}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

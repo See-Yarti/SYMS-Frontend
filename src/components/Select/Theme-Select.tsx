@@ -32,7 +32,7 @@ const ThemeSelect = () => {
       className="h-9 w-9 rounded-lg hover:bg-accent"
     >
       {theme === 'dark' ? (
-        <Moon className="h-5 w-5 text-yellow-400" />
+        <Moon className="h-5 w-5 text-[#F56304]" />
       ) : (
         <Sun className="h-5 w-5 text-orange-500" />
       )}

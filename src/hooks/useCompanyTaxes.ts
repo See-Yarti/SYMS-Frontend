@@ -1,7 +1,7 @@
 // src/hooks/useCompanyTaxes.ts
 import { axiosInstance } from '@/lib/API';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { queryClient } from './useCompanyApi';
+import { queryClient } from '@/Provider';
 
 export interface CompanyTaxItem {
   id: string;

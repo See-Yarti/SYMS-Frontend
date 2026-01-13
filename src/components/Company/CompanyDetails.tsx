@@ -1,7 +1,8 @@
 // src/components/Company/CompanyDetails.tsx
 
 import { useState, useEffect, useRef } from 'react';
-import { queryClient, useGetCompany, useUnverifyCompany, useVerifyCompany } from '@/hooks/useCompanyApi';
+import { useGetCompany, useUnverifyCompany, useVerifyCompany } from '@/hooks/useCompanyApi';
+import { queryClient } from '@/Provider';
 import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -13,6 +14,9 @@ import {
   useStartCompanySubscription,
   useDeleteCommissionOverride,
   useEndCompanySubscriptionEarly,
+  useSetStatusCommissionSettings,
+  useSetFixedCancellationAmounts,
+  useSetEdgeCaseHandling,
 } from '@/hooks/usePlansApi';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -41,6 +45,7 @@ import {
   Sparkles,
   Info,
   Check,
+  Edit,
 } from 'lucide-react';
 import { useGetLocations, useCreateLocation, useUpdateLocation, useToggleLocation, useCheckLocationKey, useSuggestLocationKeys } from '@/hooks/useLocationApi';
 import { format } from 'date-fns';
@@ -56,6 +61,7 @@ import {
 import CompanyMap from '@/components/CompanyMap';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import React from 'react';
+import { StatusCommissionSettingsPayload, StatusCommissionSetting, FixedCancellationAmountsPayload, CompanySettingsPayload, EdgeCaseHandlingPayload } from '@/types/company';
 
 type Tier = 'BASIC' | 'GOLD' | 'PREMIUM' | 'DIAMOND';
 
@@ -91,7 +97,7 @@ interface LocationAutocompleteProps {
 
 const TIER_META: Record<Tier, { label: string; Icon: any; color: string }> = {
   BASIC: { label: 'Basic', Icon: Medal, color: 'text-muted-foreground' },
-  GOLD: { label: 'Gold', Icon: Crown, color: 'text-yellow-600' },
+  GOLD: { label: 'Gold', Icon: Crown, color: 'text-[#F56304]' },
   PREMIUM: { label: 'Premium', Icon: Gem, color: 'text-purple-600' },
   DIAMOND: { label: 'Diamond', Icon: DiamondIcon, color: 'text-cyan-600' },
 };
@@ -194,6 +200,546 @@ const LocationAutocomplete = React.forwardRef<HTMLInputElement, LocationAutocomp
 );
 LocationAutocomplete.displayName = 'LocationAutocomplete';
 
+// Status Commission Settings Form Component
+interface StatusCommissionSettingsFormProps {
+  currentSettings?: {
+    COMPLETED?: StatusCommissionSetting | null;
+    LATE_CANCEL?: StatusCommissionSetting | null;
+    NO_SHOW?: StatusCommissionSetting | null;
+    CUSTOMER_FAULT?: StatusCommissionSetting | null;
+    OPERATOR_FAULT?: StatusCommissionSetting | null;
+    FREE_CANCEL?: StatusCommissionSetting | null;
+    PARTIAL_USE?: StatusCommissionSetting | null;
+  };
+  onSave: (payload: StatusCommissionSettingsPayload) => void;
+  onCancel: () => void;
+  isLoading: boolean;
+}
+
+const StatusCommissionSettingsForm: React.FC<StatusCommissionSettingsFormProps> = ({
+  currentSettings,
+  onSave,
+  onCancel,
+  isLoading,
+}) => {
+  const statusTypes = [
+    { key: 'COMPLETED', label: 'Completed', supportsSplit: true },
+    { key: 'LATE_CANCEL', label: 'Late Cancel', supportsSplit: true },
+    { key: 'NO_SHOW', label: 'No Show', supportsSplit: true },
+    { key: 'CUSTOMER_FAULT', label: 'Customer Fault', supportsSplit: true },
+    { key: 'OPERATOR_FAULT', label: 'Operator Fault', supportsSplit: false },
+    { key: 'FREE_CANCEL', label: 'Free Cancel', supportsSplit: false },
+    { key: 'PARTIAL_USE', label: 'Partial Use', supportsSplit: true },
+  ] as const;
+
+  const [formData, setFormData] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    // Initialize form data from current settings
+    const initialData: Record<string, any> = {};
+    const statusTypesList = [
+      { key: 'COMPLETED', label: 'Completed', supportsSplit: true },
+      { key: 'LATE_CANCEL', label: 'Late Cancel', supportsSplit: true },
+      { key: 'NO_SHOW', label: 'No Show', supportsSplit: true },
+      { key: 'CUSTOMER_FAULT', label: 'Customer Fault', supportsSplit: true },
+      { key: 'OPERATOR_FAULT', label: 'Operator Fault', supportsSplit: false },
+      { key: 'FREE_CANCEL', label: 'Free Cancel', supportsSplit: false },
+      { key: 'PARTIAL_USE', label: 'Partial Use', supportsSplit: true },
+    ] as const;
+    statusTypesList.forEach(({ key }) => {
+      const current = currentSettings?.[key as keyof typeof currentSettings];
+      if (current) {
+        initialData[key] = {
+          type: current.type || 'PERCENTAGE',
+          percentageRate: current.percentageRate || '',
+          fixedAmount: current.fixedAmount || '',
+          splitPercentage: current.splitPercentage || '',
+          penaltyPercentage: current.penaltyPercentage || '',
+          yalaRidePercentage: current.yalaRidePercentage || '',
+        };
+      } else {
+        initialData[key] = {
+          type: 'PERCENTAGE',
+          percentageRate: '',
+          fixedAmount: '',
+          splitPercentage: '',
+          penaltyPercentage: '',
+          yalaRidePercentage: '',
+        };
+      }
+    });
+    setFormData(initialData);
+  }, [currentSettings]);
+
+  const handleStatusChange = (status: string, field: string, value: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      [status]: {
+        ...prev[status],
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleSave = () => {
+    const payload: StatusCommissionSettingsPayload = {};
+
+    statusTypes.forEach(({ key }) => {
+      const data = formData[key];
+      if (!data) return;
+
+      if (key === 'OPERATOR_FAULT') {
+        if (data.type === 'PERCENTAGE' && data.penaltyPercentage) {
+          payload.OPERATOR_FAULT = {
+            type: 'PERCENTAGE',
+            penaltyPercentage: parseFloat(data.penaltyPercentage),
+            yalaRidePercentage: 100,
+          };
+        }
+      } else if (key === 'FREE_CANCEL') {
+        if (data.type === null) {
+          payload.FREE_CANCEL = { type: null };
+        } else if (data.type === 'PERCENTAGE' && data.percentageRate) {
+          payload.FREE_CANCEL = {
+            type: 'PERCENTAGE',
+            percentageRate: parseFloat(data.percentageRate),
+          };
+        } else if (data.type === 'FIXED' && data.fixedAmount) {
+          payload.FREE_CANCEL = {
+            type: 'FIXED',
+            fixedAmount: parseFloat(data.fixedAmount),
+          };
+        }
+      } else {
+        // COMPLETED, LATE_CANCEL, NO_SHOW, CUSTOMER_FAULT, PARTIAL_USE
+        if (data.type === 'PERCENTAGE' && data.percentageRate) {
+          payload[key as keyof StatusCommissionSettingsPayload] = {
+            type: 'PERCENTAGE',
+            percentageRate: parseFloat(data.percentageRate),
+            splitPercentage: data.splitPercentage ? parseFloat(data.splitPercentage) : undefined,
+          };
+        } else if (data.type === 'FIXED' && data.fixedAmount) {
+          payload[key as keyof StatusCommissionSettingsPayload] = {
+            type: 'FIXED',
+            fixedAmount: parseFloat(data.fixedAmount),
+            splitPercentage: data.splitPercentage ? parseFloat(data.splitPercentage) : undefined,
+          };
+        }
+      }
+    });
+
+    onSave(payload);
+  };
+
+  return (
+    <div className="space-y-6 py-4">
+      {statusTypes.map(({ key, label, supportsSplit }) => {
+        const data = formData[key] || {};
+        const isOperatorFault = key === 'OPERATOR_FAULT';
+        const isFreeCancel = key === 'FREE_CANCEL';
+
+        return (
+          <div key={key} className="border rounded-lg p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="font-semibold">{label}</h4>
+              {isFreeCancel && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleStatusChange(key, 'type', null)}
+                >
+                  Remove Commission
+                </Button>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              {!isFreeCancel || data.type !== null ? (
+                <>
+                  <div>
+                    <Label>Commission Type</Label>
+                    <Select
+                      value={data.type || 'PERCENTAGE'}
+                      onValueChange={(value) => handleStatusChange(key, 'type', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PERCENTAGE">Percentage</SelectItem>
+                        <SelectItem value="FIXED">Fixed Amount</SelectItem>
+                        {isFreeCancel && <SelectItem value={null as any}>No Commission</SelectItem>}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {isOperatorFault ? (
+                    <>
+                      <div>
+                        <Label>Penalty Percentage *</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          max="100"
+                          value={data.penaltyPercentage || ''}
+                          onChange={(e) => handleStatusChange(key, 'penaltyPercentage', e.target.value)}
+                          placeholder="e.g., 25"
+                        />
+                      </div>
+                      <div>
+                        <Label>YalaRide Percentage</Label>
+                        <Input
+                          type="number"
+                          value="100"
+                          disabled
+                          className="bg-muted"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Always 100% for operator fault</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {data.type === 'PERCENTAGE' ? (
+                        <div>
+                          <Label>Percentage Rate *</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            max="100"
+                            value={data.percentageRate || ''}
+                            onChange={(e) => handleStatusChange(key, 'percentageRate', e.target.value)}
+                            placeholder="e.g., 10"
+                          />
+                        </div>
+                      ) : (
+                        <div>
+                          <Label>Fixed Amount *</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            value={data.fixedAmount || ''}
+                            onChange={(e) => handleStatusChange(key, 'fixedAmount', e.target.value)}
+                            placeholder="e.g., 6.00"
+                          />
+                        </div>
+                      )}
+
+                      {supportsSplit && (
+                        <div>
+                          <Label>Split Percentage (Optional)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            value={data.splitPercentage || ''}
+                            onChange={(e) => handleStatusChange(key, 'splitPercentage', e.target.value)}
+                            placeholder="e.g., 50 (default: 50)"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">Split between YalaRide and Company (0-100)</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">No commission configured for this status.</p>
+              )}
+            </div>
+          </div>
+        );
+      })}
+
+      <DialogFooter>
+        <Button variant="outline" onClick={onCancel} disabled={isLoading}>
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSave}
+          disabled={isLoading}
+          className="bg-[#F56304] hover:bg-[#F56304]/90 text-white"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            'Save Settings'
+          )}
+        </Button>
+      </DialogFooter>
+    </div>
+  );
+};
+
+// Fixed Cancellation Amounts Form Component
+interface FixedCancellationAmountsFormProps {
+  currentSettings?: CompanySettingsPayload;
+  onSave: (payload: FixedCancellationAmountsPayload) => void;
+  onCancel: () => void;
+  isLoading: boolean;
+}
+
+const FixedCancellationAmountsForm: React.FC<FixedCancellationAmountsFormProps> = ({
+  currentSettings,
+  onSave,
+  onCancel,
+  isLoading,
+}) => {
+  const [useGlobalAmount, setUseGlobalAmount] = useState(false);
+  const [globalAmount, setGlobalAmount] = useState<string>('');
+  const [lateCancel, setLateCancel] = useState<string>('');
+  const [noShow, setNoShow] = useState<string>('');
+  const [customerFault, setCustomerFault] = useState<string>('');
+  const [partialUse, setPartialUse] = useState<string>('');
+
+  useEffect(() => {
+    // Initialize form data from current settings
+    if (currentSettings) {
+      if (currentSettings.fixedCancellationAmount) {
+        setUseGlobalAmount(true);
+        setGlobalAmount(currentSettings.fixedCancellationAmount);
+      } else {
+        setUseGlobalAmount(false);
+        setLateCancel(currentSettings.fixedCancellationAmountLateCancel || '');
+        setNoShow(currentSettings.fixedCancellationAmountNoShow || '');
+        setCustomerFault(currentSettings.fixedCancellationAmountCustomerFault || '');
+        setPartialUse(currentSettings.fixedCancellationAmountPartialUse || '');
+      }
+    }
+  }, [currentSettings]);
+
+  const handleSave = () => {
+    const payload: FixedCancellationAmountsPayload = {};
+
+    if (useGlobalAmount) {
+      if (!globalAmount || parseFloat(globalAmount) < 0.01) {
+        toast.error('Global amount must be at least 0.01');
+        return;
+      }
+      payload.useAllAmount = parseFloat(globalAmount);
+    } else {
+      // Per-type amounts
+      if (lateCancel && parseFloat(lateCancel) >= 0.01) {
+        payload.lateCancel = parseFloat(lateCancel);
+      }
+      if (noShow && parseFloat(noShow) >= 0.01) {
+        payload.noShow = parseFloat(noShow);
+      }
+      if (customerFault && parseFloat(customerFault) >= 0.01) {
+        payload.customerFault = parseFloat(customerFault);
+      }
+      if (partialUse && parseFloat(partialUse) >= 0.01) {
+        payload.partialUse = parseFloat(partialUse);
+      }
+
+      // Check if at least one amount is provided
+      if (Object.keys(payload).length === 0) {
+        toast.error('Please provide at least one amount');
+        return;
+      }
+    }
+
+    onSave(payload);
+  };
+
+  return (
+    <div className="space-y-6 py-4">
+      <div className="flex items-center space-x-2">
+        <Switch
+          checked={useGlobalAmount}
+          onCheckedChange={setUseGlobalAmount}
+        />
+        <Label>Use Global Amount for All Types</Label>
+      </div>
+
+      {useGlobalAmount ? (
+        <div>
+          <Label>Global Fixed Amount *</Label>
+          <Input
+            type="number"
+            step="0.01"
+            min="0.01"
+            value={globalAmount}
+            onChange={(e) => setGlobalAmount(e.target.value)}
+            placeholder="e.g., 8.00"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            This amount will be used for all cancellation types (LATE_CANCEL, NO_SHOW, CUSTOMER_FAULT, PARTIAL_USE)
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div>
+            <Label>Late Cancel Amount (Optional)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={lateCancel}
+              onChange={(e) => setLateCancel(e.target.value)}
+              placeholder="e.g., 8.00"
+            />
+          </div>
+
+          <div>
+            <Label>No Show Amount (Optional)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={noShow}
+              onChange={(e) => setNoShow(e.target.value)}
+              placeholder="e.g., 6.00"
+            />
+          </div>
+
+          <div>
+            <Label>Customer Fault Amount (Optional)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={customerFault}
+              onChange={(e) => setCustomerFault(e.target.value)}
+              placeholder="e.g., 10.00"
+            />
+          </div>
+
+          <div>
+            <Label>Partial Use Amount (Optional)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={partialUse}
+              onChange={(e) => setPartialUse(e.target.value)}
+              placeholder="e.g., 5.00"
+            />
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Set individual amounts for each cancellation type. At least one amount must be provided.
+          </p>
+        </div>
+      )}
+
+      <DialogFooter>
+        <Button variant="outline" onClick={onCancel} disabled={isLoading}>
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSave}
+          disabled={isLoading}
+          className="bg-[#F56304] hover:bg-[#F56304]/90 text-white"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            'Save Amounts'
+          )}
+        </Button>
+      </DialogFooter>
+    </div>
+  );
+};
+
+// Edge Case Handling Form Component
+interface EdgeCaseHandlingFormProps {
+  currentValue: 'CAP' | 'OWE';
+  onSave: (payload: EdgeCaseHandlingPayload) => void;
+  onCancel: () => void;
+  isLoading: boolean;
+}
+
+const EdgeCaseHandlingForm: React.FC<EdgeCaseHandlingFormProps> = ({
+  currentValue,
+  onSave,
+  onCancel,
+  isLoading,
+}) => {
+  const [edgeCaseHandling, setEdgeCaseHandling] = useState<'CAP' | 'OWE'>(currentValue);
+
+  useEffect(() => {
+    setEdgeCaseHandling(currentValue);
+  }, [currentValue]);
+
+  const handleSave = () => {
+    onSave({ edgeCaseHandling });
+  };
+
+  return (
+    <div className="space-y-6 py-4">
+      <div className="space-y-4">
+        <div>
+          <Label>Edge Case Handling Method</Label>
+          <Select
+            value={edgeCaseHandling}
+            onValueChange={(value: 'CAP' | 'OWE') => setEdgeCaseHandling(value)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="CAP">CAP - Commission Capped at Penalty Amount</SelectItem>
+              <SelectItem value="OWE">OWE - Company Owes Difference</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="bg-muted rounded-lg p-4 space-y-2">
+          <p className="text-sm font-medium">What is Edge Case?</p>
+          <p className="text-xs text-muted-foreground">
+            When fixed cancellation amount is greater than the penalty amount.
+          </p>
+          <div className="mt-3 space-y-2">
+            <div>
+              <p className="text-xs font-medium">CAP Mode:</p>
+              <p className="text-xs text-muted-foreground">
+                Commission is capped at the penalty amount. Company doesn't owe extra.
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-medium">OWE Mode:</p>
+              <p className="text-xs text-muted-foreground">
+                Company owes the difference (tracked in amountOwed field).
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <DialogFooter>
+        <Button variant="outline" onClick={onCancel} disabled={isLoading}>
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSave}
+          disabled={isLoading}
+          className="bg-[#F56304] hover:bg-[#F56304]/90 text-white"
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            'Save'
+          )}
+        </Button>
+      </DialogFooter>
+    </div>
+  );
+};
+
 const CompanyDetail = () => {
   const { companyId } = useParams<{ companyId: string }>();
   const { data: companyData, isLoading, error, refetch } = useGetCompany(companyId || '');
@@ -208,6 +754,9 @@ const CompanyDetail = () => {
   const [isUnverifyDialogOpen, setIsUnverifyDialogOpen] = useState(false);
   const [isLocationDialogOpen, setIsLocationDialogOpen] = useState(false);
   const [isEditLocationDialogOpen, setIsEditLocationDialogOpen] = useState(false);
+  const [isStatusCommissionDialogOpen, setIsStatusCommissionDialogOpen] = useState(false);
+  const [isFixedCancellationDialogOpen, setIsFixedCancellationDialogOpen] = useState(false);
+  const [isEdgeCaseHandlingDialogOpen, setIsEdgeCaseHandlingDialogOpen] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
   const [unverifiedReason, setUnverifiedReason] = useState('');
   const [unverifiedReasonDescription, setUnverifiedReasonDescription] = useState('');
@@ -227,6 +776,9 @@ const CompanyDetail = () => {
   const deleteOverride = useDeleteCommissionOverride(safeCompanyId);       // NEW
   const endEarly = useEndCompanySubscriptionEarly(safeCompanyId);          // NEW
   const startSub = useStartCompanySubscription(safeCompanyId);
+  const setStatusCommissionSettings = useSetStatusCommissionSettings(safeCompanyId);
+  const setFixedCancellationAmounts = useSetFixedCancellationAmounts(safeCompanyId);
+  const setEdgeCaseHandling = useSetEdgeCaseHandling(safeCompanyId);
 
   const [selectedTier, setSelectedTier] = useState<'BASIC' | 'GOLD' | 'PREMIUM' | 'DIAMOND'>('BASIC');
   const [subscriptionDays, setSubscriptionDays] = useState<number>(30);
@@ -689,7 +1241,7 @@ const CompanyDetail = () => {
                   href={company.taxFile}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary hover:underline inline-flex items-center"
+                  className="text-[#F56304] hover:underline inline-flex items-center"
                 >
                   View Tax File
                   <svg
@@ -721,7 +1273,7 @@ const CompanyDetail = () => {
                   href={company.tradeLicenseFile}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary hover:underline inline-flex items-center"
+                  className="text-[#F56304] hover:underline inline-flex items-center"
                 >
                   View Trade License
                   <svg
@@ -753,7 +1305,7 @@ const CompanyDetail = () => {
       <div className="border rounded-lg p-4">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold">Locations</h2>
-          <Button size="sm" onClick={() => setIsLocationDialogOpen(true)}>
+          <Button size="sm" onClick={() => setIsLocationDialogOpen(true)} className="bg-[#F56304] hover:bg-[#F56304]/90 text-white">
             <Plus className="h-4 w-4 mr-2" />
             Add Location
           </Button>
@@ -1036,7 +1588,7 @@ const CompanyDetail = () => {
 
             <div className="flex items-center gap-3">
               <Button
-                className="min-w-[160px]"
+                className="min-w-[160px] bg-[#F56304] hover:bg-[#F56304]/90 text-white"
                 disabled={startSub.isPending || planLoading || settingsLoading || !selectedTier}
                 onClick={() => {
                   startSub.mutate(
@@ -1147,6 +1699,7 @@ const CompanyDetail = () => {
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant="secondary"
+                className="bg-[#F56304] hover:bg-[#F56304]/90 text-white"
                 disabled={setOverride.isPending || !overrideRate || !overrideEndsAt}
                 onClick={() => {
                   const rateNum = Number(overrideRate);
@@ -1216,6 +1769,257 @@ const CompanyDetail = () => {
         </div>
       </div> */}
 
+      {/* Commission Settings Details */}
+      {settingsRes?.data?.settings && (
+        <div className="border rounded-lg p-4">
+          <h2 className="text-lg font-semibold mb-4">Commission Settings</h2>
+          
+          {/* Basic Commission Info */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <p className="text-sm text-muted-foreground">Base Commission Rate</p>
+              <p className="font-medium">{settingsRes.data.baseCommissionRate || '—'}%</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Effective Commission</p>
+              <p className="font-medium">{settingsRes.data.settings.effectiveCommissionRate || '—'}%</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Commission Source</p>
+              <p className="font-medium">{settingsRes.data.settings.commissionSource || 'BASE'}</p>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Edge Case Handling</p>
+                <p className="font-medium">{settingsRes.data.settings.edgeCaseHandling || 'OWE'}</p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsEdgeCaseHandlingDialogOpen(true)}
+                className="bg-[#F56304] hover:bg-[#F56304]/90 text-white border-[#F56304]"
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+            </div>
+          </div>
+
+          {/* Fixed Cancellation Amounts */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-md font-semibold">Fixed Cancellation Amounts</h3>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsFixedCancellationDialogOpen(true)}
+                className="bg-[#F56304] hover:bg-[#F56304]/90 text-white border-[#F56304]"
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Amounts
+              </Button>
+            </div>
+            {(settingsRes.data.settings.fixedCancellationAmount || 
+              settingsRes.data.settings.fixedCancellationAmountLateCancel ||
+              settingsRes.data.settings.fixedCancellationAmountNoShow ||
+              settingsRes.data.settings.fixedCancellationAmountCustomerFault ||
+              settingsRes.data.settings.fixedCancellationAmountPartialUse) ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {settingsRes.data.settings.fixedCancellationAmount && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Global Fixed Amount</p>
+                    <p className="font-medium">${settingsRes.data.settings.fixedCancellationAmount}</p>
+                  </div>
+                )}
+                {settingsRes.data.settings.fixedCancellationAmountLateCancel && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Late Cancel</p>
+                    <p className="font-medium">${settingsRes.data.settings.fixedCancellationAmountLateCancel}</p>
+                  </div>
+                )}
+                {settingsRes.data.settings.fixedCancellationAmountNoShow && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">No Show</p>
+                    <p className="font-medium">${settingsRes.data.settings.fixedCancellationAmountNoShow}</p>
+                  </div>
+                )}
+                {settingsRes.data.settings.fixedCancellationAmountCustomerFault && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Customer Fault</p>
+                    <p className="font-medium">${settingsRes.data.settings.fixedCancellationAmountCustomerFault}</p>
+                  </div>
+                )}
+                {settingsRes.data.settings.fixedCancellationAmountPartialUse && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Partial Use</p>
+                    <p className="font-medium">${settingsRes.data.settings.fixedCancellationAmountPartialUse}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No fixed cancellation amounts configured</p>
+            )}
+          </div>
+
+          {/* Status Commission Settings */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-md font-semibold">Status-Based Commission Settings</h3>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsStatusCommissionDialogOpen(true)}
+                className="bg-[#F56304] hover:bg-[#F56304]/90 text-white border-[#F56304]"
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Settings
+              </Button>
+            </div>
+            {settingsRes.data.settings.statusCommissionSettings && (
+              <div className="space-y-3">
+                {Object.entries(settingsRes.data.settings.statusCommissionSettings).map(([status, setting]) => {
+                  if (!setting) return null;
+                  return (
+                    <div key={status} className="border rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="font-medium capitalize">{status.replace(/_/g, ' ')}</p>
+                        <Badge variant="outline">{setting.type}</Badge>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                        {setting.percentageRate !== undefined && (
+                          <div>
+                            <p className="text-muted-foreground">Rate</p>
+                            <p className="font-medium">{setting.percentageRate}%</p>
+                          </div>
+                        )}
+                        {setting.fixedAmount !== undefined && (
+                          <div>
+                            <p className="text-muted-foreground">Fixed Amount</p>
+                            <p className="font-medium">${setting.fixedAmount}</p>
+                          </div>
+                        )}
+                        {setting.splitPercentage !== undefined && (
+                          <div>
+                            <p className="text-muted-foreground">Split</p>
+                            <p className="font-medium">{setting.splitPercentage}%</p>
+                          </div>
+                        )}
+                        {setting.penaltyPercentage !== undefined && (
+                          <div>
+                            <p className="text-muted-foreground">Penalty</p>
+                            <p className="font-medium">{setting.penaltyPercentage}%</p>
+                          </div>
+                        )}
+                        {setting.yalaRidePercentage !== undefined && (
+                          <div>
+                            <p className="text-muted-foreground">YalaRide</p>
+                            <p className="font-medium">{setting.yalaRidePercentage}%</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Edge Case Handling Dialog */}
+      <Dialog open={isEdgeCaseHandlingDialogOpen} onOpenChange={setIsEdgeCaseHandlingDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Edge Case Handling</DialogTitle>
+            <DialogDescription>
+              Set how to handle edge cases when fixed cancellation amount is greater than penalty amount.
+            </DialogDescription>
+          </DialogHeader>
+
+          <EdgeCaseHandlingForm
+            currentValue={settingsRes?.data?.settings?.edgeCaseHandling || 'OWE'}
+            onSave={(payload) => {
+              setEdgeCaseHandling.mutate(payload, {
+                onSuccess: () => {
+                  toast.success('Edge case handling updated successfully');
+                  refetchSettings();
+                  setIsEdgeCaseHandlingDialogOpen(false);
+                },
+                onError: (error: any) => {
+                  const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update edge case handling';
+                  toast.error(errorMessage);
+                },
+              });
+            }}
+            onCancel={() => setIsEdgeCaseHandlingDialogOpen(false)}
+            isLoading={setEdgeCaseHandling.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Fixed Cancellation Amounts Dialog */}
+      <Dialog open={isFixedCancellationDialogOpen} onOpenChange={setIsFixedCancellationDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Fixed Cancellation Amounts</DialogTitle>
+            <DialogDescription>
+              Set fixed cancellation amounts. You can set one global amount for all types or separate amounts per type.
+              Note: Company must have FIXED commission type to use this feature.
+            </DialogDescription>
+          </DialogHeader>
+
+          <FixedCancellationAmountsForm
+            currentSettings={settingsRes?.data?.settings}
+            onSave={(payload) => {
+              setFixedCancellationAmounts.mutate(payload, {
+                onSuccess: () => {
+                  toast.success('Fixed cancellation amounts updated successfully');
+                  refetchSettings();
+                  setIsFixedCancellationDialogOpen(false);
+                },
+                onError: (error: any) => {
+                  const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update amounts';
+                  toast.error(errorMessage);
+                },
+              });
+            }}
+            onCancel={() => setIsFixedCancellationDialogOpen(false)}
+            isLoading={setFixedCancellationAmounts.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Status Commission Settings Dialog */}
+      <Dialog open={isStatusCommissionDialogOpen} onOpenChange={setIsStatusCommissionDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Status Commission Settings</DialogTitle>
+            <DialogDescription>
+              Configure commission settings for each booking status. You can set different commission types and rates per status.
+            </DialogDescription>
+          </DialogHeader>
+
+          <StatusCommissionSettingsForm
+            currentSettings={settingsRes?.data?.settings?.statusCommissionSettings}
+            onSave={(payload) => {
+              setStatusCommissionSettings.mutate(payload, {
+                onSuccess: () => {
+                  toast.success('Status commission settings updated successfully');
+                  refetchSettings();
+                  setIsStatusCommissionDialogOpen(false);
+                },
+                onError: (error: any) => {
+                  const errorMessage = error?.response?.data?.message || error?.message || 'Failed to update settings';
+                  toast.error(errorMessage);
+                },
+              });
+            }}
+            onCancel={() => setIsStatusCommissionDialogOpen(false)}
+            isLoading={setStatusCommissionSettings.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* Verification */}
       <div className="flex gap-2">
         {company.isVerified ? (
@@ -1269,7 +2073,7 @@ const CompanyDetail = () => {
                   >
                     Cancel
                   </Button>
-                  <Button onClick={handleUnverifySubmit} disabled={unverifyCompany.isPending || !unverifiedReason || !unverifiedReasonDescription}>
+                  <Button onClick={handleUnverifySubmit} disabled={unverifyCompany.isPending || !unverifiedReason || !unverifiedReasonDescription} className="bg-[#F56304] hover:bg-[#F56304]/90 text-white">
                     {unverifyCompany.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Confirm Unverification
                   </Button>
@@ -1278,7 +2082,7 @@ const CompanyDetail = () => {
             </Dialog>
           </>
         ) : (
-          <Button onClick={handleVerify} disabled={verifyCompany.isPending}>
+          <Button onClick={handleVerify} disabled={verifyCompany.isPending} className="bg-[#F56304] hover:bg-[#F56304]/90 text-white">
             {verifyCompany.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Verify Company
           </Button>
@@ -1481,7 +2285,7 @@ const CompanyDetail = () => {
                         <button
                           type="button"
                           onClick={() => handleSelectLocationSuggestion(suggestion)}
-                          className="text-xs text-primary hover:underline"
+                          className="text-xs text-[#F56304] hover:underline"
                         >
                           Use
                         </button>

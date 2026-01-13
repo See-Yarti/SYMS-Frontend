@@ -6,7 +6,7 @@ import { LoginUserInitialData, User, Company, OtherInfo } from '@/types/user';
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { AxiosError } from 'axios';
 import { RootState, store } from '..';
-import { toast } from 'sonner'; // <- NEW
+import { toast } from 'sonner';
 
 export type AuthState = {
   isAuthenticated: boolean;
@@ -55,29 +55,27 @@ export const loginUser = createAsyncThunk<
 // Thunk: logout
 export const logoutUser = createAsyncThunk(
   'auth/logout',
-  async (_, { rejectWithValue }) => {
-    try {
-      const state = store.getState() as RootState;
-      const token = state.auth._rT;
-      // API call to logout is optional, but let's keep it
-      await axiosInstance.post(
+  async () => {
+    // Get token BEFORE clearing localStorage
+    const state = store.getState() as RootState;
+    const token = state.auth._rT;
+    
+    // Clear local state immediately for instant logout
+    localStorage.removeItem('persist:root');
+    localStorage.removeItem('theme');
+    
+    // Show toast immediately
+    toast.info('You have been logged out.');
+    
+    // Fire logout API call in background - don't wait for it (fire-and-forget)
+    if (token) {
+      axiosInstance.post(
         '/auth/controller/logout',
         {},
         { headers: { Authorization: `Bearer ${token}` } },
-      );
-    } catch (err) {
-      // Even if the API fails, proceed to clear the local state.
-      if (err instanceof AxiosError) {
-        toast.info('Session expired. Please login again.');
-        return rejectWithValue(err.response?.data?.message ?? 'Logout failed');
-      }
-      toast.info('Session expired. Please login again.');
-      return rejectWithValue('An unexpected error occurred during logout');
-    } finally {
-      // Always run this!
-      toast.info('You have been logged out.'); // <- Show toast always
-      localStorage.removeItem('persist:root');
-      localStorage.removeItem('theme');
+      ).catch(() => {
+        // Silently ignore all errors - user is already logged out locally
+      });
     }
   },
 );
