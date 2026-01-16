@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -32,6 +33,7 @@ import { exportInvoiceToExcel } from '@/utils/excelExport';
 import { PageLoadingSkeleton } from '@/components/ui/loading';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { AccountingItem, AccountingType } from '@/types/accounting';
 
 const statusStyles: Record<string, { bg: string; text: string; icon?: React.ReactNode; label: string }> = {
   PENDING: {
@@ -90,6 +92,16 @@ const paymentStyles: Record<string, { bg: string; text: string }> = {
     bg: 'bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-600',
     text: 'text-gray-500 dark:text-gray-300',
   },
+};
+
+const typeStyles: Record<AccountingType, string> = {
+  BOOKING_COMPLETED: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  NO_SHOW: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+  FREE_CANCEL: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  LATE_CANCEL: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+  CUSTOMER_FAULT: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+  OPERATOR_FAULT: 'bg-[#F56304]/10 text-[#F56304] dark:bg-[#F56304]/20 dark:text-[#F56304]',
+  PARTIAL_USE: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
 };
 
 const formatCurrency = (value?: string | number | null, currency?: string | null) => {
@@ -287,9 +299,9 @@ const OperatorAccountingResults: React.FC = () => {
   const currentPage = page;
 
   // Apply client-side search/status filter
-  // Response structure: items have bookingCode, status, paidStatus, etc.
+  // Response structure: items have bookingcode, status, paidstatus, etc.
   const filteredItems = items.filter((item: any) => {
-    const bookingCode = item.bookingCode || item.bookingid || '';
+    const bookingCode = item.bookingcode || item.bookingid || '';
     const matchesSearch = !tableSearchQuery ||
       bookingCode.toLowerCase().includes(tableSearchQuery.toLowerCase());
 
@@ -444,7 +456,7 @@ const OperatorAccountingResults: React.FC = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search by ID..."
+                placeholder="Search by booking code..."
                 value={tableSearchQuery}
                 onChange={(e) => setTableSearchQuery(e.target.value)}
                 className="pl-10 bg-card border-border"
@@ -479,38 +491,42 @@ const OperatorAccountingResults: React.FC = () => {
                   <TableHeader>
                     <TableRow className="bg-muted/50">
                       <TableHead className="font-semibold text-foreground truncate">Booking Code</TableHead>
+                      <TableHead className="font-semibold text-foreground truncate">Type</TableHead>
                       <TableHead className="font-semibold text-foreground truncate">Status</TableHead>
-                      <TableHead className="font-semibold text-foreground truncate">Payment</TableHead>
-                      <TableHead className="font-semibold text-foreground truncate">Vehicle</TableHead>
-                      <TableHead className="font-semibold text-foreground truncate">Location</TableHead>
+                      <TableHead className="font-semibold text-foreground truncate">Paid Status</TableHead>
                       <TableHead className="font-semibold text-foreground truncate">Pickup Date</TableHead>
                       <TableHead className="font-semibold text-foreground truncate">Drop Date</TableHead>
-                      <TableHead className="font-semibold text-foreground text-right truncate">Sub Total</TableHead>
-                      <TableHead className="font-semibold text-foreground text-right truncate">Tax</TableHead>
-                      <TableHead className="font-semibold text-foreground text-right truncate">Grand Total</TableHead>
+                      <TableHead className="font-semibold text-foreground text-right truncate">Customer Refund</TableHead>
+                      <TableHead className="font-semibold text-foreground text-right truncate">Operator Payout</TableHead>
+                      <TableHead className="font-semibold text-foreground text-right truncate">Commission</TableHead>
                       <TableHead className="font-semibold text-foreground truncate">Created</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredItems.map((item: any) => {
+                    {filteredItems.map((item: AccountingItem) => {
                       const statusKey = item.status?.toUpperCase() ?? 'PENDING';
                       const statusStyle = statusStyles[statusKey] ?? {
                         bg: 'bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-600',
                         text: 'text-gray-600 dark:text-gray-300',
                         label: item.status || 'Pending'
                       };
-                      const paymentKey = item.paidStatus?.toUpperCase() ?? 'UNPAID';
+                      const paymentKey = item.paidstatus?.toUpperCase() ?? 'UNPAID';
                       const paymentStyle = paymentStyles[paymentKey] ?? paymentStyles.UNPAID;
 
                       return (
                         <TableRow key={item.id} className="hover:bg-muted/50">
-                          <TableCell className="font-mono text-sm">
+                          <TableCell className="font-medium">
                             <button
-                              onClick={() => navigate(`/all-bookings/${item.id}`)}
-                              className="text-orange-500 hover:text-orange-600 hover:underline transition-colors cursor-pointer font-semibold"
+                              onClick={() => navigate(`/all-bookings/${item.bookingid}`)}
+                              className="text-orange-500 hover:text-orange-600 hover:underline transition-colors cursor-pointer"
                             >
-                              {item.bookingCode || `#${item.id.slice(0, 8)}`}
+                              {item.bookingcode || item.bookingid}
                             </button>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={typeStyles[item.type] || ''}>
+                              {item.type.replace(/_/g, ' ')}
+                            </Badge>
                           </TableCell>
                           <TableCell>
                             <span
@@ -532,42 +548,26 @@ const OperatorAccountingResults: React.FC = () => {
                                 paymentStyle.text
                               )}
                             >
-                              {item.paidStatus?.toUpperCase() || 'UNPAID'}
+                              {item.paidstatus?.toUpperCase() || 'UNPAID'}
                             </span>
                           </TableCell>
-                          <TableCell>
-                            <div className="text-sm font-medium text-foreground">
-                              {item.car?.make || '—'} {item.car?.model || ''}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {item.car?.passengers ? `${item.car.passengers} passengers` : '—'}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm font-medium text-foreground">
-                              {item.operationalLocation?.city || '—'}
-                            </div>
-                            <div className="text-xs text-muted-foreground max-w-[200px] truncate" title={item.operationalLocation?.addressLine || ''}>
-                              {item.operationalLocation?.addressLine || '—'}
-                            </div>
+                          <TableCell className="text-muted-foreground">
+                            {formatDate(item.pickupat)}
                           </TableCell>
                           <TableCell className="text-muted-foreground">
-                            {formatDate(item.pickupAt)}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {formatDate(item.dropAt)}
+                            {formatDate(item.dropat)}
                           </TableCell>
                           <TableCell className="text-right font-mono text-foreground">
-                            {formatCurrency(item.totals?.subTotal, item.currency)}
+                            {formatCurrency(item.customerrefund)}
                           </TableCell>
                           <TableCell className="text-right font-mono text-foreground">
-                            {formatCurrency(item.totals?.taxTotal, item.currency)}
+                            {formatCurrency(item.operatorpayout)}
                           </TableCell>
                           <TableCell className="text-right font-mono text-foreground font-semibold">
-                            {formatCurrency(item.totals?.grandTotal, item.currency)}
+                            {formatCurrency(item.yellacommission)}
                           </TableCell>
                           <TableCell className="text-muted-foreground text-sm">
-                            {item.createdAt ? formatDate(item.createdAt) : '—'}
+                            {item.createdat ? formatDate(item.createdat) : '—'}
                           </TableCell>
                         </TableRow>
                       );

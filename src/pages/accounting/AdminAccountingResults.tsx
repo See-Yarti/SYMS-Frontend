@@ -372,7 +372,7 @@ const AdminAccountingResults: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Booking ID</TableHead>
+                  <TableHead>Booking Code</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Paid Status</TableHead>
@@ -393,7 +393,14 @@ const AdminAccountingResults: React.FC = () => {
                 ) : (
                   items.map((item: AccountingItem) => (
                     <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.bookingid}</TableCell>
+                      <TableCell className="font-medium">
+                        <button
+                          onClick={() => navigate(`/all-bookings/${item.bookingid}`)}
+                          className="text-orange-500 hover:text-orange-600 hover:underline transition-colors cursor-pointer"
+                        >
+                          {item.bookingcode || item.bookingid}
+                        </button>
+                      </TableCell>
                       <TableCell>
                         <Badge className={typeStyles[item.type] || ''}>
                           {item.type.replace(/_/g, ' ')}

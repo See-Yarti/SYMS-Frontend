@@ -16,6 +16,7 @@ export interface AccountingItem {
   id: string;
   type: AccountingType;
   bookingid: string;
+  bookingcode?: string;
   companyname?: string; // Only for admin view
   companyid?: string; // Only for admin view
   status: AccountingStatus;
