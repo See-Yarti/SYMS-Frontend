@@ -231,7 +231,7 @@ const OperatorBookings: React.FC = () => {
   const canGoForward = page < totalPages && bookings.length === limit;
 
   return (
-    <div className="p-2 min-h-screen max-w-[1110px]">
+    <div className="p-2 min-h-screen">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-foreground">Operator Bookings</h1>
