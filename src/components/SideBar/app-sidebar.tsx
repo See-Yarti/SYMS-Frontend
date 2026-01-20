@@ -68,9 +68,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           slug: `rate-${loc.id}`,
           url: `/rate/${loc.id}`,
           type: 'routed',
-          icon: PanelRightDashed,
+          isAirport: loc.isAirportZone,
           roles: rateDropdown.roles,
-          badge: loc.isAirportZone ? 'Airport' : undefined,
         }));
       } else {
         rateDropdown.items = [

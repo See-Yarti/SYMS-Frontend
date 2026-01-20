@@ -28,6 +28,7 @@ export type SideBarItem = {
   items?: SideBarItem[];
   badge?: string | number;
   roles?: (UserRole | OperatorRole)[];
+  isAirport?: boolean; // For Rate locations to show plane icon
 };
 
 export type SideBarRoutedItem = SideBarItem & {

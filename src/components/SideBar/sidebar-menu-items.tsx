@@ -2,7 +2,7 @@
 import { getSidebarIcon } from '@/utils/sidebarIcons';
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronRight, ChevronDown } from 'lucide-react';
+import { ChevronRight, ChevronDown, MapPin, Plane } from 'lucide-react';
 import { SidebarMenuSubItem, SidebarMenuButton } from '@/components/ui/sidebar';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
@@ -83,7 +83,10 @@ function SidebarRoutedItem({
   item: SideBarItem;
   isActive?: boolean;
 }) {
-  const Icon = getSidebarIcon(item.title);
+  // Check if item has isAirport flag (for Rate locations)
+  const Icon = item.isAirport !== undefined 
+    ? (item.isAirport ? Plane : MapPin)
+    : getSidebarIcon(item.title);
 
   return (
     <SidebarMenuSubItem>

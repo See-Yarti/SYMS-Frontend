@@ -203,19 +203,32 @@ export default function BlackoutDialog({
     }
 
     // Reconcile with user's existing selection when locations change
-    const allowed = new Set(flatCCCItems.map(i => i.id));
-    const stillSelected = selectedCCCs.filter(s => allowed.has(s.id));
-    const stillIds = new Set(stillSelected.map(s => s.id));
-    const nextSelected = flatCCCItems.filter(i => stillIds.has(i.id)).map(i => ({ ...i, selected: false }));
-    const nextAvailable = flatCCCItems.filter(i => !stillIds.has(i.id));
-
-    if (!arraysShallowEqual(nextSelected.map(s => s.id), selectedCCCs.map(s => s.id))) {
-      setSelectedCCCs(nextSelected);
-    }
-    if (!arraysShallowEqual(nextAvailable.map(a => a.id), availableCCCs.map(a => a.id))) {
-      setAvailableCCCs(nextAvailable);
-    }
-  }, [flatCCCItems, pendingSelectedCCCIds, selectedCCCs, availableCCCs]);
+    // Use functional updates to avoid stale closures
+    let computedSelected: CompanyCarClassSelectItem[] = [];
+    let computedAvailable: CompanyCarClassSelectItem[] = [];
+    
+    setSelectedCCCs(prevSelected => {
+      const allowed = new Set(flatCCCItems.map(i => i.id));
+      const stillSelected = prevSelected.filter(s => allowed.has(s.id));
+      const stillIds = new Set(stillSelected.map(s => s.id));
+      computedSelected = flatCCCItems.filter(i => stillIds.has(i.id)).map(i => ({ ...i, selected: false }));
+      computedAvailable = flatCCCItems.filter(i => !stillIds.has(i.id));
+      
+      // Only update if IDs actually changed
+      if (arraysShallowEqual(computedSelected.map(s => s.id), prevSelected.map(s => s.id))) {
+        return prevSelected;
+      }
+      return computedSelected;
+    });
+    
+    // Update available based on computed values
+    setAvailableCCCs(prev => {
+      if (arraysShallowEqual(computedAvailable.map(a => a.id), prev.map(a => a.id))) {
+        return prev;
+      }
+      return computedAvailable;
+    });
+  }, [flatCCCItems, pendingSelectedCCCIds]);
 
   // Date constraints
   const todayMin = useTodayIso();

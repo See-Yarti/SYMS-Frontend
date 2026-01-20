@@ -5,7 +5,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
@@ -55,11 +54,6 @@ export default function CarClassDialog({
   const [numberOfPassengers, setNumberOfPassengers] = React.useState(editing?.numberOfPassengers ?? 5);
   const [numberOfBags, setNumberOfBags] = React.useState(editing?.numberOfBags ?? 2);
 
-  const [automation, setAutomation] = React.useState(editing?.isAutomationEnabled ?? true);
-  const [overtimeDay, setOvertimeDay] = React.useState(editing?.overTimeAmountPerDay ?? '0.00');
-  const [overtimeHour, setOvertimeHour] = React.useState(editing?.overTimeAmountPerHour ?? '0.00');
-  const [deposit, setDeposit] = React.useState(editing?.depositAmount ?? '0.00');
-  const [customKeep, setCustomKeep] = React.useState(editing?.isCustomKeepDurationEnabled ?? false);
   
   // Image upload state
   const [selectedImage, setSelectedImage] = React.useState<File | null>(null);
@@ -87,11 +81,6 @@ export default function CarClassDialog({
     setNumberOfDoors(editing?.numberOfDoors ?? 4);
     setNumberOfPassengers(editing?.numberOfPassengers ?? 5);
     setNumberOfBags(editing?.numberOfBags ?? 2);
-    setAutomation(editing?.isAutomationEnabled ?? true);
-    setOvertimeDay(editing?.overTimeAmountPerDay ?? '0.00');
-    setOvertimeHour(editing?.overTimeAmountPerHour ?? '0.00');
-    setDeposit(editing?.depositAmount ?? '0.00');
-    setCustomKeep(editing?.isCustomKeepDurationEnabled ?? false);
 
     // Reset image state
     setSelectedImage(null);
@@ -151,11 +140,6 @@ export default function CarClassDialog({
       numberOfDoors: Number(numberOfDoors),
       numberOfPassengers: Number(numberOfPassengers),
       numberOfBags: Number(numberOfBags),
-      overTimeAmountPerDay: overtimeDay,
-      overTimeAmountPerHour: overtimeHour,
-      depositAmount: deposit,
-      isAutomationEnabled: automation,
-      isCustomKeepDurationEnabled: customKeep,
       image: selectedImage,
     });
   }
@@ -277,7 +261,7 @@ export default function CarClassDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
               <Label className="mb-1">Doors *</Label>
               <Input
@@ -310,53 +294,6 @@ export default function CarClassDialog({
                 onChange={e => setNumberOfBags(Number(e.target.value))}
                 required
               />
-            </div>
-            <div>
-              <Label className="mb-1">Deposit Amount ($)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min={0}
-                className="w-full bg-background border border-input rounded-md"
-                value={deposit}
-                onChange={e => setDeposit(e.target.value)}
-                placeholder="0.00"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <Label className="mb-1">OT/Day ($)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min={0}
-                className="w-full bg-background border border-input rounded-md"
-                value={overtimeDay}
-                onChange={e => setOvertimeDay(e.target.value)}
-                placeholder="0.00"
-              />
-            </div>
-            <div>
-              <Label className="mb-1">OT/Hour ($)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                min={0}
-                className="w-full bg-background border border-input rounded-md"
-                value={overtimeHour}
-                onChange={e => setOvertimeHour(e.target.value)}
-                placeholder="0.00"
-              />
-            </div>
-            <div className="flex items-center gap-2 mt-6">
-              <Checkbox checked={automation} onCheckedChange={val => setAutomation(val === true)} id="automation-check" />
-              <Label htmlFor="automation-check" className="mb-0 cursor-pointer">Automation Enabled</Label>
-            </div>
-            <div className="flex items-center gap-2 mt-6">
-              <Checkbox checked={customKeep} onCheckedChange={val => setCustomKeep(val === true)} id="customkeep-check" />
-              <Label htmlFor="customkeep-check" className="mb-0 cursor-pointer">Custom Keep Duration</Label>
             </div>
           </div>
 
