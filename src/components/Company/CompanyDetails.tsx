@@ -18,7 +18,6 @@ import {
   useSetFixedCancellationAmounts,
   useSetEdgeCaseHandling,
 } from '@/hooks/usePlansApi';
-import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
   DialogContent,
@@ -209,7 +208,7 @@ interface StatusCommissionSettingsFormProps {
     CUSTOMER_FAULT?: StatusCommissionSetting | null;
     OPERATOR_FAULT?: StatusCommissionSetting | null;
     FREE_CANCEL?: StatusCommissionSetting | null;
-    PARTIAL_USE?: StatusCommissionSetting | null;
+    // PARTIAL_USE?: StatusCommissionSetting | null;
   };
   onSave: (payload: StatusCommissionSettingsPayload) => void;
   onCancel: () => void;
@@ -223,13 +222,13 @@ const StatusCommissionSettingsForm: React.FC<StatusCommissionSettingsFormProps> 
   isLoading,
 }) => {
   const statusTypes = [
-    { key: 'COMPLETED', label: 'Completed', supportsSplit: true },
+    { key: 'COMPLETED', label: 'Completed', supportsSplit: false },
     { key: 'LATE_CANCEL', label: 'Late Cancel', supportsSplit: true },
     { key: 'NO_SHOW', label: 'No Show', supportsSplit: true },
     { key: 'CUSTOMER_FAULT', label: 'Customer Fault', supportsSplit: true },
     { key: 'OPERATOR_FAULT', label: 'Operator Fault', supportsSplit: false },
-    { key: 'FREE_CANCEL', label: 'Free Cancel', supportsSplit: false },
-    { key: 'PARTIAL_USE', label: 'Partial Use', supportsSplit: true },
+    // { key: 'FREE_CANCEL', label: 'Free Cancel', supportsSplit: false },
+    // { key: 'PARTIAL_USE', label: 'Partial Use', supportsSplit: true },
   ] as const;
 
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -238,13 +237,13 @@ const StatusCommissionSettingsForm: React.FC<StatusCommissionSettingsFormProps> 
     // Initialize form data from current settings
     const initialData: Record<string, any> = {};
     const statusTypesList = [
-      { key: 'COMPLETED', label: 'Completed', supportsSplit: true },
+      { key: 'COMPLETED', label: 'Completed', supportsSplit: false },
       { key: 'LATE_CANCEL', label: 'Late Cancel', supportsSplit: true },
       { key: 'NO_SHOW', label: 'No Show', supportsSplit: true },
       { key: 'CUSTOMER_FAULT', label: 'Customer Fault', supportsSplit: true },
       { key: 'OPERATOR_FAULT', label: 'Operator Fault', supportsSplit: false },
-      { key: 'FREE_CANCEL', label: 'Free Cancel', supportsSplit: false },
-      { key: 'PARTIAL_USE', label: 'Partial Use', supportsSplit: true },
+      // { key: 'FREE_CANCEL', label: 'Free Cancel', supportsSplit: false },
+      // { key: 'PARTIAL_USE', label: 'Partial Use', supportsSplit: true },
     ] as const;
     statusTypesList.forEach(({ key }) => {
       const current = currentSettings?.[key as keyof typeof currentSettings];
@@ -293,21 +292,13 @@ const StatusCommissionSettingsForm: React.FC<StatusCommissionSettingsFormProps> 
           payload.OPERATOR_FAULT = {
             type: 'PERCENTAGE',
             penaltyPercentage: parseFloat(data.penaltyPercentage),
-            yalaRidePercentage: 100,
-          };
-        }
-      } else if (key === 'FREE_CANCEL') {
-        if (data.type === null) {
-          payload.FREE_CANCEL = { type: null };
-        } else if (data.type === 'PERCENTAGE' && data.percentageRate) {
-          payload.FREE_CANCEL = {
-            type: 'PERCENTAGE',
-            percentageRate: parseFloat(data.percentageRate),
+            yalaRidePercentage: data.yalaRidePercentage ? parseFloat(data.yalaRidePercentage) : 100,
           };
         } else if (data.type === 'FIXED' && data.fixedAmount) {
-          payload.FREE_CANCEL = {
+          payload.OPERATOR_FAULT = {
             type: 'FIXED',
             fixedAmount: parseFloat(data.fixedAmount),
+            yalaRidePercentage: data.yalaRidePercentage ? parseFloat(data.yalaRidePercentage) : 100,
           };
         }
       } else {
@@ -316,13 +307,15 @@ const StatusCommissionSettingsForm: React.FC<StatusCommissionSettingsFormProps> 
           payload[key as keyof StatusCommissionSettingsPayload] = {
             type: 'PERCENTAGE',
             percentageRate: parseFloat(data.percentageRate),
-            splitPercentage: data.splitPercentage ? parseFloat(data.splitPercentage) : undefined,
+            // Split only for non-COMPLETED statuses
+            splitPercentage: key !== 'COMPLETED' && data.splitPercentage ? parseFloat(data.splitPercentage) : undefined,
           };
         } else if (data.type === 'FIXED' && data.fixedAmount) {
           payload[key as keyof StatusCommissionSettingsPayload] = {
             type: 'FIXED',
             fixedAmount: parseFloat(data.fixedAmount),
-            splitPercentage: data.splitPercentage ? parseFloat(data.splitPercentage) : undefined,
+            // Split only for non-COMPLETED statuses
+            splitPercentage: key !== 'COMPLETED' && data.splitPercentage ? parseFloat(data.splitPercentage) : undefined,
           };
         }
       }
@@ -336,26 +329,17 @@ const StatusCommissionSettingsForm: React.FC<StatusCommissionSettingsFormProps> 
       {statusTypes.map(({ key, label, supportsSplit }) => {
         const data = formData[key] || {};
         const isOperatorFault = key === 'OPERATOR_FAULT';
-        const isFreeCancel = key === 'FREE_CANCEL';
+        // const isFreeCancel = key === 'FREE_CANCEL';
 
         return (
           <div key={key} className="border rounded-lg p-4">
             <div className="flex items-center justify-between mb-4">
               <h4 className="font-semibold">{label}</h4>
-              {isFreeCancel && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleStatusChange(key, 'type', null)}
-                >
-                  Remove Commission
-                </Button>
-              )}
+
             </div>
 
             <div className="space-y-4">
-              {!isFreeCancel || data.type !== null ? (
+              {data.type !== null ? (
                 <>
                   <div>
                     <Label>Commission Type</Label>
@@ -369,34 +353,52 @@ const StatusCommissionSettingsForm: React.FC<StatusCommissionSettingsFormProps> 
                       <SelectContent>
                         <SelectItem value="PERCENTAGE">Percentage</SelectItem>
                         <SelectItem value="FIXED">Fixed Amount</SelectItem>
-                        {isFreeCancel && <SelectItem value={null as any}>No Commission</SelectItem>}
+                        <SelectItem value={null as any}>No Commission</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   {isOperatorFault ? (
                     <>
+                      {data.type === 'PERCENTAGE' ? (
+                        <div>
+                          <Label>Penalty Percentage *</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            max="100"
+                            value={data.penaltyPercentage || ''}
+                            onChange={(e) => handleStatusChange(key, 'penaltyPercentage', e.target.value)}
+                            placeholder="e.g., 25"
+                          />
+                        </div>
+                      ) : (
+                        <div>
+                          <Label>Fixed Amount *</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            value={data.fixedAmount || ''}
+                            onChange={(e) => handleStatusChange(key, 'fixedAmount', e.target.value)}
+                            placeholder="e.g., 50.00"
+                          />
+                        </div>
+                      )}
+                      
                       <div>
-                        <Label>Penalty Percentage *</Label>
+                        <Label>YalaRide Percentage (Optional)</Label>
                         <Input
                           type="number"
                           step="0.01"
-                          min="0.01"
+                          min="0"
                           max="100"
-                          value={data.penaltyPercentage || ''}
-                          onChange={(e) => handleStatusChange(key, 'penaltyPercentage', e.target.value)}
-                          placeholder="e.g., 25"
+                          value={data.yalaRidePercentage || ''}
+                          onChange={(e) => handleStatusChange(key, 'yalaRidePercentage', e.target.value)}
+                          placeholder="e.g., 50 (default: 100)"
                         />
-                      </div>
-                      <div>
-                        <Label>YalaRide Percentage</Label>
-                        <Input
-                          type="number"
-                          value="100"
-                          disabled
-                          className="bg-muted"
-                        />
-                        <p className="text-xs text-muted-foreground mt-1">Always 100% for operator fault</p>
+                        <p className="text-xs text-muted-foreground mt-1">YalaRide share of penalty (0-100)</p>
                       </div>
                     </>
                   ) : (
@@ -769,13 +771,8 @@ const CompanyDetail = () => {
   const safeCompanyId = companyId || '';
 
   const { data: settingsRes, refetch: refetchSettings, isLoading: settingsLoading } = useGetCompanySettings(safeCompanyId);
-  const { data: planConfigs, isLoading: planLoading } = useGetPlanConfigs();
   const ensureDefaults = useEnsureDefaultPlans();
 
-  const setOverride = useSetCommissionOverride(safeCompanyId);
-  const deleteOverride = useDeleteCommissionOverride(safeCompanyId);       // NEW
-  const endEarly = useEndCompanySubscriptionEarly(safeCompanyId);          // NEW
-  const startSub = useStartCompanySubscription(safeCompanyId);
   const setStatusCommissionSettings = useSetStatusCommissionSettings(safeCompanyId);
   const setFixedCancellationAmounts = useSetFixedCancellationAmounts(safeCompanyId);
   const setEdgeCaseHandling = useSetEdgeCaseHandling(safeCompanyId);
@@ -1898,7 +1895,7 @@ const CompanyDetail = () => {
                             <p className="font-medium">${setting.fixedAmount}</p>
                           </div>
                         )}
-                        {setting.splitPercentage !== undefined && (
+                        {status !== 'COMPLETED' && setting.splitPercentage !== undefined && (
                           <div>
                             <p className="text-muted-foreground">Split</p>
                             <p className="font-medium">{setting.splitPercentage}%</p>

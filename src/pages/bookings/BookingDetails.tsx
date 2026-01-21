@@ -1,7 +1,8 @@
 // src/pages/bookings/BookingDetails.tsx
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useBookingById, useCancelBooking } from '@/hooks/useBookings';
+import { useBookingById, useCancelBooking, useCompleteBooking } from '@/hooks/useBookings';
+import { useAppSelector } from '@/store';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PageLoadingSkeleton } from '@/components/ui/loading';
@@ -23,6 +24,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import {
   ArrowLeft,
   Calendar,
   MapPin,
@@ -41,6 +49,8 @@ import {
   Percent,
   XCircle,
   AlertCircle,
+  Check,
+  MoreVertical,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -124,11 +134,36 @@ const BookingDetails: React.FC = () => {
   const navigate = useNavigate();
   const { data: booking, isLoading, isError, error, refetch } = useBookingById(bookingId);
   const cancelBooking = useCancelBooking();
+  const completeBooking = useCompleteBooking();
+  
+  // Get user role from Redux
+  const { user, otherInfo } = useAppSelector((state) => state.auth);
+  const isAdmin = user?.role === 'admin';
+  const isOperator = user?.role === 'operator';
   
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [cancelType, setCancelType] = useState<CancelType>('LATE_CANCEL');
   const [cancelNote, setCancelNote] = useState('');
   const [cancelResponse, setCancelResponse] = useState<any>(null);
+  
+  const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
+  const [completeResponse, setCompleteResponse] = useState<any>(null);
+  
+  // Permission checks
+  const hasBeenModified = booking?.status === 'COMPLETED' || booking?.status === 'CANCELLED';
+  
+  // Complete button visibility
+  const canShowComplete = isAdmin 
+    ? booking?.status !== 'COMPLETED'  // Admin: can complete unless already completed
+    : (isOperator && booking?.status !== 'COMPLETED' && booking?.status !== 'CANCELLED'); // Operator: only if untouched
+  
+  // Cancel button visibility
+  const canShowCancel = isAdmin
+    ? booking?.status !== 'CANCELLED'  // Admin: can cancel unless already cancelled
+    : (isOperator && booking?.status !== 'COMPLETED' && booking?.status !== 'CANCELLED'); // Operator: only if untouched
+  
+  // Edit cancellation visibility (ADMIN ONLY)
+  const canEditCancellation = isAdmin && booking?.status === 'CANCELLED';
 
   // Handle edit button click - open cancel dialog for cancelled bookings
   const handleEditClick = () => {
@@ -141,6 +176,38 @@ const BookingDetails: React.FC = () => {
       setCancelResponse(null); // Clear previous response
       setIsCancelDialogOpen(true);
     }
+  };
+
+  // Handle complete booking - open dialog
+  const handleCompleteBooking = () => {
+    setCompleteResponse(null); // Clear previous response
+    setIsCompleteDialogOpen(true);
+  };
+
+  // Confirm and execute complete booking
+  const confirmCompleteBooking = () => {
+    if (!bookingId || !booking?.company?.id) {
+      toast.error('Booking or Company ID not found');
+      return;
+    }
+
+    completeBooking.mutate(
+      {
+        bookingId,
+        companyId: booking.company.id,
+      },
+      {
+        onSuccess: (data) => {
+          setCompleteResponse(data);
+          toast.success('Booking completed successfully');
+          refetch();
+        },
+        onError: (error: any) => {
+          const errorMessage = error?.response?.data?.message || error?.message || 'Failed to complete booking';
+          toast.error(errorMessage);
+        },
+      }
+    );
   };
 
   if (isLoading) return <PageLoadingSkeleton />;
@@ -217,26 +284,75 @@ const BookingDetails: React.FC = () => {
           <Button variant="outline" size="sm" className="gap-2 rounded-xl h-12 w-14">
             <Share2 className="h-4 w-4" />
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="gap-2 rounded-xl h-12 w-21"
-            onClick={handleEditClick}
-          >
-            <Edit className="h-4 w-4" />
-            Edit
-          </Button>
-          {booking.status !== 'CANCELLED' && (
-            <Button 
-              variant="destructive" 
-              size="sm" 
-              className="gap-2 rounded-xl h-12"
-              onClick={() => setIsCancelDialogOpen(true)}
-            >
-              <XCircle className="h-4 w-4" />
-              Cancel Booking
-            </Button>
-          )}
+          
+          {/* Actions Dropdown Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2 rounded-xl h-12">
+                <MoreVertical className="h-4 w-4" />
+                Actions
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              {/* Edit Cancellation - ADMIN ONLY */}
+              {canEditCancellation && (
+                <DropdownMenuItem onClick={handleEditClick}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit Cancellation
+                </DropdownMenuItem>
+              )}
+              
+              {/* Complete Booking - Role-based visibility */}
+              {canShowComplete && (
+                <DropdownMenuItem 
+                  onClick={handleCompleteBooking}
+                  disabled={completeBooking.isPending}
+                  className="text-green-600 focus:text-green-600"
+                >
+                  {completeBooking.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Completing...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="mr-2 h-4 w-4" />
+                      Complete Booking
+                    </>
+                  )}
+                </DropdownMenuItem>
+              )}
+              
+              {/* Separator before cancel option */}
+              {(canShowComplete || canEditCancellation) && canShowCancel && (
+                <DropdownMenuSeparator />
+              )}
+              
+              {/* Cancel Booking - Role-based visibility */}
+              {canShowCancel && (
+                <DropdownMenuItem 
+                  onClick={() => setIsCancelDialogOpen(true)}
+                  className="text-red-600 focus:text-red-600"
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Cancel Booking
+                </DropdownMenuItem>
+              )}
+              
+              {/* Show message if operator already modified */}
+              {isOperator && hasBeenModified && !canShowComplete && !canShowCancel && (
+                <>
+                  <DropdownMenuItem disabled className="text-muted-foreground">
+                    <AlertCircle className="mr-2 h-4 w-4" />
+                    Status already updated
+                  </DropdownMenuItem>
+                  <p className="px-2 py-1.5 text-xs text-muted-foreground">
+                    Operators can only change status once
+                  </p>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -568,6 +684,19 @@ const BookingDetails: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
 
+          {/* Warning for operators */}
+          {!cancelResponse && isOperator && booking?.status !== 'CANCELLED' && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-amber-800 dark:text-amber-300 mb-1">One-time Action</p>
+                <p className="text-amber-700 dark:text-amber-400">
+                  As an operator, you can only change the booking status once. After cancelling, you won't be able to modify or complete this booking.
+                </p>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-4 py-4">
             <div>
               <Label htmlFor="cancelType">Cancellation Type *</Label>
@@ -581,7 +710,6 @@ const BookingDetails: React.FC = () => {
                   <SelectItem value="NO_SHOW">NO_SHOW - 10% fee</SelectItem>
                   <SelectItem value="CUSTOMER_FAULT">CUSTOMER_FAULT - 20% fee</SelectItem>
                   <SelectItem value="OPERATOR_FAULT">OPERATOR_FAULT - Full refund, configurable penalty</SelectItem>
-                  <SelectItem value="PARTIAL_USE">PARTIAL_USE - Based on used amount</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -705,6 +833,105 @@ const BookingDetails: React.FC = () => {
                   </>
                 ) : (
                   booking?.status === 'CANCELLED' ? 'Update Cancellation' : 'Confirm Cancellation'
+                )}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Complete Booking Dialog */}
+      <Dialog open={isCompleteDialogOpen} onOpenChange={setIsCompleteDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Complete Booking</DialogTitle>
+            <DialogDescription>
+              {!completeResponse 
+                ? 'Are you sure you want to mark this booking as completed? This will calculate the final commission and operator payout.'
+                : 'Booking has been completed successfully. Here are the accounting details:'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Warning for operators */}
+          {!completeResponse && isOperator && (
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+              <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-amber-800 dark:text-amber-300 mb-1">One-time Action</p>
+                <p className="text-amber-700 dark:text-amber-400">
+                  As an operator, you can only change the booking status once. After completing, you won't be able to modify or cancel this booking.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {completeResponse && (
+            <Card className="p-4 bg-muted border border-border">
+              <div className="flex items-center gap-2 mb-3">
+                <Check className="h-5 w-5 text-green-600" />
+                <h3 className="font-semibold text-green-600">Completion Accounting</h3>
+              </div>
+              <div className="space-y-3 text-sm">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 rounded-lg bg-background">
+                    <p className="text-muted-foreground mb-1">Commission Type</p>
+                    <p className="font-medium">{completeResponse.accounting?.commissionType || '—'}</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-background">
+                    <p className="text-muted-foreground mb-1">Commission Rate</p>
+                    <p className="font-medium">{completeResponse.accounting?.commissionValue || completeResponse.accounting?.commissionRate + '%' || '—'}</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+                    <p className="text-emerald-600 dark:text-emerald-400 mb-1 text-xs font-medium uppercase">Operator Payout</p>
+                    <p className="font-semibold text-lg">{formatCurrency(completeResponse.accounting?.operatorPayout)}</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+                    <p className="text-orange-600 dark:text-orange-400 mb-1 text-xs font-medium uppercase">YalaRide Commission</p>
+                    <p className="font-semibold text-lg">{formatCurrency(completeResponse.accounting?.yalaRideCommission)}</p>
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-blue-600 dark:text-blue-400 text-xs font-medium uppercase mb-1">Status</p>
+                      <p className="font-medium">Completed</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-blue-600 dark:text-blue-400 text-xs font-medium uppercase mb-1">Completed At</p>
+                      <p className="font-medium text-sm">{formatDateTime(completeResponse.completedAt)}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsCompleteDialogOpen(false);
+                setCompleteResponse(null);
+              }}
+            >
+              {completeResponse ? 'Close' : 'Cancel'}
+            </Button>
+            {!completeResponse && (
+              <Button
+                onClick={confirmCompleteBooking}
+                disabled={completeBooking.isPending}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {completeBooking.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Completing...
+                  </>
+                ) : (
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    Confirm Complete
+                  </>
                 )}
               </Button>
             )}

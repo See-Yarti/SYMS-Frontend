@@ -202,3 +202,20 @@ export interface CancelBookingResponse {
   cancelledAt: string;
   accounting: CancelBookingAccounting;
 }
+
+// Complete Booking types
+export interface CompleteBookingAccounting {
+  customerRefund: string;
+  operatorPayout: string;
+  yalaRideCommission: string;
+  commissionType: 'PERCENTAGE' | 'FIXED';
+  commissionValue?: string;
+  commissionRate?: string;
+}
+
+export interface CompleteBookingResponse {
+  bookingId: string;
+  status: 'COMPLETED';
+  completedAt: string;
+  accounting: CompleteBookingAccounting;
+}
