@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 
 // ===== Types =====
 interface CarClass { id: string; slug: string; name: string; }
-interface Location { id: string; city: string; title: string; isAirportZone?: boolean; }
+interface Location { id: string; city: string; title?: string; isAirportZone?: boolean; }
 interface Blackout {
   id: string; description: string; type: "FULL" | "PICKUP_ONLY" | "RETURN_ONLY";
   startDateTime: string; endDateTime: string;
@@ -88,7 +88,7 @@ const toApiTime = (hhmm: string) => {
   const ampm = h24 >= 12 ? "pm" : "am"; const h12 = (h24 % 12) || 12;
   return `${pad2(h12)}.${pad2(m)} ${ampm}`;
 };
-const prettyLocationLabel = (loc?: Location) => (!loc ? "Unknown Location" : `PR: ${loc.title}${loc.isAirportZone ? " Airport" : ""}`);
+const prettyLocationLabel = (loc?: Location) => (!loc ? "Unknown Location" : `PR: ${loc.title || loc.city}${loc.isAirportZone ? " Airport" : ""}`);
 const arraysShallowEqual = <T,>(a: T[], b: T[]) => a.length === b.length && a.every((v, i) => v === b[i]);
 
 export default function BlackoutDialog({
