@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 
 // ===== Types =====
 interface CarClass { id: string; slug: string; name: string; }
-interface Location { id: string; city: string; isAirportZone?: boolean; }
+interface Location { id: string; city: string; title: string; isAirportZone?: boolean; }
 interface Blackout {
   id: string; description: string; type: "FULL" | "PICKUP_ONLY" | "RETURN_ONLY";
   startDateTime: string; endDateTime: string;
@@ -38,10 +38,11 @@ interface BlackoutDialogProps {
   }) => Promise<void> | void;
   blackout?: Blackout; companyId: string; initialLocationId?: string;
 }
-interface CompanyCarClassSelectItem {
-  id: string;        // companyCarClassId (per location)
-  label: string;     // "EVMN — Toyota Corolla @ City"
-  slug: string;
+interface CarClassGroupItem {
+  carClassId: string;             // Base car class ID (e.g., "031a2407...")
+  slug: string;                   // "MCAR"
+  label: string;                  // "MCAR — Available at 2 locations"
+  companyCarClassIds: string[];   // All companyCarClassIds for this car class across selected locations
   selected: boolean;
 }
 
@@ -87,7 +88,7 @@ const toApiTime = (hhmm: string) => {
   const ampm = h24 >= 12 ? "pm" : "am"; const h12 = (h24 % 12) || 12;
   return `${pad2(h12)}.${pad2(m)} ${ampm}`;
 };
-const prettyLocationLabel = (loc?: Location) => (!loc ? "Unknown Location" : `PR: ${loc.city}${loc.isAirportZone ? " Airport" : ""}`);
+const prettyLocationLabel = (loc?: Location) => (!loc ? "Unknown Location" : `PR: ${loc.title}${loc.isAirportZone ? " Airport" : ""}`);
 const arraysShallowEqual = <T,>(a: T[], b: T[]) => a.length === b.length && a.every((v, i) => v === b[i]);
 
 export default function BlackoutDialog({
@@ -99,8 +100,8 @@ export default function BlackoutDialog({
   const [startDate, setStartDate] = React.useState(""); const [startTime, setStartTime] = React.useState("00:00");
   const [endDate, setEndDate] = React.useState(""); const [endTime, setEndTime] = React.useState("23:59");
   const [selectedLocationIds, setSelectedLocationIds] = React.useState<string[]>([]);
-  const [availableCCCs, setAvailableCCCs] = React.useState<CompanyCarClassSelectItem[]>([]);
-  const [selectedCCCs, setSelectedCCCs] = React.useState<CompanyCarClassSelectItem[]>([]);
+  const [availableCCCs, setAvailableCCCs] = React.useState<CarClassGroupItem[]>([]);
+  const [selectedCCCs, setSelectedCCCs] = React.useState<CarClassGroupItem[]>([]);
   const [pendingSelectedCCCIds, setPendingSelectedCCCIds] = React.useState<string[] | null>(null);
 
   // Locations list
@@ -120,8 +121,8 @@ export default function BlackoutDialog({
     { enabled: selectedLocationIds.length > 0 }
   );
 
-  // Flatten the grouped response to per-location selectable rows
-  const flatCCCItems = React.useMemo<CompanyCarClassSelectItem[]>(() => {
+  // Group car classes - only show car classes available at ALL selected locations
+  const flatCCCItems = React.useMemo<CarClassGroupItem[]>(() => {
     const payload =
       Array.isArray((rawResp as any)?.data?.data)
         ? (rawResp as any).data.data
@@ -131,21 +132,47 @@ export default function BlackoutDialog({
             ? (rawResp as any)
             : [];
 
-    if (!Array.isArray(payload) || payload.length === 0) return [];
+    if (!Array.isArray(payload) || payload.length === 0 || selectedLocationIds.length === 0) return [];
 
     const selectedSet = new Set(selectedLocationIds);
-    const items: CompanyCarClassSelectItem[] = [];
+    const items: CarClassGroupItem[] = [];
 
     for (const group of payload) {
-      const slug = group?.carClass?.slug || group?.carClass?.name || "Class";
+      const carClass = group?.carClass;
+      if (!carClass) continue;
+      
+      const slug = carClass.slug || carClass.name || "Class";
       const locs: CCCPerLocation[] = group?.locations || [];
-      for (const loc of locs) {
-        if (!selectedSet.has(loc.locationId)) continue;
-        items.push({ id: loc.companyCarClassId, label: `${slug}`, slug, selected: false });
-      }
+      
+      // Filter locations to only include selected ones
+      const matchingLocs = locs.filter(loc => selectedSet.has(loc.locationId));
+      
+      // Only include this car class if it's available at ALL selected locations
+      if (matchingLocs.length !== selectedLocationIds.length) continue;
+      
+      // Collect all companyCarClassIds for this car class across selected locations
+      const companyCarClassIds = matchingLocs.map(loc => loc.companyCarClassId);
+      
+      // Build label showing availability
+      const makeModels = matchingLocs.map(loc => 
+        loc.make && loc.model ? `${loc.make} ${loc.model}` : ''
+      ).filter(Boolean);
+      const uniqueMakeModels = [...new Set(makeModels)];
+      
+      const label = selectedLocationIds.length > 1
+        ? `${slug} — Available at ${selectedLocationIds.length} location${selectedLocationIds.length > 1 ? 's' : ''}`
+        : `${slug}${uniqueMakeModels.length > 0 ? ` — ${uniqueMakeModels[0]}` : ''}`;
+      
+      items.push({
+        carClassId: carClass.id,
+        slug,
+        label,
+        companyCarClassIds,
+        selected: false
+      });
     }
+    
     return items;
-    // 👇 remove activeLocations here
   }, [rawResp, selectedLocationIds]);
 
 
@@ -194,39 +221,37 @@ export default function BlackoutDialog({
     // Apply pending preselect once (edit mode)
     if (pendingSelectedCCCIds && pendingSelectedCCCIds.length > 0) {
       const pre = new Set(pendingSelectedCCCIds);
-      const selected = flatCCCItems.filter(x => pre.has(x.id)).map(x => ({ ...x, selected: false }));
-      const available = flatCCCItems.filter(x => !pre.has(x.id));
+      
+      // Check which car class groups have at least one matching companyCarClassId
+      const selected = flatCCCItems.filter(group => 
+        group.companyCarClassIds.some(id => pre.has(id))
+      ).map(x => ({ ...x, selected: false }));
+      
+      const selectedIds = new Set(selected.map(s => s.carClassId));
+      const available = flatCCCItems.filter(x => !selectedIds.has(x.carClassId));
+      
       setSelectedCCCs(selected);
       setAvailableCCCs(available);
-      setPendingSelectedCCCIds([]);
+      setPendingSelectedCCCIds(null);
       return;
     }
 
     // Reconcile with user's existing selection when locations change
-    // Use functional updates to avoid stale closures
-    let computedSelected: CompanyCarClassSelectItem[] = [];
-    let computedAvailable: CompanyCarClassSelectItem[] = [];
-    
     setSelectedCCCs(prevSelected => {
-      const allowed = new Set(flatCCCItems.map(i => i.id));
-      const stillSelected = prevSelected.filter(s => allowed.has(s.id));
-      const stillIds = new Set(stillSelected.map(s => s.id));
-      computedSelected = flatCCCItems.filter(i => stillIds.has(i.id)).map(i => ({ ...i, selected: false }));
-      computedAvailable = flatCCCItems.filter(i => !stillIds.has(i.id));
+      const allowedCarClassIds = new Set(flatCCCItems.map(i => i.carClassId));
+      const stillSelected = prevSelected.filter(s => allowedCarClassIds.has(s.carClassId));
+      const stillIds = new Set(stillSelected.map(s => s.carClassId));
+      const computedSelected = flatCCCItems.filter(i => stillIds.has(i.carClassId)).map(i => ({ ...i, selected: false }));
+      const computedAvailable = flatCCCItems.filter(i => !stillIds.has(i.carClassId));
       
-      // Only update if IDs actually changed
-      if (arraysShallowEqual(computedSelected.map(s => s.id), prevSelected.map(s => s.id))) {
+      // Update available in sync
+      setAvailableCCCs(computedAvailable);
+      
+      // Only update selected if IDs actually changed
+      if (arraysShallowEqual(computedSelected.map(s => s.carClassId), prevSelected.map(s => s.carClassId))) {
         return prevSelected;
       }
       return computedSelected;
-    });
-    
-    // Update available based on computed values
-    setAvailableCCCs(prev => {
-      if (arraysShallowEqual(computedAvailable.map(a => a.id), prev.map(a => a.id))) {
-        return prev;
-      }
-      return computedAvailable;
     });
   }, [flatCCCItems, pendingSelectedCCCIds]);
 
@@ -248,6 +273,9 @@ export default function BlackoutDialog({
     const finalLocationIds = selectedLocationIds.length === 0 && initialLocationId
       ? [initialLocationId] : selectedLocationIds;
 
+    // Flatten all companyCarClassIds from selected car class groups
+    const allCompanyCarClassIds = selectedCCCs.flatMap(group => group.companyCarClassIds);
+
     await onSave({
       description,
       type: blackoutType,
@@ -255,21 +283,21 @@ export default function BlackoutDialog({
       startTime: toApiTime(startTime),
       endDate: toApiDate(endDate),
       endTime: toApiTime(endTime),
-      carClassIds: selectedCCCs.map(x => x.id), // <-- companyCarClassId(s) per selected location
+      carClassIds: allCompanyCarClassIds, // All companyCarClassIds across all locations
       locationIds: finalLocationIds,
     });
   };
 
   // Transfer helpers
   const toggleSelected = (
-    list: CompanyCarClassSelectItem[], idx: number,
-    setList: React.Dispatch<React.SetStateAction<CompanyCarClassSelectItem[]>>
+    list: CarClassGroupItem[], idx: number,
+    setList: React.Dispatch<React.SetStateAction<CarClassGroupItem[]>>
   ) => setList(list.map((x, i) => (i === idx ? { ...x, selected: !x.selected } : x)));
 
   const moveSelected = (
-    from: CompanyCarClassSelectItem[], to: CompanyCarClassSelectItem[],
-    setFrom: React.Dispatch<React.SetStateAction<CompanyCarClassSelectItem[]>>,
-    setTo: React.Dispatch<React.SetStateAction<CompanyCarClassSelectItem[]>>
+    from: CarClassGroupItem[], to: CarClassGroupItem[],
+    setFrom: React.Dispatch<React.SetStateAction<CarClassGroupItem[]>>,
+    setTo: React.Dispatch<React.SetStateAction<CarClassGroupItem[]>>
   ) => {
     const toMove = from.filter(x => x.selected);
     setFrom(from.filter(x => !x.selected));
@@ -277,8 +305,8 @@ export default function BlackoutDialog({
   };
 
   const moveAll = (
-    from: CompanyCarClassSelectItem[], setFrom: React.Dispatch<React.SetStateAction<CompanyCarClassSelectItem[]>>,
-    to: CompanyCarClassSelectItem[], setTo: React.Dispatch<React.SetStateAction<CompanyCarClassSelectItem[]>>
+    from: CarClassGroupItem[], setFrom: React.Dispatch<React.SetStateAction<CarClassGroupItem[]>>,
+    to: CarClassGroupItem[], setTo: React.Dispatch<React.SetStateAction<CarClassGroupItem[]>>
   ) => {
     setTo([...to, ...from.map(x => ({ ...x, selected: false }))]); setFrom([]);
   };
@@ -401,7 +429,7 @@ export default function BlackoutDialog({
                   <div className="text-xs text-muted-foreground">No entries</div>
                 ) : (
                   availableCCCs.map((item, index) => (
-                    <div key={item.id} className="flex items-center gap-2 p-1">
+                    <div key={item.carClassId} className="flex items-center gap-2 p-1">
                       <Checkbox checked={item.selected} onCheckedChange={() => toggleSelected(availableCCCs, index, setAvailableCCCs)} />
                       <span>{item.label}</span>
                     </div>
@@ -422,7 +450,7 @@ export default function BlackoutDialog({
                   <div className="text-xs text-muted-foreground">No entries selected</div>
                 ) : (
                   selectedCCCs.map((item, index) => (
-                    <div key={item.id} className="flex items-center gap-2 p-1">
+                    <div key={item.carClassId} className="flex items-center gap-2 p-1">
                       <Checkbox checked={item.selected} onCheckedChange={() => toggleSelected(selectedCCCs, index, setSelectedCCCs)} />
                       <span>{item.label}</span>
                     </div>

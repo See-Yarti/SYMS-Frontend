@@ -115,6 +115,7 @@ export const useUploadFile = <TResponse = unknown>(endpoint: string) => {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 60000, // 60 seconds for file uploads
       });
       return data.data;
     },

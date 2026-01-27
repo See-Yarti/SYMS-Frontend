@@ -16,6 +16,68 @@ export const axiosInstance = axios.create({
 let isRefreshing = false;
 let failedQueue: Array<{ resolve: (value: unknown) => void; reject: (reason?: any) => void }> = [];
 
+// Proactive token refresh - refresh token 2 minutes before expiry
+let tokenRefreshTimeout: NodeJS.Timeout | null = null;
+
+const scheduleTokenRefresh = () => {
+  // Clear existing timeout
+  if (tokenRefreshTimeout) {
+    clearTimeout(tokenRefreshTimeout);
+  }
+
+  // Schedule refresh before token expires (with buffer)
+  // Production: 13 minutes (15min - 2min buffer)
+  // Testing: 45 seconds (1min - 15sec buffer)
+  const refreshIn = 45 * 1000; // 45 seconds for testing (change to 13 * 60 * 1000 for production)
+  
+  if (import.meta.env.DEV) {
+    const refreshTime = new Date(Date.now() + refreshIn);
+    console.log(`[Token] Scheduled proactive refresh at ${refreshTime.toLocaleTimeString()}`);
+  }
+  
+  tokenRefreshTimeout = setTimeout(async () => {
+    try {
+      const state = store.getState() as RootState;
+      const refreshToken = state.auth._rT;
+      
+      if (!refreshToken) {
+        if (import.meta.env.DEV) {
+          console.log('[Token] No refresh token found, skipping refresh');
+        }
+        return;
+      }
+
+      if (import.meta.env.DEV) {
+        console.log('[Token] Proactively refreshing tokens...');
+      }
+
+      const refreshResponse = await axios.get(
+        import.meta.env.VITE_API_REFRESH_TOKEN_URL,
+        {
+          headers: { Authorization: `Bearer ${refreshToken}` },
+        }
+      );
+
+      const newAccessToken = refreshResponse.data.data.tokens._aT;
+      const newRefreshToken = refreshResponse.data.data.tokens._rT;
+      
+      store.dispatch(AuthActions.updateAccessToken(newAccessToken));
+      store.dispatch(AuthActions.updateRefreshToken(newRefreshToken));
+      
+      if (import.meta.env.DEV) {
+        console.log('[Token] ✅ Tokens refreshed successfully');
+      }
+      
+      // Schedule next refresh
+      scheduleTokenRefresh();
+    } catch (error: any) {
+      console.error('[Token] ❌ Proactive token refresh failed:');
+      console.error('Error details:', error?.response?.data || error?.message || error);
+      // Don't logout here - let the regular 401 handler deal with it
+    }
+  }, refreshIn);
+};
+
 const processQueue = (error?: any, token?: string) => {
   failedQueue.forEach((prom) => {
     if (error) prom.reject(error);
@@ -24,12 +86,40 @@ const processQueue = (error?: any, token?: string) => {
   failedQueue = [];
 };
 
+// Export function to initialize token refresh on app load
+export const initializeTokenRefresh = () => {
+  const state = store.getState() as RootState;
+  const token = state.auth._aT;
+  
+  if (import.meta.env.DEV) {
+    console.log('[Token] Initialize called, token exists:', !!token);
+  }
+  
+  if (token && !tokenRefreshTimeout) {
+    if (import.meta.env.DEV) {
+      console.log('[Token] Starting token refresh scheduler...');
+    }
+    scheduleTokenRefresh();
+  } else if (token && tokenRefreshTimeout) {
+    if (import.meta.env.DEV) {
+      console.log('[Token] Token refresh already scheduled');
+    }
+  }
+};
+
 axiosInstance.interceptors.request.use(
   (config) => {
     const state = store.getState() as RootState;
     const token = state.auth._aT;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      // Start proactive refresh schedule if not already running
+      if (!tokenRefreshTimeout) {
+        if (import.meta.env.DEV) {
+          console.log('[Token] First API call detected, starting refresh scheduler...');
+        }
+        scheduleTokenRefresh();
+      }
     }
     return config;
   },
@@ -83,6 +173,9 @@ axiosInstance.interceptors.response.use(
         store.dispatch(AuthActions.updateAccessToken(newAccessToken));
         store.dispatch(AuthActions.updateRefreshToken(newRefreshToken));
         
+        // Schedule next proactive refresh
+        scheduleTokenRefresh();
+        
         // Process queued requests - they will retry with their own original requests
         processQueue(null, newAccessToken);
         
@@ -92,6 +185,13 @@ axiosInstance.interceptors.response.use(
       } catch (refreshError) {
         toast.error('Session expired. Please login again.'); // Show toast
         processQueue(refreshError, undefined);
+        
+        // Clear token refresh timeout on logout
+        if (tokenRefreshTimeout) {
+          clearTimeout(tokenRefreshTimeout);
+          tokenRefreshTimeout = null;
+        }
+        
         store.dispatch(logoutUser());
         // Auto redirect to login after short delay so toast can be seen
         setTimeout(() => {

@@ -8,9 +8,17 @@ import { persistor, store } from './store/index.ts';
 import router from './Router.tsx';
 import { RouterProvider } from 'react-router-dom';
 import Provider from './Provider.tsx';
+import { initializeTokenRefresh } from './lib/API.ts';
 
 createRoot(document.getElementById('root')!).render(
-    <PersistGate loading={null} persistor={persistor}>
+    <PersistGate 
+      loading={null} 
+      persistor={persistor}
+      onBeforeLift={() => {
+        // Initialize token refresh after Redux state is rehydrated
+        initializeTokenRefresh();
+      }}
+    >
       <ReduxProvider store={store}>
         <Provider>
           <RouterProvider router={router} />

@@ -301,8 +301,25 @@ const StatusCommissionSettingsForm: React.FC<StatusCommissionSettingsFormProps> 
             yalaRidePercentage: data.yalaRidePercentage ? parseFloat(data.yalaRidePercentage) : 100,
           };
         }
+      } else if (key === 'NO_SHOW') {
+        // NO_SHOW: Special case
+        // PERCENTAGE: percentageRate + splitPercentage
+        // FIXED: percentageRate + fixedAmount
+        if (data.type === 'PERCENTAGE' && data.percentageRate && data.splitPercentage) {
+          payload.NO_SHOW = {
+            type: 'PERCENTAGE',
+            percentageRate: parseFloat(data.percentageRate),
+            splitPercentage: parseFloat(data.splitPercentage),
+          };
+        } else if (data.type === 'FIXED' && data.percentageRate && data.fixedAmount) {
+          payload.NO_SHOW = {
+            type: 'FIXED',
+            percentageRate: parseFloat(data.percentageRate),
+            fixedAmount: parseFloat(data.fixedAmount),
+          };
+        }
       } else {
-        // COMPLETED, LATE_CANCEL, NO_SHOW, CUSTOMER_FAULT, PARTIAL_USE
+        // COMPLETED, LATE_CANCEL, CUSTOMER_FAULT, PARTIAL_USE
         if (data.type === 'PERCENTAGE' && data.percentageRate) {
           payload[key as keyof StatusCommissionSettingsPayload] = {
             type: 'PERCENTAGE',
@@ -329,6 +346,7 @@ const StatusCommissionSettingsForm: React.FC<StatusCommissionSettingsFormProps> 
       {statusTypes.map(({ key, label, supportsSplit }) => {
         const data = formData[key] || {};
         const isOperatorFault = key === 'OPERATOR_FAULT';
+        const isNoShow = key === 'NO_SHOW';
         // const isFreeCancel = key === 'FREE_CANCEL';
 
         return (
@@ -353,7 +371,6 @@ const StatusCommissionSettingsForm: React.FC<StatusCommissionSettingsFormProps> 
                       <SelectContent>
                         <SelectItem value="PERCENTAGE">Percentage</SelectItem>
                         <SelectItem value="FIXED">Fixed Amount</SelectItem>
-                        <SelectItem value={null as any}>No Commission</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -400,6 +417,50 @@ const StatusCommissionSettingsForm: React.FC<StatusCommissionSettingsFormProps> 
                         />
                         <p className="text-xs text-muted-foreground mt-1">YalaRide share of penalty (0-100)</p>
                       </div>
+                    </>
+                  ) : isNoShow ? (
+                    <>
+                      {/* NO_SHOW: Special case - always needs percentageRate + one other field */}
+                      <div>
+                        <Label>Percentage Rate *</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          max="100"
+                          value={data.percentageRate || ''}
+                          onChange={(e) => handleStatusChange(key, 'percentageRate', e.target.value)}
+                          placeholder="e.g., 10"
+                        />
+                      </div>
+                      
+                      {data.type === 'PERCENTAGE' ? (
+                        <div>
+                          <Label>Split Percentage *</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            value={data.splitPercentage || ''}
+                            onChange={(e) => handleStatusChange(key, 'splitPercentage', e.target.value)}
+                            placeholder="e.g., 50"
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">Split between YalaRide and Company (0-100)</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <Label>Fixed Amount *</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            value={data.fixedAmount || ''}
+                            onChange={(e) => handleStatusChange(key, 'fixedAmount', e.target.value)}
+                            placeholder="e.g., 6.00"
+                          />
+                        </div>
+                      )}
                     </>
                   ) : (
                     <>
