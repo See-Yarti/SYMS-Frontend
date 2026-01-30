@@ -4,8 +4,9 @@ import * as React from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, Plus, ShieldBan } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Pencil, Trash2, Plus, Search, RefreshCw, MoreVertical, ShieldBan } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import BlackoutDialog from '@/components/Blackout/BlackoutDialog';
 import { useAppSelector } from '@/store';
 import { useFetchData, useDeleteData, usePostJson, usePatchDataBlackout } from '@/hooks/useOperatorCarClass';
@@ -85,15 +86,15 @@ export default function BlackoutPage() {
   });
 
   // UI state
-  const [search] = React.useState<string>('');
+  const [searchQuery, setSearchQuery] = React.useState<string>('');
   const [dialogOpen, setDialogOpen] = React.useState<boolean>(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState<boolean>(false);
   const [pendingDelete, setPendingDelete] = React.useState<Blackout | null>(null);
 
   const filteredBlackouts = blackouts.filter(blackout =>
-    blackout.description.toLowerCase().includes(search.toLowerCase()) ||
-    blackout.locations.some(loc => loc.city.toLowerCase().includes(search.toLowerCase())) ||
-    blackout.carClasses.some(cc => cc.carClass.name.toLowerCase().includes(search.toLowerCase()))
+    blackout.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    blackout.locations.some(loc => loc.city.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    blackout.carClasses.some(cc => cc.carClass.name.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const formatDisplayDate = (dateString: string) => {
@@ -157,123 +158,189 @@ export default function BlackoutPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-2 md:px-8 py-8 space-y-10">
-      {/* Section Header */}
-      <div className="flex items-center gap-4 mb-4">
-        <div className="flex items-center gap-3">
-          <ShieldBan className="w-9 h-9 text-destructive/80" />
-          <h1 className="text-3xl font-bold tracking-tight mb-0.5">Blackouts</h1>
-        </div>
-        <Button
-          className="ml-auto gap-2 rounded-xl shadow bg-primary/90 hover:bg-primary"
-          size="lg"
-          onClick={() => {
-            if (canOperate) {
-              setEditingBlackoutId(null);
-              setDialogOpen(true);
-            } else {
-              toast.error('Company and Location required');
-            }
-          }}
-          disabled={!canOperate}
-        >
-          <Plus className="w-5 h-5" /> Add Blackout
-        </Button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-foreground">Blackouts Management</h1>
       </div>
 
-      {/* Table */}
-      <div className="rounded-2xl bg-background/90 overflow-x-auto border border-muted shadow-lg">
-        <table className="min-w-full text-sm">
+      {/* Combined Filter + Table Card - Exact design match */}
+      <div className="rounded-[20px] bg-white border border-gray-200 shadow-md overflow-hidden">
+        {/* Search and Filter Bar with Add Button - Full width */}
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-200">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              placeholder="Search description, car classes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 rounded-lg border-gray-300 h-10"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => refetchBlackouts()}
+            className="rounded-lg border-gray-300 h-10 w-10"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button
+            onClick={() => {
+              if (canOperate) {
+                setEditingBlackoutId(null);
+                setDialogOpen(true);
+              } else {
+                toast.error('Company and Location required');
+              }
+            }}
+            disabled={!canOperate}
+            className="gap-2 rounded-lg bg-[#F56304] hover:bg-[#e05503] text-white h-10 px-4"
+          >
+            <Plus className="h-4 w-4" />
+            Add Blackout
+          </Button>
+        </div>
+
+        {/* Table */}
+        <table className="min-w-full">
           <thead>
-            <tr className="bg-muted/60 text-xs font-semibold uppercase tracking-wider">
-              <th className="p-3"></th>
-              <th className="p-3">Description</th>
-              <th className="p-3">Car Classes</th>
-              <th className="p-3">Type</th>
-              <th className="p-3">Start</th>
-              <th className="p-3">End</th>
-              <th className="p-3"></th>
+            <tr className="bg-gray-50/80 border-b border-gray-200">
+              <th className="px-6 py-3.5 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Description
+              </th>
+              <th className="px-6 py-3.5 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Car Classes
+              </th>
+              <th className="px-6 py-3.5 text-center text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Type
+              </th>
+              <th className="px-6 py-3.5 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Start
+              </th>
+              <th className="px-6 py-3.5 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                End
+              </th>
+              <th className="px-6 py-3.5 text-right text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Actions
+              </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="bg-white divide-y divide-gray-100">
             {filteredBlackouts.length > 0 ? (
               filteredBlackouts.map((blackout, idx) => (
                 <tr
                   key={blackout.id}
-                  className={`transition-colors duration-100 ${idx % 2 === 0 ? "bg-background/70" : "bg-muted/60"} hover:bg-primary/10`}
+                  className={
+                    idx % 2 === 0
+                      ? 'bg-white hover:bg-gray-50/50 transition-colors'
+                      : 'bg-gray-50/30 hover:bg-gray-50/50 transition-colors'
+                  }
                 >
-                  <td className="px-3 py-2 text-center">
-                    <Checkbox />
+                  <td className="px-6 py-4">
+                    <span className="font-semibold text-[#F56304] text-sm">
+                      {blackout.description}
+                    </span>
                   </td>
-                  <td className="whitespace-nowrap flex items-center gap-2 py-2">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="hover:bg-primary/20"
-                      onClick={() => {
-                        if (canOperate) {
-                          setEditingBlackoutId(blackout.id);
-                          setDialogOpen(true);
-                        } else {
-                          toast.error('Company and Location required');
-                        }
-                      }}
-                      disabled={!canOperate}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <span className="font-medium">{blackout.description}</span>
-                  </td>
-                  <td className="truncate max-w-xs text-center">
-                    <span className="inline-flex flex-wrap gap-1 justify-center">
+                  <td className="px-6 py-4">
+                    <span className="inline-flex flex-wrap gap-1">
                       {blackout.carClasses.map((cc, i) => (
                         <span
                           key={i}
-                          className="px-2 py-0.5 bg-primary/10 rounded-xl text-xs text-primary font-semibold"
+                          className="px-2 py-0.5 bg-orange-100 rounded-full text-xs text-[#F56304] font-semibold"
                         >
-                          {cc.carClass.name} ({cc.carClass.slug})
+                          {cc.carClass.name}
                         </span>
                       ))}
                     </span>
                   </td>
-                  <td className="text-center">
+                  <td className="px-6 py-4 text-center">
                     <span
                       className={
                         blackout.type === 'FULL'
-                          ? "inline-block px-2 py-0.5 rounded-full bg-destructive/20 text-destructive font-semibold text-xs"
-                          : "inline-block px-2 py-0.5 rounded-full bg-orange-400/20 text-orange-800 font-semibold text-xs"
+                          ? "inline-block px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 font-medium text-xs"
+                          : "inline-block px-2.5 py-0.5 rounded-full bg-orange-100 text-orange-800 font-medium text-xs"
                       }
-                      title={blackout.type}
                     >
                       {blackout.type === 'FULL' ? 'FULL' : blackout.type === 'PICKUP_ONLY' ? 'PICKUP ONLY' : 'RETURN ONLY'}
                     </span>
                   </td>
-                  <td className="text-center text-xs">{formatDisplayDate(blackout.startDateTime)}</td>
-                  <td className="text-center text-xs">{formatDisplayDate(blackout.endDateTime)}</td>
-                  <td className="text-center">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive/90"
-                      onClick={() => {
-                        if (canOperate) {
-                          setPendingDelete(blackout);
-                          setDeleteDialogOpen(true);
-                        } else {
-                          toast.error('Company and Location required');
-                        }
-                      }}
-                      disabled={!canOperate}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                  <td className="px-6 py-4 text-sm text-gray-700">
+                    {formatDisplayDate(blackout.startDateTime)}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-700">
+                    {formatDisplayDate(blackout.endDateTime)}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                        >
+                          <MoreVertical className="h-4 w-4 text-gray-600" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            if (canOperate) {
+                              setEditingBlackoutId(blackout.id);
+                              setDialogOpen(true);
+                            } else {
+                              toast.error('Company and Location required');
+                            }
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            if (canOperate) {
+                              setPendingDelete(blackout);
+                              setDeleteDialogOpen(true);
+                            } else {
+                              toast.error('Company and Location required');
+                            }
+                          }}
+                          className="cursor-pointer text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={8} className="h-24 text-center text-muted-foreground">
-                  {paramLocationId ? 'No blackouts found for this location' : 'Please select a location'}
+                <td colSpan={6} className="px-6 py-20">
+                  <div className="flex flex-col items-center justify-center gap-4">
+                    {/* Icon */}
+                    <div className="w-16 h-16 rounded-xl bg-[#F56304] flex items-center justify-center">
+                      <ShieldBan className="w-8 h-8 text-white" />
+                    </div>
+                    
+                    {/* Primary Message */}
+                    <div className="text-center">
+                      <h3 className="text-lg font-bold text-gray-900 mb-2">
+                        No Blackout records found
+                      </h3>
+                      <p className="text-sm text-gray-500 max-w-md">
+                        {searchQuery ? (
+                          <>Try adjusting your search filters. We will show blackout records that match your criteria as soon as they are available.</>
+                        ) : paramLocationId ? (
+                          <>No blackouts found for this location. Click <span className="font-semibold">Add Blackout</span> to create one.</>
+                        ) : (
+                          <>Please select a location to view blackouts.</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
                 </td>
               </tr>
             )}

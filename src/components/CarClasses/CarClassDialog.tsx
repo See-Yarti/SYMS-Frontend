@@ -160,7 +160,7 @@ export default function CarClassDialog({
                 value={carClassCode}
                 onValueChange={setCarClassCode}
               >
-                <SelectTrigger className="w-full bg-background border border-input rounded-md focus:ring-2 focus:ring-primary">
+                <SelectTrigger className="w-full bg-background border border-input rounded-md focus:ring-2 focus:ring-[#F56304]">
                   <SelectValue placeholder="Select Car Class Code" />
                 </SelectTrigger>
                 <SelectContent>
@@ -306,7 +306,7 @@ export default function CarClassDialog({
             <Button type="button" variant="outline" onClick={onClose} className="font-semibold">
               Cancel
             </Button>
-            <Button type="submit" variant="default" className="font-semibold">
+            <Button type="submit" className="font-semibold bg-[#F56304] hover:bg-[#e05503] text-white">
               {editing ? "Save" : "Add"}
             </Button>
           </DialogFooter>

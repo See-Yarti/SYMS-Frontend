@@ -5,10 +5,10 @@ import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, Plus, RefreshCw, Car, Calendar, BadgeDollarSign } from 'lucide-react';
+import { Pencil, Trash2, Plus, RefreshCw, Search, MoreVertical } from 'lucide-react';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 import NewRateDialog from '@/components/Rates/NewRateDialog';
 import EditRateDialog from '@/components/Rates/EditRateDialog';
@@ -201,6 +201,7 @@ export default function RatesPage() {
   // UI state
   const [dialogOpenCreate, setDialogOpenCreate] = React.useState(false);
   const [filterCarClass, setFilterCarClass] = React.useState('__ALL__');
+  const [searchQuery, setSearchQuery] = React.useState('');
 
   const [editOpen, setEditOpen] = React.useState(false);
   const [editingRateId, setEditingRateId] = React.useState<string | null>(null);
@@ -209,9 +210,11 @@ export default function RatesPage() {
     () => Array.from(new Set(rows.map((r) => r.car || 'Unknown'))),
     [rows]
   );
-  const filteredRows = rows.filter(
-    (r) => filterCarClass === '__ALL__' || r.car === filterCarClass
-  );
+  const filteredRows = rows.filter((r) => {
+    const matchesClass = filterCarClass === '__ALL__' || r.car === filterCarClass;
+    const matchesSearch = !searchQuery || r.car.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesClass && matchesSearch;
+  });
 
   const handleAddRate = async (payload: CreateRatePayload) => {
     await createRate(payload);
@@ -228,19 +231,50 @@ export default function RatesPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-2 md:px-6 py-8 space-y-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3 ">
-            <BadgeDollarSign className="w-7 h-7 text-primary" />
-            <h1 className="text-3xl font-bold tracking-tight">Rates Management</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-foreground">Rates Management</h1>
+      </div>
+
+      {/* Combined Filter + Table Card - Exact design match */}
+      <div className="rounded-[20px] bg-white border border-gray-200 shadow-md overflow-hidden">
+        {/* Search and Filter Bar with Add Button - Full width */}
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-200">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              placeholder="Search Car Classes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 rounded-lg border-gray-300 h-10"
+            />
           </div>
-          <p className="text-muted-foreground text-base">
-            Manage rates for each class and period. Click “New Rate” to add, or use the pencil to edit.
-          </p>
-        </div>
-        <div className="flex flex-row gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 whitespace-nowrap">Filter by Class:</span>
+            <Select value={filterCarClass} onValueChange={setFilterCarClass}>
+              <SelectTrigger className="w-[180px] rounded-lg border-gray-300 h-10">
+                <SelectValue placeholder="All Classes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__ALL__">All Classes</SelectItem>
+                {distinctCars.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => refetchRates()}
+            disabled={ratesLoading}
+            className="rounded-lg border-gray-300 h-10 w-10"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
           <Button
             onClick={() => {
               if (!canOperate) return toast.error('Company and Location required');
@@ -249,166 +283,147 @@ export default function RatesPage() {
               }
               setDialogOpenCreate(true);
             }}
-            className="gap-2 rounded-xl shadow-md"
-            variant="default"
+            className="gap-2 rounded-lg bg-[#F56304] hover:bg-[#e05503] text-white h-10 px-4"
             disabled={!canOperate || creating || carClassesLoading}
           >
-            <Plus className="h-5 w-5" />
-            New Rate
-          </Button>
-          <Button
-            variant="outline"
-            className="gap-2 rounded-xl"
-            onClick={() => refetchRates()}
-            disabled={ratesLoading}
-          >
-            <RefreshCw className="h-5 w-5" />
-            Refresh
+            <Plus className="h-4 w-4" />
+            Add New Rate
           </Button>
         </div>
-      </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-6 bg-muted/60 rounded-xl px-4 py-3 shadow-sm">
-        <div className="flex items-center gap-2">
-          <Label className="text-sm text-muted-foreground flex items-center gap-1">
-            <Car className="w-4 h-4" /> Car Class
-          </Label>
-        </div>
-        <Select value={filterCarClass} onValueChange={setFilterCarClass}>
-          <SelectTrigger className="w-40 rounded-lg shadow">
-            <SelectValue placeholder="All" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__ALL__">All</SelectItem>
-            {distinctCars.map((c) => (
-              <SelectItem key={c} value={c}>
-                {c}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Table */}
-      <div className="bg-background/90 rounded-2xl border border-muted shadow-lg overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/70">
-              <TableHead className="w-[50px]"></TableHead>
-              <TableHead>Car</TableHead>
-              <TableHead>
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-4 h-4" /> Begin
-                </span>
-              </TableHead>
-              <TableHead>
-                <span className="flex items-center gap-1">
-                  <Calendar className="w-4 h-4" /> End
-                </span>
-              </TableHead>
-              <TableHead>Blackouts</TableHead>
-              <TableHead className="text-right">Daily</TableHead>
-              <TableHead className="text-right">Weekly</TableHead>
-              <TableHead className="text-right">Monthly</TableHead>
-              <TableHead className="w-[50px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        {/* Table */}
+        <table className="min-w-full">
+          <thead>
+            <tr className="bg-gray-50/80 border-b border-gray-200">
+              <th className="px-6 py-3.5 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Car Class
+              </th>
+              <th className="px-6 py-3.5 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Period Start
+              </th>
+              <th className="px-6 py-3.5 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Period End
+              </th>
+              <th className="px-6 py-3.5 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Status
+              </th>
+              <th className="px-6 py-3.5 text-right text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Daily Rate
+              </th>
+              <th className="px-6 py-3.5 text-right text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Weekly Rate
+              </th>
+              <th className="px-6 py-3.5 text-right text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Monthly Rate
+              </th>
+              <th className="px-6 py-3.5 text-right text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-100">
             {filteredRows.map((rate, idx) => (
-              <TableRow
+              <tr
                 key={rate.id}
                 className={
-                  rate.isInBlackout
-                    ? 'bg-red-100 hover:bg-red-200'
-                    : idx % 2 === 0
-                      ? 'bg-muted/30'
-                      : ''
+                  idx % 2 === 0
+                    ? 'bg-white hover:bg-gray-50/50 transition-colors'
+                    : 'bg-gray-50/30 hover:bg-gray-50/50 transition-colors'
                 }
               >
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="hover:bg-primary/20"
-                    title="Edit"
-                    onClick={() => openEdit(rate)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-                <TableCell>
-                  <span className="inline-flex items-center gap-1 text-primary font-medium">
-                    <Car className="w-3 h-3" /> {rate.car}
+                <td className="px-6 py-4">
+                  <span className="font-semibold text-[#F56304] text-sm">
+                    {rate.car}
                   </span>
-                </TableCell>
-                <TableCell>
-                  <span className="inline-flex items-center gap-1">
-                    <Calendar className="w-3 h-3" /> {rate.begin}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span className="inline-flex items-center gap-1">
-                    <Calendar className="w-3 h-3" /> {rate.end}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span
-                    className={
-                      rate.isInBlackout
-                        ? 'text-red-700 font-semibold'
-                        : 'text-muted-foreground italic'
-                    }
-                  >
-                    {rate.isInBlackout ? 'In blackout' : 'Not in blackout'}
-                  </span>
-                </TableCell>
-                <TableCell className="text-right font-semibold">
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-700">
+                  {rate.begin}
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-700">
+                  {rate.end}
+                </td>
+                <td className="px-6 py-4">
+                  {rate.isInBlackout ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                      In blackout
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Active
+                    </span>
+                  )}
+                </td>
+                <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">
                   {toCurrency(rate.daily)}
-                </TableCell>
-                <TableCell className="text-right font-semibold">
+                </td>
+                <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">
                   {toCurrency(rate.weekly)}
-                </TableCell>
-                <TableCell className="text-right font-semibold">
+                </td>
+                <td className="px-6 py-4 text-right text-sm font-medium text-gray-900">
                   {toCurrency(rate.monthly)}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:text-destructive/90"
-                    onClick={() => handleDelete(rate.id)}
-                    disabled={deleting}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                      >
+                        <MoreVertical className="h-4 w-4 text-gray-600" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-40">
+                      <DropdownMenuItem
+                        onClick={() => openEdit(rate)}
+                        className="cursor-pointer"
+                      >
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleDelete(rate.id)}
+                        className="cursor-pointer text-destructive focus:text-destructive"
+                        disabled={deleting}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </td>
+              </tr>
             ))}
 
             {ratesLoading && (
-              <TableRow>
-                <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
+              <tr>
+                <td colSpan={8} className="px-6 py-16 text-center text-muted-foreground text-sm">
                   Loading rates…
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             )}
             {!ratesLoading && filteredRows.length === 0 && !ratesError && (
-              <TableRow>
-                <TableCell colSpan={10} className="h-24 text-center text-muted-foreground">
-                  {canOperate ? 'No rates found for this location.' : 'Company and Location required.'}
-                </TableCell>
-              </TableRow>
+              <tr>
+                <td colSpan={8} className="px-6 py-16 text-center text-muted-foreground text-sm">
+                  {searchQuery || filterCarClass !== '__ALL__' ? (
+                    <span>No rates found matching your filters.</span>
+                  ) : canOperate ? (
+                    <span>No rates found. Click <b>Add New Rate</b> to get started.</span>
+                  ) : (
+                    <span>Company and Location required.</span>
+                  )}
+                </td>
+              </tr>
             )}
             {ratesError && (
-              <TableRow>
-                <TableCell colSpan={10} className="h-24 text-center text-destructive">
+              <tr>
+                <td colSpan={8} className="px-6 py-16 text-center text-destructive text-sm">
                   {getErrMessage(ratesErrObj)}
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             )}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
 
       {/* Create */}

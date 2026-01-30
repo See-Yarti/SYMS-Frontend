@@ -379,6 +379,7 @@ export default function EditRateDialog({
                 type="submit"
                 form="edit-rate-form"
                 disabled={saving || listLoading || !companyCarClassId || !startDate || !endDate}
+                className="bg-[#F56304] hover:bg-[#e05503] text-white"
               >
                 Save
               </Button>

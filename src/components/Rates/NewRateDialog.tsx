@@ -382,7 +382,7 @@ export default function NewRateDialog({ open, onClose, onAddRate, carClasses }: 
 
           <DialogFooter className="px-6 py-4 gap-2">
             <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
-            <Button type="submit" form="rate-form" disabled={!(companyCarClassId && startDate && endDate)}>
+            <Button type="submit" form="rate-form" disabled={!(companyCarClassId && startDate && endDate)} className="bg-[#F56304] hover:bg-[#e05503] text-white">
               Add Rate
             </Button>
           </DialogFooter>

@@ -14,6 +14,8 @@ import Profile from './pages/profile/Profile';
 import Products from './pages/products/Products';
 import CompaniesList from '@/components/Company/CompanyList';
 import CompanyDetail from '@/components/Company/CompanyDetails';
+import CompanyCommissionSettings from '@/components/Company/CompanyCommissionSettings';
+import CompanyCommissionSettingsEdit from '@/components/Company/CompanyCommissionSettingsEdit';
 import Companies from './pages/company/Companies';
 import Addresses from './pages/addresses/Addresses';
 import CompanyFormWrapper from './components/Company/CompanyFormWrapper';
@@ -29,6 +31,7 @@ import RatePlannerPage from './pages/rate/RatePlanner';
 import BlackoutPage from './pages/rate/BlackoutPage';
 import CarClassesPage from './pages/rate/CarClassesPage';
 import TaxesPage from './pages/rate/TaxesPage';
+import CDWPage from './pages/rate/CDWPage';
 import AllBookings from './pages/bookings';
 import BookingDetails from './pages/bookings/BookingDetails';
 import AdminAccounting from './pages/accounting/AdminAccounting';
@@ -115,6 +118,14 @@ const router = createBrowserRouter([
                 element: <CompanyFormWrapper />,
               },
               {
+                path: ':companyId/commission-settings/edit',
+                element: <CompanyCommissionSettingsEdit />,
+              },
+              {
+                path: ':companyId/commission-settings',
+                element: <CompanyCommissionSettings />,
+              },
+              {
                 path: ':companyId',
                 element: <CompanyDetail />,
               },
@@ -137,6 +148,7 @@ const router = createBrowserRouter([
               { path: ':locationId/blackouts', element: <BlackoutPage /> },
               { path: ':locationId/car-classes', element: <CarClassesPage /> },
               { path: ':locationId/taxes', element: <TaxesPage /> },
+              { path: ':locationId/cdw', element: <CDWPage /> },
             ],
           },
           {

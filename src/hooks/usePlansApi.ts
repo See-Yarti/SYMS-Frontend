@@ -29,22 +29,14 @@ export const useGetCompanySettings = (companyId: string) =>
       return data;
     },
     enabled: !!companyId,
-    staleTime: 60_000,
+    staleTime: 30_000, // Consider data fresh for 30 seconds to reduce API calls
+    refetchOnMount: 'always', // Refetch when component mounts
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
-    retry: false,
-  });
-
-export const useEnsureDefaultPlans = () =>
-  useMutation<PlanConfigsResponse, Error, void>({
-    mutationFn: async () => {
-      const { data } = await axiosInstance.post(
-        `/plan-configs/create-defaults-if-missing`
-      );
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['plan-configs'] });
+    retry: (failureCount, error: any) => {
+      // Don't retry on 429 (rate limit)
+      if (error?.response?.status === 429) return false;
+      return failureCount < 2;
     },
   });
 
@@ -97,9 +89,9 @@ export const useStartCompanySubscription = (companyId: string) =>
 export const getPlanByTier = (configs: PlanConfigsResponse | undefined, tier: Tier) =>
   configs?.data.find((c) => c.tier === tier);
 
-// Set status commission settings
+// Set status commission settings (includes edge case handling)
 export const useSetStatusCommissionSettings = (companyId: string) =>
-  useMutation<SetStatusCommissionSettingsResponse, Error, StatusCommissionSettingsPayload>({
+  useMutation<SetStatusCommissionSettingsResponse, Error, StatusCommissionSettingsPayload & { edgeCaseHandling?: 'OWE' | 'CAP' }>({
     mutationFn: async (payload) => {
       const { data } = await axiosInstance.post(
         `/company-settings/${companyId}/status-commission-settings`,
@@ -107,10 +99,7 @@ export const useSetStatusCommissionSettings = (companyId: string) =>
       );
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['company-settings', companyId] });
-      queryClient.invalidateQueries({ queryKey: ['company', companyId] });
-    },
+    // Don't invalidate here - let the caller handle it once all saves are done
   });
 
 // Set fixed cancellation amounts
@@ -123,10 +112,7 @@ export const useSetFixedCancellationAmounts = (companyId: string) =>
       );
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['company-settings', companyId] });
-      queryClient.invalidateQueries({ queryKey: ['company', companyId] });
-    },
+    // Don't invalidate here - let the caller handle it once all saves are done
   });
 
 // Set edge case handling
@@ -139,10 +125,7 @@ export const useSetEdgeCaseHandling = (companyId: string) =>
       );
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['company-settings', companyId] });
-      queryClient.invalidateQueries({ queryKey: ['company', companyId] });
-    },
+    // Don't invalidate here - let the caller handle it once all saves are done
   });
 
 

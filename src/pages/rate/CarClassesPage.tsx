@@ -3,7 +3,21 @@ import * as React from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, Car, PlusCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Pencil, Trash2, PlusCircle, Search, RefreshCw, MoreVertical } from 'lucide-react';
 import CarClassDialog from '@/components/CarClasses/CarClassDialog';
 import { useFetchData, usePostData, usePutData, useDeleteData } from '@/hooks/useOperatorCarClass';
 import { useAppSelector } from '@/store';
@@ -109,6 +123,8 @@ export default function CarClassesPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [pendingDelete, setPendingDelete] = React.useState<CompanyCarClass | null>(null);
   const [editingWithImages, setEditingWithImages] = React.useState<CompanyCarClass | null>(null);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [filterCode, setFilterCode] = React.useState('all');
 
   // Function to fetch car class with images for editing
   const fetchCarClassWithImages = async (carClassId: string) => {
@@ -173,106 +189,195 @@ export default function CarClassesPage() {
     }
   }
 
+  // Get unique car codes for filter
+  const uniqueCodes = React.useMemo(() => {
+    const codes = new Set(companyCarClasses.map(c => c.carClass?.slug || c.carClass?.name));
+    return Array.from(codes);
+  }, [companyCarClasses]);
+
+  // Filter car classes based on search and filter
+  const filteredCarClasses = React.useMemo(() => {
+    return companyCarClasses.filter((carClass) => {
+      const code = carClass.carClass?.slug || carClass.carClass?.name || '';
+      const matchesSearch = code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           carClass.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           carClass.model.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesFilter = filterCode === 'all' || code === filterCode;
+      return matchesSearch && matchesFilter;
+    });
+  }, [companyCarClasses, searchQuery, filterCode]);
+
   return (
-    <div className="max-w-7xl mx-auto px-2 py-8 space-y-8">
-      <div className="flex items-center gap-4 mb-6">
-        <Car className="w-10 h-10 text-primary" />
-        <h1 className="text-3xl font-extrabold tracking-tight">Car Classes</h1>
-        <Button
-          className="ml-auto gap-2 rounded-xl shadow bg-gradient-to-r from-primary to-primary/80 text-base"
-          size="lg"
-          onClick={() => {
-            if (canOperate) {
-              setEditing(null);
-              setDialogOpen(true);
-            } else {
-              toast.error('Company and Location required');
-            }
-          }}
-          disabled={!canOperate}
-        >
-          <PlusCircle className="h-5 w-5" />
-          Add Car Class
-        </Button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-foreground">Car Classes</h1>
       </div>
 
-      <div className="rounded-2xl bg-card border border-muted shadow-lg overflow-x-auto">
-        <table className="min-w-full text-[15px]">
+      {/* Combined Filter + Table Card - Exact design match */}
+      <div className="rounded-[20px] bg-white border border-gray-200 shadow-md overflow-hidden">
+        {/* Search and Filter Bar with Add Button - Full width */}
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-200">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              placeholder="Search Car Code..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 rounded-lg border-gray-300 h-10"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600 whitespace-nowrap">Filter by Code:</span>
+            <Select value={filterCode} onValueChange={setFilterCode}>
+              <SelectTrigger className="w-[180px] rounded-lg border-gray-300 h-10">
+                <SelectValue placeholder="All Code" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Code</SelectItem>
+                {uniqueCodes.map((code) => (
+                  <SelectItem key={code} value={code}>
+                    {code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => refetch()}
+            className="rounded-lg border-gray-300 h-10 w-10"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Button
+            className="gap-2 rounded-lg bg-[#F56304] hover:bg-[#e05503] text-white h-10 px-4"
+            onClick={() => {
+              if (canOperate) {
+                setEditing(null);
+                setDialogOpen(true);
+              } else {
+                toast.error('Company and Location required');
+              }
+            }}
+            disabled={!canOperate}
+          >
+            <PlusCircle className="h-4 w-4" />
+            Add Car Class
+          </Button>
+        </div>
+
+        {/* Table */}
+        <table className="min-w-full">
           <thead>
-            <tr className="bg-muted/70 text-xs font-semibold uppercase tracking-wide">
-              <th className="p-3"></th>
-              <th className="p-3">Code</th>
-              <th className="p-3">Make</th>
-              <th className="p-3">Model</th>
-              <th className="p-3">Doors</th>
-              <th className="p-3">Passengers</th>
-              <th className="p-3">Bags</th>
-              <th className="p-3"></th>
+            <tr className="bg-gray-50/80 border-b border-gray-200">
+              <th className="px-6 py-3.5 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Car Code
+              </th>
+              <th className="px-6 py-3.5 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Make
+              </th>
+              <th className="px-6 py-3.5 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Model
+              </th>
+              <th className="px-6 py-3.5 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Doors
+              </th>
+              <th className="px-6 py-3.5 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Passengers
+              </th>
+              <th className="px-6 py-3.5 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Bags
+              </th>
+              <th className="px-6 py-3.5 text-left text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                Actions
+              </th>
             </tr>
           </thead>
-          <tbody>
-            {companyCarClasses.length > 0 ? (
-              companyCarClasses.map((cl) => (
-                <tr key={cl.id} className="border-b border-muted/50">
-                  <td className="text-center">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="hover:bg-primary/15"
-                      onClick={async () => {
-                        if (canOperate) {
-                          setEditing(cl);
-                          setDialogOpen(true);
-                          // Fetch car class with images for editing
-                          const carClassWithImages = await fetchCarClassWithImages(cl.id);
-                          if (carClassWithImages) {
-                            setEditingWithImages(carClassWithImages);
-                          }
-                        } else {
-                          toast.error('Company and Location required');
-                        }
-                      }}
-                      aria-label="Edit Car Class"
-                      disabled={!canOperate}
-                    >
-                      <Pencil className="w-4 h-4 text-muted-foreground" />
-                    </Button>
+          <tbody className="bg-white divide-y divide-gray-100">
+            {filteredCarClasses.length > 0 ? (
+              filteredCarClasses.map((cl) => (
+                <tr key={cl.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-6 py-4">
+                    <span className="font-semibold text-[#F56304] text-sm">
+                      {cl.carClass?.slug || cl.carClass?.name}
+                    </span>
                   </td>
-                  <td className="text-center text-primary">
-                    {cl.carClass?.slug || cl.carClass?.name}
+                  <td className="px-6 py-4 text-sm text-gray-700">
+                    {cl.make}
                   </td>
-                  <td className="text-center">{cl.make}</td>
-                  <td className="text-center">{cl.model}</td>
-                  <td className="text-center">{cl.numberOfDoors}</td>
-                  <td className="text-center">{cl.numberOfPassengers}</td>
-                  <td className="text-center">{cl.numberOfBags}</td>
-                  <td className="text-center">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-destructive hover:text-destructive/80"
-                      onClick={() => {
-                        setPendingDelete(cl);
-                        setDeleteDialogOpen(true);
-                      }}
-                      aria-label="Delete Car Class"
-                      disabled={!canOperate}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                  <td className="px-6 py-4 text-sm text-gray-700">
+                    {cl.model}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-700">
+                    {cl.numberOfDoors}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-700">
+                    {cl.numberOfPassengers}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-700">
+                    {cl.numberOfBags}
+                  </td>
+                  <td className="px-6 py-4">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 hover:bg-gray-100"
+                          disabled={!canOperate}
+                        >
+                          <MoreVertical className="h-4 w-4 text-gray-600" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuItem
+                          onClick={async () => {
+                            if (canOperate) {
+                              setEditing(cl);
+                              setDialogOpen(true);
+                              const carClassWithImages = await fetchCarClassWithImages(cl.id);
+                              if (carClassWithImages) {
+                                setEditingWithImages(carClassWithImages);
+                              }
+                            }
+                          }}
+                          className="cursor-pointer"
+                        >
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setPendingDelete(cl);
+                            setDeleteDialogOpen(true);
+                          }}
+                          className="cursor-pointer text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={9} className="h-24 text-center text-muted-foreground text-lg">
-                  <span>No car classes found. Click <b>Add Car Class</b> to get started.</span>
+                <td colSpan={7} className="px-6 py-16 text-center text-muted-foreground text-sm">
+                  {searchQuery || filterCode !== 'all' ? (
+                    <span>No car classes found matching your filters.</span>
+                  ) : (
+                    <span>No car classes found. Click <b>Add Car Class</b> to get started.</span>
+                  )}
                 </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
+      {/* End of combined card */}
 
       <CarClassDialog
         open={dialogOpen}

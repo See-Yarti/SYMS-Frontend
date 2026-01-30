@@ -2,18 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useGetCompany, useUnverifyCompany, useVerifyCompany } from '@/hooks/useCompanyApi';
-import { queryClient } from '@/Provider';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import {
   useGetCompanySettings,
-  useGetPlanConfigs,
-  useEnsureDefaultPlans,
-  useSetCommissionOverride,
-  useStartCompanySubscription,
-  useDeleteCommissionOverride,
-  useEndCompanySubscriptionEarly,
   useSetStatusCommissionSettings,
   useSetFixedCancellationAmounts,
   useSetEdgeCaseHandling,
@@ -36,15 +29,22 @@ import {
   MapPin,
   Search,
   ChevronDown,
-  Crown,
-  Gem,
-  Diamond as DiamondIcon,
-  Medal,
   Key,
   Sparkles,
   Info,
   Check,
-  Edit,
+  Settings,
+  ArrowRight,
+  ArrowLeft,
+  Building2,
+  Users,
+  Car,
+  FileText,
+  ExternalLink,
+  Mail,
+  Calendar,
+  Clock,
+  Copy,
 } from 'lucide-react';
 import { useGetLocations, useCreateLocation, useUpdateLocation, useToggleLocation, useCheckLocationKey, useSuggestLocationKeys } from '@/hooks/useLocationApi';
 import { format } from 'date-fns';
@@ -61,8 +61,6 @@ import CompanyMap from '@/components/CompanyMap';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import React from 'react';
 import { StatusCommissionSettingsPayload, StatusCommissionSetting, FixedCancellationAmountsPayload, CompanySettingsPayload, EdgeCaseHandlingPayload } from '@/types/company';
-
-type Tier = 'BASIC' | 'GOLD' | 'PREMIUM' | 'DIAMOND';
 
 interface Location {
   id: string;
@@ -93,13 +91,6 @@ interface LocationAutocompleteProps {
   placeholder?: string;
   className?: string;
 }
-
-const TIER_META: Record<Tier, { label: string; Icon: any; color: string }> = {
-  BASIC: { label: 'Basic', Icon: Medal, color: 'text-muted-foreground' },
-  GOLD: { label: 'Gold', Icon: Crown, color: 'text-[#F56304]' },
-  PREMIUM: { label: 'Premium', Icon: Gem, color: 'text-purple-600' },
-  DIAMOND: { label: 'Diamond', Icon: DiamondIcon, color: 'text-cyan-600' },
-};
 
 const LocationAutocomplete = React.forwardRef<HTMLInputElement, LocationAutocompleteProps>(
   ({ id, value, onChange, onPlaceSelected, placeholder, className, countryCode }, ref) => {
@@ -805,6 +796,7 @@ const EdgeCaseHandlingForm: React.FC<EdgeCaseHandlingFormProps> = ({
 
 const CompanyDetail = () => {
   const { companyId } = useParams<{ companyId: string }>();
+  const navigate = useNavigate();
   const { data: companyData, isLoading, error, refetch } = useGetCompany(companyId || '');
   const { data: locationsData, refetch: refetchLocations } = useGetLocations(companyId || '');
   const verifyCompany = useVerifyCompany();
@@ -831,55 +823,11 @@ const CompanyDetail = () => {
   // Stable id before company fetch resolves
   const safeCompanyId = companyId || '';
 
-  const { data: settingsRes, refetch: refetchSettings, isLoading: settingsLoading } = useGetCompanySettings(safeCompanyId);
-  const ensureDefaults = useEnsureDefaultPlans();
+  const { data: settingsRes, refetch: refetchSettings } = useGetCompanySettings(safeCompanyId);
 
   const setStatusCommissionSettings = useSetStatusCommissionSettings(safeCompanyId);
   const setFixedCancellationAmounts = useSetFixedCancellationAmounts(safeCompanyId);
   const setEdgeCaseHandling = useSetEdgeCaseHandling(safeCompanyId);
-
-  const [selectedTier, setSelectedTier] = useState<'BASIC' | 'GOLD' | 'PREMIUM' | 'DIAMOND'>('BASIC');
-  const [subscriptionDays, setSubscriptionDays] = useState<number>(30);
-  const [subscriptionMode, setSubscriptionMode] = useState<'startNow' | 'startAfterCurrent'>('startNow');
-  const [subscriptionNote, setSubscriptionNote] = useState<string>('');
-
-  // Prefer settings API; fall back to company
-  const baseRate =
-    settingsRes?.data.baseCommissionRate ??
-    (companyData?.data?.company as any)?.baseCommissionRate ??
-    '—';
-
-  const effectiveRate = settingsRes?.data.settings.effectiveCommissionRate ?? baseRate;
-
-  const [overrideRate, setOverrideRate] = useState<string>('');
-  const [overrideEndsAt, setOverrideEndsAt] = useState<string>('2099-01-01T00:00:00Z');
-
-  useEffect(() => {
-    ensureDefaults.mutate(undefined, {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: ['plan-configs'] }),
-    });
-
-    const s = settingsRes?.data?.settings;
-    if (!s) return;
-
-    if (s.currentTier) setSelectedTier(s.currentTier);
-
-    // Only populate the inputs if the override is still active
-    const apiHasActiveOverride =
-      !!s.overrideCommissionRate &&
-      !!s.overrideEndsAt &&
-      new Date(s.overrideEndsAt).getTime() > Date.now();
-
-    if (apiHasActiveOverride) {
-      setOverrideRate(s.overrideCommissionRate != null ? String(s.overrideCommissionRate) : '');
-      setOverrideEndsAt(s.overrideEndsAt ?? '');
-    } else {
-      // clear inputs when there’s no active override (or it just expired)
-      setOverrideRate('');
-      setOverrideEndsAt('');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settingsRes?.timestamp]);
 
   // Location form
   const [locationForm, setLocationForm] = useState({
@@ -1029,12 +977,6 @@ const CompanyDetail = () => {
       }
     );
   };
-
-  // is an override actually active right now?
-  const hasActiveOverride =
-    !!settingsRes?.data.settings.overrideCommissionRate &&
-    !!settingsRes?.data.settings.overrideEndsAt &&
-    new Date(settingsRes.data.settings.overrideEndsAt).getTime() > Date.now();
 
   // Handle location key input with auto-capitalization
   const handleLocationKeyChange = (value: string) => {
@@ -1233,756 +1175,438 @@ const CompanyDetail = () => {
   }
 
   const company = companyData.data.company;
-  const locations: LocationsData = locationsData?.data || { activeLocations: [], inactiveLocations: [] };
+  const locations: LocationsData = {
+    activeLocations: locationsData?.data?.activeLocations || [],
+    inactiveLocations: locationsData?.data?.inactiveLocations || []
+  };
   const selectedCountry = locationForm.country;
   const selectedState = locationForm.state;
   const stateList = State.getStatesOfCountry(selectedCountry);
   const cityList = City.getCitiesOfState(selectedCountry, selectedState);
 
+  const companyKey = (company as any).companyKey || company.name?.replace(/\s+/g, '').slice(0, 3).toUpperCase() || 'COMP';
+  const tagLabel = `COMP-${companyKey}-${new Date().getFullYear()}`;
+  const copyTag = () => navigator.clipboard.writeText(tagLabel);
+  const firstAddress = company.addresses?.[0];
+  const displayCountry = firstAddress?.country || company.citiesOfOperation?.[0] || '—';
+  const displayCity = firstAddress?.city || company.citiesOfOperation?.[0] || '—';
+
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-start gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">{company.name}</h1>
-          <p className="text-muted-foreground">{company.description}</p>
-        </div>
-        <Badge variant={company.isVerified ? 'default' : 'secondary'} className="ml-2">
-          {company.isVerified ? 'Verified' : 'Not Verified'}
-        </Badge>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="border rounded-lg p-4">
-          <h2 className="text-lg font-semibold mb-4">Company Details</h2>
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Tax Number</p>
-              <p>{company.taxNumber || '-'}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Trade License</p>
-              <p>{company.tradeLicenseIssueNumber || '-'}</p>
-              {company.tradeLicenseExpiryDate && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  Expires: {format(new Date(company.tradeLicenseExpiryDate), 'MMM d, yyyy')}
-                </p>
-              )}
-            </div>
-            {company.citiesOfOperation?.length > 0 && (
-              <div>
-                <p className="text-sm text-muted-foreground">Cities of Operation</p>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {company.citiesOfOperation.map((city: string) => (
-                    <span key={city} className="bg-muted px-2 py-1 rounded text-sm">
-                      {city}
-                    </span>
-                  ))}
-                </div>
-              </div>
+      {/* Top Header - same as image */}
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">{company.name}</h1>
+            <button
+              type="button"
+              onClick={copyTag}
+              className="mt-1 flex items-center gap-1.5 rounded border bg-muted/50 px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <span>{tagLabel}</span>
+              <Copy className="h-4 w-4" />
+            </button>
+            <Button
+              variant="link"
+              className="mt-2 h-auto p-0 text-muted-foreground hover:text-foreground"
+              onClick={() => navigate('/companies/list')}
+            >
+              <ArrowLeft className="mr-1.5 h-4 w-4" />
+              Back to Companies
+            </Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {company.isVerified ? (
+              <Button size="sm" className="border-green-600 bg-green-600 text-white hover:bg-green-700 hover:text-white">
+                <Check className="mr-1.5 h-4 w-4" />
+                Verified
+              </Button>
+            ) : (
+              <Badge variant="secondary">Not Verified</Badge>
             )}
-            <div>
-              <p className="text-sm text-muted-foreground">Created At</p>
-              <p>{format(new Date(company.createdAt), 'MMM d, yyyy HH:mm')}</p>
-            </div>
+            <Button size="sm" variant="outline" onClick={() => navigate(`/companies/${companyId}/edit`)}>
+              Edit
+            </Button>
           </div>
         </div>
+      </div>
 
-        <div className="border rounded-lg p-4">
-          <h2 className="text-lg font-semibold mb-4">Documents</h2>
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Tax File</p>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Left column - main content */}
+        <div className="space-y-6 lg:col-span-2">
+          {/* Company Information card */}
+          <div className="rounded-xl border bg-card shadow-sm">
+            <div className="flex items-center gap-3 border-b p-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100">
+                <Building2 className="h-6 w-6 text-[#F56304]" />
+              </div>
+              <h2 className="text-lg font-semibold">Company Information</h2>
+            </div>
+            <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Tax Number</p>
+                <p className="font-medium">{company.taxNumber || '—'}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Trade License</p>
+                <p className="font-medium">{company.tradeLicenseIssueNumber || '—'}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">License Expiry</p>
+                <p className="flex items-center gap-1.5 font-medium">
+                  {company.tradeLicenseExpiryDate ? format(new Date(company.tradeLicenseExpiryDate), 'MMM d, yyyy') : '—'}
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Created At</p>
+                <p className="flex items-center gap-1.5 font-medium">
+                  {format(new Date(company.createdAt), 'MMM d, yyyy HH:mm')}
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Country</p>
+                <p className="font-medium">{displayCountry}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">City</p>
+                <p className="font-medium">{displayCity}</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3 border-t p-4">
               {company.taxFile ? (
                 <a
                   href={company.taxFile}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#F56304] hover:underline inline-flex items-center"
+                  className="inline-flex items-center gap-2 rounded-lg border border-[#F56304] bg-transparent px-4 py-2 text-sm font-medium text-[#F56304] hover:bg-orange-50"
                 >
-                  View Tax File
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="ml-1"
-                  >
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                    <polyline points="15 3 21 3 21 9"></polyline>
-                    <line x1="10" y1="14" x2="21" y2="3"></line>
-                  </svg>
+                  <FileText className="h-4 w-4" />
+                  Tax File
+                  <ExternalLink className="h-4 w-4" />
                 </a>
               ) : (
-                <p className="text-muted-foreground">Not provided</p>
+                <span className="inline-flex items-center gap-2 rounded-lg border border-muted px-4 py-2 text-sm text-muted-foreground">
+                  <FileText className="h-4 w-4" />
+                  Tax File
+                </span>
               )}
-            </div>
-
-            <div>
-              <p className="text-sm text-muted-foreground">Trade License</p>
               {company.tradeLicenseFile ? (
                 <a
                   href={company.tradeLicenseFile}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#F56304] hover:underline inline-flex items-center"
+                  className="inline-flex items-center gap-2 rounded-lg border border-[#F56304] bg-transparent px-4 py-2 text-sm font-medium text-[#F56304] hover:bg-orange-50"
                 >
-                  View Trade License
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="ml-1"
-                  >
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                    <polyline points="15 3 21 3 21 9"></polyline>
-                    <line x1="10" y1="14" x2="21" y2="3"></line>
-                  </svg>
+                  <FileText className="h-4 w-4" />
+                  Trade License
+                  <ExternalLink className="h-4 w-4" />
                 </a>
               ) : (
-                <p className="text-muted-foreground">Not provided</p>
+                <span className="inline-flex items-center gap-2 rounded-lg border border-muted px-4 py-2 text-sm text-muted-foreground">
+                  <FileText className="h-4 w-4" />
+                  Trade License
+                </span>
               )}
             </div>
           </div>
+
+              {/* Location Information card */}
+          <div className="rounded-xl border bg-card shadow-sm">
+            <div className="flex items-center justify-between border-b p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100">
+                  <MapPin className="h-6 w-6 text-[#F56304]" />
+                </div>
+                <h2 className="text-lg font-semibold">Location Information</h2>
+              </div>
+              <Button size="sm" onClick={() => setIsLocationDialogOpen(true)} className="bg-[#F56304] hover:bg-[#F56304]/90 text-white">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Location
+              </Button>
+            </div>
+            <div className="p-4">
+              {locations.activeLocations.length > 0 && (
+                <div>
+                  <h3 className="mb-3 text-sm font-medium text-muted-foreground">Active Locations</h3>
+                  <div className="space-y-3">
+                    {locations.activeLocations.map((location) => (
+                      <div key={location.id} className="rounded-lg border border-green-100 bg-green-50/50 p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-100">
+                            <MapPin className="h-5 w-5 text-green-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-semibold">{location.title}</h4>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {location.addressLine}, {location.city}, {location.state}, {location.country}
+                            </p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <Button variant="outline" size="sm" onClick={() => openEditLocationDialog(location)}>
+                                Edit
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={() => handleToggleLocation(location.id)}>
+                                Disable
+                              </Button>
+                            </div>
+                            <Accordion type="single" collapsible className="mt-3 w-full">
+                              <AccordionItem value="map" className="border-0">
+                                <AccordionTrigger className="py-2 hover:no-underline">
+                                  <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                    <ChevronDown className="h-4 w-4" />
+                                    Show Map
+                                  </span>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                  <div className="space-y-2 text-sm">
+                                    <div>
+                                      <p className="text-xs font-medium uppercase text-muted-foreground">Address on Google Map</p>
+                                      <p className="font-medium">{location.addressLine}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs font-medium uppercase text-muted-foreground">GPS Coordinates</p>
+                                      <p className="font-medium">
+                                        {parseFloat(location.latitude).toFixed(7)}, {parseFloat(location.longitude).toFixed(7)}
+                                      </p>
+                                    </div>
+                                    <div className="h-[200px] w-full rounded-lg overflow-hidden">
+                                      <CompanyMap
+                                        locations={[
+                                          {
+                                            lat: parseFloat(location.latitude),
+                                            lng: parseFloat(location.longitude),
+                                            address: location.addressLine,
+                                          },
+                                        ]}
+                                      />
+                                    </div>
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            </Accordion>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {locations.inactiveLocations.length > 0 && (
+                <div className="mt-4">
+                  <h3 className="mb-3 text-sm font-medium text-muted-foreground">Inactive Locations</h3>
+                  <div className="space-y-3">
+                    {locations.inactiveLocations.map((location) => (
+                      <div key={location.id} className="rounded-lg border bg-muted/30 p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
+                            <MapPin className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-semibold">{location.title}</h4>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {location.addressLine}, {location.city}, {location.state}, {location.country}
+                            </p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <Button variant="outline" size="sm" onClick={() => openEditLocationDialog(location)}>
+                                Edit
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={() => handleToggleLocation(location.id)}>
+                                Enable
+                              </Button>
+                            </div>
+                            <Accordion type="single" collapsible className="mt-3 w-full">
+                              <AccordionItem value="map" className="border-0">
+                                <AccordionTrigger className="py-2 hover:no-underline">
+                                  <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                    <ChevronDown className="h-4 w-4" />
+                                    Show Map
+                                  </span>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                  <div className="space-y-2 text-sm">
+                                    <p className="text-xs font-medium uppercase text-muted-foreground">GPS Coordinates</p>
+                                    <p className="font-medium">
+                                      {parseFloat(location.latitude).toFixed(7)}, {parseFloat(location.longitude).toFixed(7)}
+                                    </p>
+                                    <div className="h-[200px] w-full rounded-lg overflow-hidden">
+                                      <CompanyMap
+                                        locations={[
+                                          {
+                                            lat: parseFloat(location.latitude),
+                                            lng: parseFloat(location.longitude),
+                                            address: location.addressLine,
+                                          },
+                                        ]}
+                                      />
+                                    </div>
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            </Accordion>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {locations.activeLocations.length === 0 && locations.inactiveLocations.length === 0 && (
+                <p className="text-sm text-muted-foreground">No locations added yet.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Operators card */}
+          {company.operators && company.operators.length > 0 && (
+            <div className="rounded-xl border bg-card shadow-sm">
+              <div className="flex items-center gap-3 border-b p-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100">
+                  <Users className="h-6 w-6 text-[#F56304]" />
+                </div>
+                <h2 className="text-lg font-semibold">Operators</h2>
+              </div>
+              <div className="p-4">
+                <div className="space-y-3">
+                  {company.operators.map((operator: any) => (
+                    <div key={operator.id} className="flex items-center gap-3 rounded-lg border p-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F56304]/20 text-sm font-semibold text-[#F56304]">
+                        {operator.user.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold">{operator.user.name}</p>
+                        <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <Mail className="h-4 w-4" />
+                          {operator.user.email}
+                        </p>
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {operator.operatorRole.replace('Operator', '').trim() || 'Operator'}
+                          </Badge>
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Clock className="h-3.5 w-3.5" />
+                            Last active: {format(new Date(operator.user.lastActivityAt), 'MMM d, yyyy')}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Head Office Address / Addresses */}
+          {company.addresses && company.addresses.length > 0 && (
+            <div className="rounded-xl border bg-card shadow-sm">
+              <div className="border-b p-4">
+                <h2 className="text-lg font-semibold">
+                  {company.addresses.length === 1 ? company.addresses[0].addressLabel : 'Addresses'}
+                </h2>
+              </div>
+              <div className="p-4">
+                {company.addresses.length === 1 ? (
+                  <div className="space-y-1 text-sm">
+                    <p className="font-medium">
+                      {company.addresses[0].street}, {company.addresses[0].apartment}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {company.addresses[0].city}, {company.addresses[0].state}, {company.addresses[0].country}
+                    </p>
+                    {company.addresses[0].additionalInfo && (
+                      <p className="mt-2 text-muted-foreground">{company.addresses[0].additionalInfo}</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {company.addresses.map((address: any) => (
+                      <div key={address.id} className="rounded-lg border p-4">
+                        <h3 className="font-medium">{address.addressLabel}</h3>
+                        <p className="mt-1 text-sm">
+                          {address.street}, {address.apartment}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {address.city}, {address.state}, {address.country}
+                        </p>
+                        {address.additionalInfo && (
+                          <p className="mt-2 text-sm text-muted-foreground">{address.additionalInfo}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right sidebar */}
+        <div className="space-y-6 lg:col-span-1">
+          {/* Company summary card */}
+          <div className="rounded-xl border bg-card shadow-sm">
+            <div className="flex items-center gap-3 border-b p-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100">
+                <Building2 className="h-6 w-6 text-[#F56304]" />
+              </div>
+              <h2 className="text-lg font-semibold">Company</h2>
+            </div>
+            <div className="space-y-3 p-4">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Company Name</p>
+                <p className="mt-1 rounded bg-green-50 px-2 py-1.5 font-semibold text-green-800">{company.name}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">License Type</p>
+                <p className="font-medium">Full Service</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Country</p>
+                <p className="font-medium">{displayCountry}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Fleet summary card - placeholder */}
+          <div className="rounded-xl border bg-card shadow-sm">
+            <div className="flex items-center gap-3 border-b p-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100">
+                <Car className="h-6 w-6 text-[#F56304]" />
+              </div>
+              <h2 className="text-lg font-semibold">Fleet</h2>
+            </div>
+            <div className="grid grid-cols-2 gap-3 p-4">
+              <div className="rounded-lg bg-muted/50 p-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total Classes</p>
+                <p className="mt-1 text-xl font-bold">—</p>
+              </div>
+              <div className="rounded-lg bg-muted/50 p-3">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Active</p>
+                <p className="mt-1 text-xl font-bold text-green-600">—</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Commission Settings card */}
+          <div className="rounded-xl border bg-card shadow-sm">
+            <div className="flex items-center gap-3 border-b p-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100">
+                <Settings className="h-6 w-6 text-[#F56304]" />
+              </div>
+              <h2 className="text-lg font-semibold">Commission Settings</h2>
+            </div>
+            <div className="p-4">
+              <p className="text-sm text-muted-foreground">This section will be configured in the next update.</p>
+              <Button
+                className="mt-4 w-full bg-[#F56304] hover:bg-[#F56304]/90 text-white"
+                onClick={() => navigate(`/companies/${companyId}/commission-settings`)}
+              >
+                View Details
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Locations */}
-      <div className="border rounded-lg p-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Locations</h2>
-          <Button size="sm" onClick={() => setIsLocationDialogOpen(true)} className="bg-[#F56304] hover:bg-[#F56304]/90 text-white">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Location
-          </Button>
-        </div>
-
-        {/* Active */}
-        {locations.activeLocations.length > 0 && (
-          <div className="mb-6">
-            <h3 className="font-medium mb-2">Active Locations</h3>
-            <div className="space-y-3">
-              {locations.activeLocations.map((location) => (
-                <div key={location.id} className="border rounded p-4">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium">{location.title}</h4>
-                        {location.isAirportZone && <Badge variant="default">Airport Zone</Badge>}
-                      </div>
-                      <p className="text-sm mt-1">
-                        {location.addressLine}, {location.city}, {location.state}, {location.country}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => openEditLocationDialog(location)}>
-                        Edit
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleToggleLocation(location.id)}>
-                        Disable
-                      </Button>
-                    </div>
-                  </div>
-
-                  <Accordion type="single" collapsible className="w-full mt-2">
-                    <AccordionItem value="map" className="border-0">
-                      <AccordionTrigger className="py-2 hover:no-underline">
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <ChevronDown className="h-4 w-4 mr-1" />
-                          Show Map
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="h-[200px] w-full rounded-lg overflow-hidden mt-2">
-                          <CompanyMap
-                            locations={[
-                              {
-                                lat: parseFloat(location.latitude),
-                                lng: parseFloat(location.longitude),
-                                address: location.addressLine,
-                              },
-                            ]}
-                          />
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Inactive */}
-        {locations.inactiveLocations.length > 0 && (
-          <div>
-            <h3 className="font-medium mb-2">Inactive Locations</h3>
-            <div className="space-y-3">
-              {locations.inactiveLocations.map((location) => (
-                <div key={location.id} className="border rounded p-4">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium">{location.title}</h4>
-                        {location.isAirportZone && <Badge variant="default">Airport Zone</Badge>}
-                      </div>
-                      <p className="text-sm mt-1">
-                        {location.addressLine}, {location.city}, {location.state}, {location.country}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Coordinates: {parseFloat(location.latitude).toFixed(6)}, {parseFloat(location.longitude).toFixed(6)}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => openEditLocationDialog(location)}>
-                        Edit
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleToggleLocation(location.id)}>
-                        Enable
-                      </Button>
-                    </div>
-                  </div>
-
-                  <Accordion type="single" collapsible className="w-full mt-2">
-                    <AccordionItem value="map" className="border-0">
-                      <AccordionTrigger className="py-2 hover:no-underline">
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <ChevronDown className="h-4 w-4 mr-1" />
-                          Show Map
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="h-[200px] w-full rounded-lg overflow-hidden mt-2">
-                          <CompanyMap
-                            locations={[
-                              {
-                                lat: parseFloat(location.latitude),
-                                lng: parseFloat(location.longitude),
-                                address: location.addressLine,
-                              },
-                            ]}
-                          />
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Operators */}
-      {company.operators && company.operators.length > 0 && (
-        <div className="border rounded-lg p-4">
-          <h2 className="text-lg font-semibold mb-4">Operators</h2>
-          <div className="space-y-3">
-            {company.operators.map((operator: any) => (
-              <div key={operator.id} className="flex items-center gap-3 p-3 border rounded">
-                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
-                  {operator.user.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium">{operator.user.name}</p>
-                  <p className="text-sm text-muted-foreground">{operator.user.email}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="outline" className="text-xs capitalize">
-                      {operator.operatorRole.replace('Operator', '').trim() || 'Operator'}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      Last active: {format(new Date(operator.user.lastActivityAt), 'MMM d, yyyy')}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Addresses */}
-      {company.addresses && company.addresses.length > 0 && (
-        <div className="border rounded-lg p-4">
-          <h2 className="text-lg font-semibold mb-4">Addresses</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {company.addresses.map((address: any) => (
-              <div key={address.id} className="border rounded p-4">
-                <h3 className="font-medium">{address.addressLabel}</h3>
-                <p className="text-sm mt-1">
-                  {address.street}, {address.apartment}
-                </p>
-                <p className="text-sm">
-                  {address.city}, {address.state}, {address.country}
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">{address.additionalInfo}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Plans & Commission — SIMPLE + CLEAR */}
-      {/* <div className="border rounded-lg p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">Plans & Commission</h2>
-          <div className="flex flex-wrap items-center gap-2">
-            <TierBadgeInline tier={settingsRes?.data.settings.currentTier} />
-            <Badge>Effective: {effectiveRate}%</Badge>
-          </div>
-        </div>
-
-        <p className="text-sm text-muted-foreground mt-1 flex flex-wrap gap-4">
-          <span>
-            Base rate: <span className="font-medium">{baseRate}%</span>
-          </span>
-          <span>
-            Subscription ends:{' '}
-            <span className="font-medium">
-              {settingsRes?.data.settings.subscriptionEndsAt
-                ? format(new Date(settingsRes.data.settings.subscriptionEndsAt), 'MMM d, yyyy HH:mm')
-                : '—'}
-            </span>
-          </span>
-        </p>
-
-        <Separator className="my-4" />
-
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-sm">Choose Tier</Label>
-              <div className="flex flex-wrap gap-2">
-                {(planConfigs?.data ?? []).map((p: any) => {
-                  const isActive = selectedTier === p.tier;
-                  return (
-                    <Button
-                      key={p.tier}
-                      type="button"
-                      variant={isActive ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setSelectedTier(p.tier)}
-                      className="rounded-full"
-                    >
-                      {p.tier}
-                      {p.commissionDelta !== '0.00' ? ` · +${p.commissionDelta}%` : ''}
-                    </Button>
-                  );
-                })}
-                {!planLoading && !planConfigs?.data?.length && (
-                  <span className="text-xs text-muted-foreground">No tiers found</span>
-                )}
-              </div>
-              <ProjectedRateHelper baseRate={baseRate} selectedTier={selectedTier} planConfigs={planConfigs} />
-            </div>
-
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="grow min-w-[160px]">
-                <Label className="text-sm">Days</Label>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setSubscriptionDays((d) => Math.max(1, d - 1))}
-                  >
-                    —
-                  </Button>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={subscriptionDays}
-                    onChange={(e) => setSubscriptionDays(Math.max(1, Number(e.target.value || 1)))}
-                  />
-                  <Button type="button" variant="outline" size="icon" onClick={() => setSubscriptionDays((d) => d + 1)}>
-                    +
-                  </Button>
-                </div>
-              </div>
-
-              <div className="grow min-w-[220px]">
-                <Label className="text-sm">Mode</Label>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant={subscriptionMode === 'startNow' ? 'default' : 'outline'}
-                    onClick={() => setSubscriptionMode('startNow')}
-                    className="flex-1"
-                  >
-                    Now
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={subscriptionMode === 'startAfterCurrent' ? 'default' : 'outline'}
-                    onClick={() => setSubscriptionMode('startAfterCurrent')}
-                    className="flex-1"
-                  >
-                    Queue
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <Label className="text-sm">Note (optional)</Label>
-              <Input
-                value={subscriptionNote}
-                onChange={(e) => setSubscriptionNote(e.target.value)}
-                placeholder="e.g., upgrade now"
-              />
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Button
-                className="min-w-[160px] bg-[#F56304] hover:bg-[#F56304]/90 text-white"
-                disabled={startSub.isPending || planLoading || settingsLoading || !selectedTier}
-                onClick={() => {
-                  startSub.mutate(
-                    { tier: selectedTier, days: subscriptionDays, mode: subscriptionMode, note: subscriptionNote || undefined },
-                    {
-                      onSuccess: (r) => {
-                        toast.success(r.data.message, {
-                          description: `Active ${format(new Date(r.data.data.startsAt), 'MMM d, yyyy HH:mm')} → ${format(
-                            new Date(r.data.data.endsAt),
-                            'MMM d, yyyy HH:mm'
-                          )}`,
-                        });
-                        refetchSettings();
-                      },
-                      onError: (err) => toast.error('Failed to start subscription', { description: (err as any).message }),
-                    }
-                  );
-                }}
-              >
-                {startSub.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {subscriptionMode === 'startNow' ? 'Start subscription' : 'Queue subscription'}
-              </Button>
-              {planLoading && <span className="text-xs text-muted-foreground">Loading plans…</span>}
-            </div>
-
-            <div className="mt-4 space-y-2 rounded-md border p-3">
-              <p className="text-sm font-medium">Current Subscription — End Early</p>
-
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={endEarly.isPending}
-                  onClick={() =>
-                    endEarly.mutate(
-                      { action: 'START_NEXT_SCHEDULED', note: subscriptionNote || undefined },
-                      {
-                        onSuccess: (r: any) => {
-                          toast.success('Started next scheduled tier', { description: r?.data?.message });
-                          refetchSettings();
-                        },
-                        onError: (err) => toast.error('Failed', { description: (err as any).message }),
-                      }
-                    )
-                  }
-                >
-                  {endEarly.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  End now & start queued
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={endEarly.isPending}
-                  onClick={() =>
-                    endEarly.mutate(
-                      { action: 'REVERT_TO_BASE', note: subscriptionNote || 'pause plan' },
-                      {
-                        onSuccess: (r: any) => {
-                          toast.success('Reverted to base tier', { description: r?.data?.message });
-                          refetchSettings();
-                        },
-                        onError: (err) => toast.error('Failed', { description: (err as any).message }),
-                      }
-                    )
-                  }
-                >
-                  Revert to base
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-medium">Commission Override</h3>
-              <span className="text-xs text-muted-foreground">Overrides beat tier/base until expiry.</span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <Label className="text-sm">Override Rate (%)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={overrideRate}
-                  onChange={(e) => setOverrideRate(e.target.value)}
-                  placeholder="e.g., 8.50"
-                />
-              </div>
-              <div>
-                <Label className="text-sm">Override Ends Date</Label>
-                <Input
-                  type="datetime-local"
-                  min={nowLocalInputValue()}
-                  value={toLocalInputValue(overrideEndsAt)}
-                  onChange={(e) => {
-                    const fixedLocal = clampToFutureLocal(e.target.value);
-                    if (fixedLocal !== e.target.value) {
-                      toast.info('Override end time adjusted to the next minute.');
-                    }
-                    setOverrideEndsAt(fromLocalInputValueToISO(fixedLocal));
-                  }}
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="secondary"
-                className="bg-[#F56304] hover:bg-[#F56304]/90 text-white"
-                disabled={setOverride.isPending || !overrideRate || !overrideEndsAt}
-                onClick={() => {
-                  const rateNum = Number(overrideRate);
-                  if (Number.isNaN(rateNum) || rateNum <= 0) {
-                    toast.error('Enter a valid override rate > 0');
-                    return;
-                  }
-                  const endsAtDate = new Date(overrideEndsAt);
-                  const now = new Date();
-                  if (endsAtDate.getTime() <= now.getTime()) {
-                    toast.error('Override end time must be in the future.');
-                    setOverrideEndsAt(fromLocalInputValueToISO(nowLocalInputValue()));
-                    return;
-                  }
-
-                  setOverride.mutate(
-                    { rate: rateNum, endsAt: overrideEndsAt },
-                    {
-                      onSuccess: () => {
-                        toast.success('Override applied');
-                        refetchSettings();
-                      },
-                      onError: (err) => toast.error('Failed to set override', { description: (err as any).message }),
-                    }
-                  );
-                }}
-              >
-                {setOverride.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Override
-              </Button>
-
-              <Button
-                variant="outline"
-                type="button"
-                disabled={!hasActiveOverride || deleteOverride.isPending}
-                onClick={() => {
-                  if (!hasActiveOverride) return;
-                  deleteOverride.mutate(undefined, {
-                    onSuccess: () => {
-                      toast.success('Override expired');
-                      setOverrideRate('');   // clear immediately
-                      setOverrideEndsAt(''); // clear date-time field
-                      refetchSettings();
-                    },
-                    onError: (err) =>
-                      toast.error('Failed to expire override', { description: (err as any).message }),
-                  });
-                }}
-              >
-                {deleteOverride.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Expire now
-              </Button>
-
-              <span className="text-xs text-muted-foreground">
-                Current:{' '}
-                <strong>
-                  {settingsRes?.data.settings.overrideCommissionRate
-                    ? `${settingsRes.data.settings.overrideCommissionRate}% until ${settingsRes.data.settings.overrideEndsAt
-                      ? format(new Date(settingsRes.data.settings.overrideEndsAt), 'MMM d, yyyy HH:mm')
-                      : '—'
-                    }`
-                    : 'none'}
-                </strong>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div> */}
-
-      {/* Commission Settings Details */}
-      {settingsRes?.data?.settings && (
-        <div className="border rounded-lg p-4">
-          <h2 className="text-lg font-semibold mb-4">Commission Settings</h2>
-          
-          {/* Basic Commission Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <p className="text-sm text-muted-foreground">Base Commission Rate</p>
-              <p className="font-medium">{settingsRes.data.baseCommissionRate || '—'}%</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Effective Commission</p>
-              <p className="font-medium">{settingsRes.data.settings.effectiveCommissionRate || '—'}%</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Commission Source</p>
-              <p className="font-medium">{settingsRes.data.settings.commissionSource || 'BASE'}</p>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Edge Case Handling</p>
-                <p className="font-medium">{settingsRes.data.settings.edgeCaseHandling || 'OWE'}</p>
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setIsEdgeCaseHandlingDialogOpen(true)}
-                className="bg-[#F56304] hover:bg-[#F56304]/90 text-white border-[#F56304]"
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                Edit
-              </Button>
-            </div>
-          </div>
-
-          {/* Fixed Cancellation Amounts */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-md font-semibold">Fixed Cancellation Amounts</h3>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setIsFixedCancellationDialogOpen(true)}
-                className="bg-[#F56304] hover:bg-[#F56304]/90 text-white border-[#F56304]"
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                Edit Amounts
-              </Button>
-            </div>
-            {(settingsRes.data.settings.fixedCancellationAmount || 
-              settingsRes.data.settings.fixedCancellationAmountLateCancel ||
-              settingsRes.data.settings.fixedCancellationAmountNoShow ||
-              settingsRes.data.settings.fixedCancellationAmountCustomerFault ||
-              settingsRes.data.settings.fixedCancellationAmountPartialUse) ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {settingsRes.data.settings.fixedCancellationAmount && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Global Fixed Amount</p>
-                    <p className="font-medium">${settingsRes.data.settings.fixedCancellationAmount}</p>
-                  </div>
-                )}
-                {settingsRes.data.settings.fixedCancellationAmountLateCancel && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Late Cancel</p>
-                    <p className="font-medium">${settingsRes.data.settings.fixedCancellationAmountLateCancel}</p>
-                  </div>
-                )}
-                {settingsRes.data.settings.fixedCancellationAmountNoShow && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">No Show</p>
-                    <p className="font-medium">${settingsRes.data.settings.fixedCancellationAmountNoShow}</p>
-                  </div>
-                )}
-                {settingsRes.data.settings.fixedCancellationAmountCustomerFault && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Customer Fault</p>
-                    <p className="font-medium">${settingsRes.data.settings.fixedCancellationAmountCustomerFault}</p>
-                  </div>
-                )}
-                {settingsRes.data.settings.fixedCancellationAmountPartialUse && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Partial Use</p>
-                    <p className="font-medium">${settingsRes.data.settings.fixedCancellationAmountPartialUse}</p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No fixed cancellation amounts configured</p>
-            )}
-          </div>
-
-          {/* Status Commission Settings */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-md font-semibold">Status-Based Commission Settings</h3>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setIsStatusCommissionDialogOpen(true)}
-                className="bg-[#F56304] hover:bg-[#F56304]/90 text-white border-[#F56304]"
-              >
-                <Edit className="mr-2 h-4 w-4" />
-                Edit Settings
-              </Button>
-            </div>
-            {settingsRes.data.settings.statusCommissionSettings && (
-              <div className="space-y-3">
-                {Object.entries(settingsRes.data.settings.statusCommissionSettings).map(([status, setting]) => {
-                  if (!setting) return null;
-                  return (
-                    <div key={status} className="border rounded-lg p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="font-medium capitalize">{status.replace(/_/g, ' ')}</p>
-                        <Badge variant="outline">{setting.type}</Badge>
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                        {setting.percentageRate !== undefined && (
-                          <div>
-                            <p className="text-muted-foreground">Rate</p>
-                            <p className="font-medium">{setting.percentageRate}%</p>
-                          </div>
-                        )}
-                        {setting.fixedAmount !== undefined && (
-                          <div>
-                            <p className="text-muted-foreground">Fixed Amount</p>
-                            <p className="font-medium">${setting.fixedAmount}</p>
-                          </div>
-                        )}
-                        {status !== 'COMPLETED' && setting.splitPercentage !== undefined && (
-                          <div>
-                            <p className="text-muted-foreground">Split</p>
-                            <p className="font-medium">{setting.splitPercentage}%</p>
-                          </div>
-                        )}
-                        {setting.penaltyPercentage !== undefined && (
-                          <div>
-                            <p className="text-muted-foreground">Penalty</p>
-                            <p className="font-medium">{setting.penaltyPercentage}%</p>
-                          </div>
-                        )}
-                        {setting.yalaRidePercentage !== undefined && (
-                          <div>
-                            <p className="text-muted-foreground">YalaRide</p>
-                            <p className="font-medium">{setting.yalaRidePercentage}%</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Edge Case Handling Dialog */}
       <Dialog open={isEdgeCaseHandlingDialogOpen} onOpenChange={setIsEdgeCaseHandlingDialogOpen}>
@@ -2557,100 +2181,3 @@ const CompanyDetail = () => {
 };
 
 export default CompanyDetail;
-
-/* ---------- Helpers ---------- */
-
-function ProjectedRateHelper({
-  baseRate,
-  selectedTier,
-  planConfigs,
-}: {
-  baseRate: string | number;
-  selectedTier: 'BASIC' | 'GOLD' | 'PREMIUM' | 'DIAMOND';
-  planConfigs: any;
-}) {
-  const base = Number(baseRate);
-  const delta = planConfigs
-    ? Number((planConfigs.data.find((p: any) => p.tier === selectedTier)?.commissionDelta) ?? '0')
-    : 0;
-  const projected = Number.isFinite(base) ? (base + delta).toFixed(2) : '—';
-
-  return (
-    <div className="text-xs text-muted-foreground">
-      Projected effective with <span className="font-medium">{selectedTier}</span>:{' '}
-      <span className="font-medium">{projected}%</span>
-    </div>
-  );
-}
-
-// Convert ISO -> <input type="datetime-local">
-function toLocalInputValue(iso: string) {
-  try {
-    if (!iso) return '';
-    const d = new Date(iso);
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const yyyy = d.getFullYear();
-    const mm = pad(d.getMonth() + 1);
-    const dd = pad(d.getDate());
-    const hh = pad(d.getHours());
-    const mi = pad(d.getMinutes());
-    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
-  } catch {
-    return '';
-  }
-}
-
-// Convert local input -> UTC ISO
-function fromLocalInputValueToISO(localValue: string) {
-  try {
-    const d = new Date(localValue);
-    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString();
-  } catch {
-    return new Date().toISOString();
-  }
-}
-
-function TierBadgeInline({ tier }: { tier?: Tier }) {
-  if (!tier) return <Badge variant="outline">Tier: —</Badge>;
-  const { Icon, label, color } = TIER_META[tier];
-  return (
-    <Badge variant="outline" className="gap-1 pr-2 pl-1">
-      <Icon className={`h-4 w-4 ${color}`} />
-      <span className="font-medium">{label}</span>
-    </Badge>
-  );
-}
-
-// Round now up to the next minute and return as <input type="datetime-local"> value
-function nowLocalInputValue() {
-  const d = new Date();
-  d.setSeconds(0, 0);
-  d.setMinutes(d.getMinutes() + 1);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const yyyy = d.getFullYear();
-  const mm = pad(d.getMonth() + 1);
-  const dd = pad(d.getDate());
-  const hh = pad(d.getHours());
-  const mi = pad(d.getMinutes());
-  return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
-}
-
-// Ensure local input string is not in the past; if it is, snap to next minute
-function clampToFutureLocal(localValue: string) {
-  if (!localValue) return nowLocalInputValue();
-  const chosen = new Date(localValue); // local time
-  const now = new Date();
-  if (chosen.getTime() <= now.getTime()) {
-    const next = new Date();
-    next.setSeconds(0, 0);
-    next.setMinutes(next.getMinutes() + 1);
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const yyyy = next.getFullYear();
-    const mm = pad(next.getMonth() + 1);
-    const dd = pad(next.getDate());
-    const hh = pad(next.getHours());
-    const mi = pad(next.getMinutes());
-    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
-  }
-  return localValue;
-}

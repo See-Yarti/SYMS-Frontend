@@ -385,7 +385,7 @@ export default function BlackoutDialog({
                           return (
                             <CommandItem key={loc.id} value={loc.city} onSelect={() => toggleLocation(loc.id)} className="flex items-center gap-2">
                               <span className={cn("mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
-                                checked ? "bg-primary text-primary-foreground" : "bg-background")}>
+                                checked ? "bg-[#F56304] text-white" : "bg-background")}>
                                 {checked && <Check className="h-3 w-3" />}
                               </span>
                               <span className="truncate">{prettyLocationLabel(loc)}</span>
@@ -405,8 +405,8 @@ export default function BlackoutDialog({
                   const label = prettyLocationLabel(loc);
                   const canRemove = selectedLocationIds.length > 0 || (initialLocationId && id !== initialLocationId);
                   return (
-                    <div key={id} className="flex items-center gap-1 px-2 py-1 bg-primary/10 rounded-md">
-                      <span className="text-sm">{label}</span>
+                    <div key={id} className="flex items-center gap-1 px-2 py-1 bg-orange-100 rounded-md">
+                      <span className="text-sm text-[#F56304]">{label}</span>
                       {canRemove && (
                         <button type="button" onClick={() => clearLocation(id)} className="text-destructive hover:text-destructive/80" aria-label="Remove location">
                           <X className="h-3 w-3" />
@@ -430,7 +430,11 @@ export default function BlackoutDialog({
                 ) : (
                   availableCCCs.map((item, index) => (
                     <div key={item.carClassId} className="flex items-center gap-2 p-1">
-                      <Checkbox checked={item.selected} onCheckedChange={() => toggleSelected(availableCCCs, index, setAvailableCCCs)} />
+                      <Checkbox 
+                        checked={item.selected} 
+                        onCheckedChange={() => toggleSelected(availableCCCs, index, setAvailableCCCs)}
+                        className="data-[state=checked]:bg-[#F56304] data-[state=checked]:border-[#F56304]"
+                      />
                       <span>{item.label}</span>
                     </div>
                   ))
@@ -451,7 +455,11 @@ export default function BlackoutDialog({
                 ) : (
                   selectedCCCs.map((item, index) => (
                     <div key={item.carClassId} className="flex items-center gap-2 p-1">
-                      <Checkbox checked={item.selected} onCheckedChange={() => toggleSelected(selectedCCCs, index, setSelectedCCCs)} />
+                      <Checkbox 
+                        checked={item.selected} 
+                        onCheckedChange={() => toggleSelected(selectedCCCs, index, setSelectedCCCs)}
+                        className="data-[state=checked]:bg-[#F56304] data-[state=checked]:border-[#F56304]"
+                      />
                       <span>{item.label}</span>
                     </div>
                   ))
@@ -482,7 +490,7 @@ export default function BlackoutDialog({
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit">{blackout ? "Update" : "Create"}</Button>
+            <Button type="submit" className="bg-[#F56304] hover:bg-[#e05503] text-white">{blackout ? "Update" : "Create"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

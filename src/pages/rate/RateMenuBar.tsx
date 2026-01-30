@@ -5,11 +5,11 @@ import { cn } from '@/lib/utils';
 import { CalendarDays, LineChart, Ban, Car, Percent } from 'lucide-react';
 
 const RATE_TABS = [
-  { label: 'Rates', path: '', icon: <CalendarDays className="w-4 h-4 mr-1" /> },
-  // { label: 'Rate Planner', path: 'planner', icon: <LineChart className="w-4 h-4 mr-1" /> },
-  { label: 'Blackouts', path: 'blackouts', icon: <Ban className="w-4 h-4 mr-1" /> },
   { label: 'Car Classes', path: 'car-classes', icon: <Car className="w-4 h-4 mr-1" /> },
+  { label: 'Rates', path: '', icon: <CalendarDays className="w-4 h-4 mr-1" /> },
   { label: 'Taxes', path: 'taxes', icon: <Percent className="w-4 h-4 mr-1" /> },
+  { label: 'CDW', path: 'cdw', icon: <LineChart className="w-4 h-4 mr-1" /> },
+  { label: 'Blackouts', path: 'blackouts', icon: <Ban className="w-4 h-4 mr-1" /> },
 ];
 
 export default function RateMenuBar() {
@@ -19,7 +19,7 @@ export default function RateMenuBar() {
   return (
     <div
       className={cn(
-        'sticky top-0 z-30 w-full bg-background/95 backdrop-blur-md border-b border-muted shadow',
+        'sticky top-0 z-30 w-full bg-white rounded-xl backdrop-blur-md border-b border-muted shadow',
         'flex items-center gap-2 px-4'
       )}
       style={{ minHeight: 56 }}
@@ -40,7 +40,7 @@ export default function RateMenuBar() {
                 'h-12 rounded-none px-4 font-medium flex items-center gap-1 transition-all duration-150 text-muted-foreground',
                 'hover:text-foreground hover:bg-muted/60',
                 isActive &&
-                  'text-primary font-semibold border-b-2 border-primary bg-muted/80 shadow-sm'
+                  'text-[#F56304] font-semibold border-b-2 border-[#F56304] bg-muted/80 shadow-sm'
               )}
               tabIndex={0}
             >

@@ -293,7 +293,7 @@ export default function TaxDialog({
 
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose}>Cancel</Button>
-                    <Button onClick={submit} disabled={Boolean(saving) || !title.trim() || (taxType === 'PERCENTAGE' ? !isWithinOpenInterval(percentage) : !amount || Number(amount) <= 0)}>
+                    <Button onClick={submit} disabled={Boolean(saving) || !title.trim() || (taxType === 'PERCENTAGE' ? !isWithinOpenInterval(percentage) : !amount || Number(amount) <= 0)} className="bg-[#F56304] hover:bg-[#e05503] text-white">
                         {editing ? 'Update' : 'Create'}
                     </Button>
                 </DialogFooter>

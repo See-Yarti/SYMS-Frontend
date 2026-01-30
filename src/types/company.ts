@@ -129,13 +129,14 @@ export interface OperatorProfileFlat {
 export type CommissionSource = 'BASE' | 'TIER' | 'OVERRIDE';
 export type Tier = 'BASIC' | 'GOLD' | 'PREMIUM' | 'DIAMOND';
 
+// Base interface for status commission settings
 export interface StatusCommissionSetting {
   type: 'PERCENTAGE' | 'FIXED' | null;
   percentageRate?: number;
   fixedAmount?: number;
-  splitPercentage?: number;
-  penaltyPercentage?: number;
-  yalaRidePercentage?: number;
+  splitPercentage?: number; // Only for LATE_CANCEL, NO_SHOW, CUSTOMER_FAULT when type is PERCENTAGE
+  penaltyPercentage?: number; // Only for OPERATOR_FAULT
+  yalaRidePercentage?: number; // Only for OPERATOR_FAULT (always 100)
 }
 
 export interface StatusCommissionSettingsPayload {
