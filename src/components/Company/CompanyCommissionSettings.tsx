@@ -81,8 +81,10 @@ function CompanyCommissionSettingsPage() {
   const settingsOld = settingsResOld?.data?.settings as any;
   const scs = settingsOld?.statusCommissionSettings || {};
   
-  // Determine commission type from settings.commissionType (NOT from COMPLETED.type)
-  const commissionType = (settingsOld?.commissionType || 'PERCENTAGE') as 'PERCENTAGE' | 'FIXED';
+  // Commission type: prefer COMPLETED.type (updated by status-commission-settings API)
+  // Fallback to settings.commissionType when statusCommissionSettings not set
+  const completedSetting = scs.COMPLETED as StatusCommissionSetting | undefined;
+  const commissionType = (completedSetting?.type || settingsOld?.commissionType || 'PERCENTAGE') as 'PERCENTAGE' | 'FIXED';
   const isFixedMode = commissionType === 'FIXED';
   
   const effectiveRate = settingsOld?.effectiveCommissionRate || settingsResOld?.data?.baseCommissionRate || '0';

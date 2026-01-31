@@ -77,13 +77,16 @@ function CompanyCommissionSettingsEditPage() {
   useEffect(() => {
     if (!settingsResOld?.data?.settings) return;
     const s = settingsResOld.data.settings as any;
-    const type = (s.commissionType ?? 'PERCENTAGE') as 'PERCENTAGE' | 'FIXED';
-    setCommissionType(type);
-    const rate = s.effectiveCommissionRate ?? s.baseCommissionRate ?? '10';
-    setPlatformCommissionPct(String(rate));
-    const fixedAmt = s.fixedCommissionAmount ?? rate;
-    setPlatformCommissionFixed(typeof fixedAmt === 'number' ? String(fixedAmt) : String(fixedAmt ?? '10'));
     const scs = s.statusCommissionSettings ?? {};
+    const completedSetting = scs.COMPLETED as StatusCommissionSetting | undefined;
+    // Prefer COMPLETED.type (same source as view page)
+    const type = (completedSetting?.type || s.commissionType || 'PERCENTAGE') as 'PERCENTAGE' | 'FIXED';
+    setCommissionType(type);
+    // Use COMPLETED values when available, else fallback to column fields
+    const rate = completedSetting?.percentageRate ?? s.effectiveCommissionRate ?? s.baseCommissionRate ?? '10';
+    const fixedAmt = completedSetting?.fixedAmount ?? s.fixedCommissionAmount ?? rate;
+    setPlatformCommissionPct(String(rate));
+    setPlatformCommissionFixed(typeof fixedAmt === 'number' ? String(fixedAmt) : String(fixedAmt ?? '10'));
     const opFault = scs.OPERATOR_FAULT as StatusCommissionSetting | undefined;
     setOperatorFaultPct(String(opFault?.penaltyPercentage ?? 15));
     const late = scs.LATE_CANCEL as StatusCommissionSetting | undefined;
@@ -153,14 +156,84 @@ function CompanyCommissionSettingsEditPage() {
     if (pendingMode) {
       setCommissionType(pendingMode);
       setHasUnsavedChanges(true);
-      console.log('Mode changed to:', pendingMode);
-      toast.info(`Mode changed to ${pendingMode === 'FIXED' ? 'Fixed' : 'Percentage'}. Click "Save Settings" to apply changes.`);
+
+      // Clear all commission fields (data loss as per warning)
+      setPlatformCommissionPct('');
+      setPlatformCommissionFixed('');
+      setOperatorFaultPct('');
+      setLateCancel({ penaltyPct: '', yalaRideShare: '', remainingToOperator: true });
+      setNoShow({ penaltyPct: '', yalaRideShare: '', remainingToOperator: true });
+      setCustomerFault({ penaltyPct: '', yalaRideShare: '', remainingToOperator: true });
+      setEdgeCaseOWE(false);
+      setEdgeCaseCAP(true);
+
+      toast.info(`Mode changed to ${pendingMode === 'FIXED' ? 'Fixed' : 'Percentage'}. Fill in the fields and click "Save Settings" to apply.`);
       setPendingMode(null);
       setModeChangeModalOpen(false);
     }
   };
 
+  // Client-side validation (matches backend: min 0.01, max 100)
+  const validateCommissionForm = (): { valid: boolean; message: string } => {
+    const MIN = 0.01;
+    const MAX = 100;
+
+    // COMPLETED
+    if (isFixedMode) {
+      const fixed = parseFloat(platformCommissionFixed);
+      if (isNaN(fixed) || fixed < MIN) {
+        return { valid: false, message: 'Platform Commission (Fixed) must be at least 0.01 USD' };
+      }
+      if (fixed > 9999.99) {
+        return { valid: false, message: 'Platform Commission (Fixed) must not exceed 9999.99 USD' };
+      }
+    } else {
+      const pct = parseFloat(platformCommissionPct);
+      if (isNaN(pct) || pct < MIN || pct > MAX) {
+        return { valid: false, message: 'Platform Commission (%) must be between 0.01 and 100' };
+      }
+    }
+
+    // Operator Fault
+    const opPct = parseFloat(operatorFaultPct);
+    if (isNaN(opPct) || opPct < MIN || opPct > MAX) {
+      return { valid: false, message: 'Operator Fault penalty (%) must be between 0.01 and 100' };
+    }
+
+    // Late Cancel, No Show, Customer Fault
+    const penaltyFields = [
+      { name: 'Late Cancel', penaltyPct: lateCancel.penaltyPct, share: lateCancel.yalaRideShare },
+      { name: 'No Show', penaltyPct: noShow.penaltyPct, share: noShow.yalaRideShare },
+      { name: 'Customer Fault', penaltyPct: customerFault.penaltyPct, share: customerFault.yalaRideShare },
+    ];
+    for (const f of penaltyFields) {
+      const penalty = parseFloat(f.penaltyPct);
+      if (isNaN(penalty) || penalty < MIN || penalty > MAX) {
+        return { valid: false, message: `${f.name}: Penalty rate must be between 0.01 and 100` };
+      }
+      const share = parseFloat(f.share);
+      if (isFixedMode) {
+        if (isNaN(share) || share < MIN) {
+          return { valid: false, message: `${f.name}: YalaRide share (USD) must be at least 0.01` };
+        }
+      } else {
+        if (isNaN(share) || share < 0 || share > MAX) {
+          return { valid: false, message: `${f.name}: YalaRide share (%) must be between 0 and 100` };
+        }
+      }
+    }
+
+    return { valid: true, message: '' };
+  };
+
   const handleSave = async () => {
+    // Validate commission settings
+    const commissionValidation = validateCommissionForm();
+    if (!commissionValidation.valid) {
+      toast.error(commissionValidation.message);
+      return;
+    }
+
     // Validate CDW settings if enabled
     if (cdwEnabled) {
       const minNum = parseFloat(cdwMin);
@@ -179,48 +252,42 @@ function CompanyCommissionSettingsEditPage() {
       }
     }
 
+    // Build payload (validation already passed - values are in valid range)
     const payload: StatusCommissionSettingsPayload = {
-      // COMPLETED: No splitPercentage allowed
       COMPLETED: {
         type: commissionType,
-        percentageRate: isFixedMode ? undefined : parseFloat(platformCommissionPct) || 0,
-        fixedAmount: isFixedMode ? parseFloat(platformCommissionFixed) || 0 : undefined,
-        // splitPercentage is NOT allowed for COMPLETED
+        percentageRate: isFixedMode ? undefined : parseFloat(platformCommissionPct),
+        fixedAmount: isFixedMode ? parseFloat(platformCommissionFixed) : undefined,
       },
-      // OPERATOR_FAULT: Requires yalaRidePercentage (always 100)
       OPERATOR_FAULT: {
         type: 'PERCENTAGE',
-        penaltyPercentage: parseFloat(operatorFaultPct) || 15,
-        yalaRidePercentage: 100, // Always 100 as per backend requirement
+        penaltyPercentage: parseFloat(operatorFaultPct),
+        yalaRidePercentage: 100,
       },
-      // LATE_CANCEL: Requires splitPercentage for PERCENTAGE, percentageRate for both types
       LATE_CANCEL: {
         type: commissionType,
-        percentageRate: parseFloat(lateCancel.penaltyPct) || 0,
-        splitPercentage: isFixedMode ? undefined : parseFloat(lateCancel.yalaRideShare) || 0,
-        fixedAmount: isFixedMode ? parseFloat(lateCancel.yalaRideShare) || 0 : undefined,
+        percentageRate: parseFloat(lateCancel.penaltyPct),
+        splitPercentage: isFixedMode ? undefined : parseFloat(lateCancel.yalaRideShare),
+        fixedAmount: isFixedMode ? parseFloat(lateCancel.yalaRideShare) : undefined,
       },
-      // NO_SHOW: Same structure as LATE_CANCEL
       NO_SHOW: {
         type: commissionType,
-        percentageRate: parseFloat(noShow.penaltyPct) || 0,
-        splitPercentage: isFixedMode ? undefined : parseFloat(noShow.yalaRideShare) || 0,
-        fixedAmount: isFixedMode ? parseFloat(noShow.yalaRideShare) || 0 : undefined,
+        percentageRate: parseFloat(noShow.penaltyPct),
+        splitPercentage: isFixedMode ? undefined : parseFloat(noShow.yalaRideShare),
+        fixedAmount: isFixedMode ? parseFloat(noShow.yalaRideShare) : undefined,
       },
-      // CUSTOMER_FAULT: Same structure as LATE_CANCEL
       CUSTOMER_FAULT: {
         type: commissionType,
-        percentageRate: parseFloat(customerFault.penaltyPct) || 0,
-        splitPercentage: isFixedMode ? undefined : parseFloat(customerFault.yalaRideShare) || 0,
-        fixedAmount: isFixedMode ? parseFloat(customerFault.yalaRideShare) || 0 : undefined,
+        percentageRate: parseFloat(customerFault.penaltyPct),
+        splitPercentage: isFixedMode ? undefined : parseFloat(customerFault.yalaRideShare),
+        fixedAmount: isFixedMode ? parseFloat(customerFault.yalaRideShare) : undefined,
       },
     };
     
-    try {
-      // Save all settings in sequence
+    const executeSave = async () => {
       // 1. Commission settings (main)
       await setStatusSettings.mutateAsync(payload);
-      
+
       // 2. Fixed amounts (only in fixed mode)
       if (isFixedMode) {
         await setFixedAmounts.mutateAsync({
@@ -228,12 +295,10 @@ function CompanyCommissionSettingsEditPage() {
           noShow: parseFloat(noShow.yalaRideShare) || 0,
           customerFault: parseFloat(customerFault.yalaRideShare) || 0,
         });
-        
-        // 3. Edge case handling (only in fixed mode)
         await setEdgeCase.mutateAsync({ edgeCaseHandling: edgeCaseCAP ? 'CAP' : 'OWE' });
       }
-      
-      // 4. CDW settings
+
+      // 3. CDW settings
       await updateCDWSettings.mutateAsync({
         cdwEnabled,
         ...(cdwEnabled && {
@@ -242,24 +307,49 @@ function CompanyCommissionSettingsEditPage() {
           cdwCommissionPercentage: parseFloat(cdwCommission),
         }),
       });
-      
-      // Force invalidate all company settings queries ONCE at the end
+
+      // 4. Invalidate queries once at the end
       await queryClient.invalidateQueries({ queryKey: ['company-settings', companyId] });
       await queryClient.invalidateQueries({ queryKey: ['company-cdw-settings', companyId] });
-      
-      setHasUnsavedChanges(false);
-      toast.success('All settings saved successfully');
-      navigate(`/companies/${companyId}/commission-settings`);
-    } catch (e: any) {
-      // Handle 429 rate limit error
-      if (e?.response?.status === 429) {
-        toast.error('Too many requests. Please wait a moment and try again.');
+    };
+
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const maxRetries = 2;
+    let lastError: any = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        await executeSave();
+        setHasUnsavedChanges(false);
+        toast.success('All settings saved successfully');
+        navigate(`/companies/${companyId}/commission-settings`);
         return;
+      } catch (e: any) {
+        lastError = e;
+        if (e?.response?.status === 429 && attempt < maxRetries) {
+          const waitSec = 3;
+          toast.info(`Too many requests. Retrying in ${waitSec} seconds...`);
+          await sleep(waitSec * 1000);
+        } else {
+          break;
+        }
       }
-      const errorMsg = e?.response?.data?.message || 'Failed to save settings';
-      toast.error(errorMsg);
-      console.error('Save settings error:', e);
     }
+
+    if (lastError?.response?.status === 429) {
+      toast.error('Too many requests. Please wait 30–60 seconds and try again.');
+    } else if (lastError?.response?.status === 422) {
+      // Show API validation constraints
+      const errData = lastError?.response?.data;
+      const errors = errData?.errors as Array<{ field?: string; constraints?: string[] }> | undefined;
+      const constraints = errors?.flatMap((e) => e.constraints ?? []) ?? [];
+      const uniqueMsg = [...new Set(constraints)].join('. ') || errData?.message || 'Validation failed';
+      toast.error(uniqueMsg);
+    } else {
+      const errorMsg = lastError?.response?.data?.message || 'Failed to save settings';
+      toast.error(errorMsg);
+    }
+    console.error('Save settings error:', lastError);
   };
 
   return (
@@ -376,10 +466,12 @@ function CompanyCommissionSettingsEditPage() {
                   <div className="mt-1.5 flex items-center">
                     <Input
                       type="number"
-                      min={0}
-                      step={isFixedMode ? 1 : 0.5}
+                      min={0.01}
+                      max={isFixedMode ? undefined : 100}
+                      step={isFixedMode ? 0.01 : 0.5}
                       value={isFixedMode ? platformCommissionFixed : platformCommissionPct}
                       onChange={(e) => (isFixedMode ? setPlatformCommissionFixed(e.target.value) : setPlatformCommissionPct(e.target.value))}
+                      placeholder={isFixedMode ? 'e.g. 10' : '0.01–100'}
                       className="h-10 flex-1 rounded-lg border-gray-200 bg-gray-50"
                     />
                     <span className="ml-2 text-sm text-muted-foreground">{isFixedMode ? 'USD' : '%'}</span>
@@ -401,10 +493,12 @@ function CompanyCommissionSettingsEditPage() {
                   <div className="mt-1.5 flex items-center">
                     <Input
                       type="number"
-                      min={0}
+                      min={0.01}
                       max={100}
+                      step={0.5}
                       value={operatorFaultPct}
                       onChange={(e) => setOperatorFaultPct(e.target.value)}
+                      placeholder="0.01–100"
                       className="h-10 flex-1 rounded-lg border-gray-200 bg-gray-50"
                     />
                     <span className="ml-2 text-sm text-muted-foreground">%</span>
@@ -673,10 +767,12 @@ function PenaltyEditCard({
             <div className="mt-1.5 flex items-center">
               <Input
                 type="number"
-                min={0}
+                min={0.01}
                 max={100}
+                step={0.5}
                 value={penaltyPct}
                 onChange={(e) => setPenaltyPct(e.target.value)}
+                placeholder="0.01–100"
                 className="h-10 flex-1 rounded-lg border-gray-200 bg-gray-50"
               />
               <span className="ml-2 text-sm text-muted-foreground">%</span>
@@ -690,10 +786,12 @@ function PenaltyEditCard({
             <div className="mt-1.5 flex items-center">
               <Input
                 type="number"
-                min={0}
-                step={isFixedMode ? 1 : 0.5}
+                min={isFixedMode ? 0.01 : 0}
+                max={100}
+                step={isFixedMode ? 0.01 : 0.5}
                 value={yalaRideShare}
                 onChange={(e) => setYalaRideShare(e.target.value)}
+                placeholder={isFixedMode ? 'e.g. 10' : '0–100'}
                 className="h-10 flex-1 rounded-lg border-gray-200 bg-gray-50"
               />
               <span className="ml-2 text-sm text-muted-foreground">{isFixedMode ? 'USD' : '%'}</span>
