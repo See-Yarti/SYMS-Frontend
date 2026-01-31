@@ -231,7 +231,8 @@ const AdminAccountingResults: React.FC = () => {
     );
   }
 
-  const accountingData = companyData?.data;
+  // API response: { success, data: { ok, total, page, limit, summary, items }, timestamp }
+  const accountingData = companyData?.data ?? companyData;
   const items = accountingData?.items || [];
   const summary = accountingData?.summary;
   const meta = accountingData;
@@ -365,34 +366,37 @@ const AdminAccountingResults: React.FC = () => {
         </div>
       )}
 
-      {/* Data Table */}
+      {/* Data Table - horizontal scroll on small screens */}
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
+          <div className="overflow-x-auto scroll-smooth">
+            <Table className="min-w-[900px] w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Booking Code</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Paid Status</TableHead>
-                  <TableHead>Pickup Date</TableHead>
-                  <TableHead>Drop Date</TableHead>
-                  <TableHead className="text-right">Customer Refund</TableHead>
-                  <TableHead className="text-right">Operator Payout</TableHead>
-                  <TableHead className="text-right">Commission</TableHead>
+                  <TableHead className="whitespace-nowrap">Booking Code</TableHead>
+                  <TableHead className="whitespace-nowrap">Type</TableHead>
+                  <TableHead className="whitespace-nowrap">Status</TableHead>
+                  <TableHead className="whitespace-nowrap">Paid Status</TableHead>
+                  <TableHead className="whitespace-nowrap">Pickup Date</TableHead>
+                  <TableHead className="whitespace-nowrap">Drop Date</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">Customer Refund</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">Operator Payout</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">Commission</TableHead>
+                  <TableHead className="whitespace-nowrap">Comm. Type</TableHead>
+                  <TableHead className="whitespace-nowrap">Comm. Value</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">Amount Owed</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
                       No accounting records found for the selected criteria.
                     </TableCell>
                   </TableRow>
                 ) : (
                   items.map((item: AccountingItem) => (
-                    <TableRow key={item.id}>
+                    <TableRow key={item.id} className="whitespace-nowrap">
                       <TableCell className="font-medium">
                         <button
                           onClick={() => navigate(`/all-bookings/${item.bookingid}`)}
@@ -402,21 +406,24 @@ const AdminAccountingResults: React.FC = () => {
                         </button>
                       </TableCell>
                       <TableCell>
-                        <Badge className={typeStyles[item.type] || ''}>
-                          {item.type.replace(/_/g, ' ')}
+                        <Badge className={typeStyles[item.type as AccountingType] || ''}>
+                          {item.type?.replace(/_/g, ' ') || '-'}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{item.status}</Badge>
+                        <Badge variant="outline">{item.status || '-'}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{item.paidstatus}</Badge>
+                        <Badge variant="outline">{item.paidstatus || '-'}</Badge>
                       </TableCell>
                       <TableCell>{formatDate(item.pickupat)}</TableCell>
                       <TableCell>{formatDate(item.dropat)}</TableCell>
-                      <TableCell className="text-right">{item.customerrefund || '0.00'}</TableCell>
-                      <TableCell className="text-right">{item.operatorpayout || '0.00'}</TableCell>
-                      <TableCell className="text-right">{item.yellacommission || '0.00'}</TableCell>
+                      <TableCell className="text-right">{item.customerrefund ?? '0.00'}</TableCell>
+                      <TableCell className="text-right">{item.operatorpayout ?? '0.00'}</TableCell>
+                      <TableCell className="text-right">{item.yalacommission ?? '0.00'}</TableCell>
+                      <TableCell>{item.commissiontype ?? '-'}</TableCell>
+                      <TableCell>{item.commissionvalue ?? '-'}</TableCell>
+                      <TableCell className="text-right">{item.amountowed ?? '0.00'}</TableCell>
                     </TableRow>
                   ))
                 )}

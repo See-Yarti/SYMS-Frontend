@@ -136,15 +136,6 @@ export default function CDWPage() {
     setHasChanges(true);
   }, [cdwEnabled, scope, wholeLocationPercentage, carClassPercentages, revenueMethod, taxEnabled, taxType, taxValue]);
 
-  // Auto-enable tax when SEPARATE revenue method is selected
-  useEffect(() => {
-    if (revenueMethod === 'SEPARATE' && cdwTaxAllowed) {
-      setTaxEnabled(true);
-    } else if (revenueMethod === 'PART_OF_RENTAL') {
-      setTaxEnabled(false);
-    }
-  }, [revenueMethod, cdwTaxAllowed]);
-
   // Validation (pass overrideEnabled when validating for toggle before state updates)
   const validateForm = (overrideEnabled?: boolean): { valid: boolean; message?: string } => {
     const enabled = overrideEnabled ?? cdwEnabled;

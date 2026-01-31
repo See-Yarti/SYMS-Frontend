@@ -17,15 +17,19 @@ export interface AccountingItem {
   type: AccountingType;
   bookingid: string;
   bookingcode?: string;
-  companyname?: string; // Only for admin view
-  companyid?: string; // Only for admin view
+  companyname?: string;
+  companyid?: string;
   status: AccountingStatus;
   paidstatus: PaidStatus;
   pickupat: string;
   dropat: string;
   customerrefund: string;
   operatorpayout: string;
-  yellacommission: string;
+  yalacommission: string;
+  commissiontype?: string;
+  commissionvalue?: string;
+  commissionrateapplied?: string;
+  amountowed?: string;
   createdat: string;
 }
 

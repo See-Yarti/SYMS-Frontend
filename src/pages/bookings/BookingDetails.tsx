@@ -35,6 +35,7 @@ import {
   Calendar,
   MapPin,
   Car,
+  Shield,
   User,
   Phone,
   Mail,
@@ -613,6 +614,66 @@ const BookingDetails: React.FC = () => {
                 </div>
               </div>
             </div>
+          </Card>
+
+          {/* CDW Information */}
+          <Card className="p-6 bg-card border border-border rounded-xl">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#F56304] dark:bg-orange-900/30 flex items-center justify-center">
+                  <Shield className="h-5 w-5 text-white" />
+                </div>
+                <h2 className="text-lg font-medium text-foreground">CDW</h2>
+              </div>
+              <span className={cn(
+                'rounded-full px-3 py-1 text-xs font-semibold',
+                booking?.cdwSelected
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+              )}>
+                {booking?.cdwSelected ? 'Selected' : 'Not Selected'}
+              </span>
+            </div>
+
+            {booking?.cdwSelected ? (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">CDW Percentage</p>
+                  <p className="font-medium text-lg text-foreground">
+                    {booking.cdwPercentage != null ? `${booking.cdwPercentage}%` : '—'}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-[#EFF6FF] rounded-lg border border-[#DBEAFE] text-center">
+                    <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">CDW Amount</p>
+                    <p className="text-foreground font-medium">
+                      {booking.cdwAmount != null ? formatCurrency(booking.cdwAmount) : '—'}
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-[#FAF5FF] border border-[#F3E8FF] text-center">
+                    <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">CDW Commission</p>
+                    <p className="text-foreground font-medium">
+                      {booking.cdwCommissionAmount != null ? formatCurrency(booking.cdwCommissionAmount) : '—'}
+                    </p>
+                  </div>
+                </div>
+                {booking.cdwOption && (
+                  <div>
+                    <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">CDW Option</p>
+                    <p className="text-sm text-foreground">{booking.cdwOption.replace(/_/g, ' ')}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-lg bg-muted/50 p-4 text-center">
+                <p className="text-sm text-muted-foreground">CDW was not selected for this booking</p>
+                {(booking?.company?.settings as any)?.cdwEnabled && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    CDW available: {(booking.company.settings as any).cdwMinPercentage}% – {(booking.company.settings as any).cdwMaxPercentage}%
+                  </p>
+                )}
+              </div>
+            )}
           </Card>
 
           {/* Pricing Summary */}
