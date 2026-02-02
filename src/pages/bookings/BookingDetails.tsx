@@ -653,10 +653,41 @@ const BookingDetails: React.FC = () => {
                   <div className="p-3 rounded-lg bg-[#FAF5FF] border border-[#F3E8FF] text-center">
                     <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">CDW Commission</p>
                     <p className="text-foreground font-medium">
-                      {booking.cdwCommissionAmount != null ? formatCurrency(booking.cdwCommissionAmount) : '—'}
+                      {(() => {
+                        const val = booking.cdwCommissionAmount ?? (booking as any).accountingBreakdown?.cdwCommissionAmount ?? (booking as any).accountingRecords?.[0]?.cdwCommissionAmount;
+                        return val != null && Number(val) !== 0 ? formatCurrency(val) : '—';
+                      })()}
                     </p>
                   </div>
                 </div>
+                {(() => {
+                  const taxOnCdw = (booking as any).cdwBreakdown?.taxOnCdwAmount;
+                  if (taxOnCdw == null) return null;
+                  const num = typeof taxOnCdw === 'string' ? parseFloat(taxOnCdw) : taxOnCdw;
+                  if (isNaN(num) || num === 0) return null;
+                  return (
+                    <div>
+                      <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">Tax on CDW</p>
+                      <p className="font-medium text-foreground">{formatCurrency(taxOnCdw)}</p>
+                    </div>
+                  );
+                })()}
+                {((booking as any).accountingBreakdown?.operatorPayoutOnCdw ?? (booking as any).accountingRecords?.[0]?.operatorPayoutOnCdwAmount) != null && (
+                  <div>
+                    <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">Operator Payout on CDW</p>
+                    <p className="font-medium text-foreground">
+                      {formatCurrency((booking as any).accountingBreakdown?.operatorPayoutOnCdw ?? (booking as any).accountingRecords?.[0]?.operatorPayoutOnCdwAmount)}
+                    </p>
+                  </div>
+                )}
+                {((booking as any).accountingBreakdown?.yalaRideCommissionOnCdw ?? (booking as any).accountingRecords?.[0]?.yalaRideCommissionOnCdwAmount) != null && (
+                  <div>
+                    <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">YalaRide Commission on CDW</p>
+                    <p className="font-medium text-foreground">
+                      {formatCurrency((booking as any).accountingBreakdown?.yalaRideCommissionOnCdw ?? (booking as any).accountingRecords?.[0]?.yalaRideCommissionOnCdwAmount)}
+                    </p>
+                  </div>
+                )}
                 {booking.cdwOption && (
                   <div>
                     <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">CDW Option</p>
