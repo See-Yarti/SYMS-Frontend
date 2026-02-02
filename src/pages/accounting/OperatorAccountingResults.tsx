@@ -564,7 +564,7 @@ const OperatorAccountingResults: React.FC = () => {
                             {formatCurrency(item.operatorpayout)}
                           </TableCell>
                           <TableCell className="text-right font-mono text-foreground font-semibold">
-                            {formatCurrency(item.yellacommission)}
+                            {formatCurrency(item.yalacommission)}
                           </TableCell>
                           <TableCell className="text-muted-foreground text-sm">
                             {item.createdat ? formatDate(item.createdat) : '—'}

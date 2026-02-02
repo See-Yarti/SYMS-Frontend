@@ -18,7 +18,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { exportInvoiceToExcel } from '@/utils/excelExport';
-import { AccountingItem, AccountingType } from '@/types/accounting';
+import { AccountingItem, AccountingApiResult, AccountingType } from '@/types/accounting';
 import { PageLoadingSkeleton } from '@/components/ui/loading';
 import { toast } from 'sonner';
 import { fetchInvoice, fetchInvoiceJson } from '@/hooks/useAccounting';
@@ -232,7 +232,7 @@ const AdminAccountingResults: React.FC = () => {
   }
 
   // API response: { success, data: { ok, total, page, limit, summary, items }, timestamp }
-  const accountingData = companyData?.data ?? companyData;
+  const accountingData = (companyData?.data ?? companyData) as AccountingApiResult | undefined;
   const items = accountingData?.items || [];
   const summary = accountingData?.summary;
   const meta = accountingData;

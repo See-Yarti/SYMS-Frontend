@@ -904,7 +904,7 @@ const AdminAccounting: React.FC = () => {
                               {formatCurrency(item.operatorpayout)}
                             </TableCell>
                             <TableCell className="text-center font-mono text-foreground">
-                              {formatCurrency(item.yellacommission)}
+                              {formatCurrency(item.yalacommission)}
                             </TableCell>
                             <TableCell className="text-muted-foreground text-sm truncate">
                               {formatDateTime(item.createdat)}

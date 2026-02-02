@@ -414,7 +414,7 @@ const Accounting: React.FC = () => {
                         {formatCurrency(item.operatorpayout)}
                       </TableCell>
                       <TableCell className="text-right font-mono">
-                        {formatCurrency(item.yellacommission)}
+                        {formatCurrency(item.yalacommission)}
                       </TableCell>
                       <TableCell>
                         {formatDateTime(item.createdat)}
