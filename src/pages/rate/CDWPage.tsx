@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 
 import { useAppSelector } from '@/store';
 import { useGetLocationCDWSettings, useUpdateLocationCDWSettings, validateCDWPercentage } from '@/hooks/useCDWApi';
@@ -27,6 +28,43 @@ interface CompanyCarClass {
   make: string | null;
   model: string | null;
 }
+
+/** Predefined CDW display labels - user can select up to 5 */
+const CDW_LABEL_OPTIONS = [
+  "Front & Rear Bumper Damage",
+  "Side Panels & Doors Damage",
+  "Bonnet & Trunk Damage",
+  "Fender Damage",
+  "Minor Dents & Scratches",
+  "Major Collision Damage",
+  "Front Windshield Damage",
+  "Rear Glass Damage",
+  "Side Window Glass",
+  "Headlights",
+  "Taillights",
+  "Fog Lights",
+  "Side Mirrors",
+  "Indicators",
+  "Wipers",
+  "External Trim / Moldings",
+  "Tire Puncture",
+  "Tire Burst",
+  "Alloy Rim Scratch",
+  "Wheel Damage",
+  "Underbody Scrape",
+  "Speed Breaker Damage",
+  "Road Debris Damage",
+  "Vehicle Theft",
+  "Attempted Theft Damage",
+  "Vandalism / Break-in Damage",
+  "Fire Damage (Non-Negligence)",
+  "Flood / Water Damage",
+  "Storm / Natural Disaster Damage",
+  "Key Loss",
+  "Key Damage",
+  "Remote / Smart Key Replacement",
+  "Lock Damage",
+];
 
 export default function CDWPage() {
   const { locationId = '' } = useParams<{ locationId?: string }>();
@@ -64,6 +102,7 @@ export default function CDWPage() {
   const [taxEnabled, setTaxEnabled] = useState(false);
   const [taxType, setTaxType] = useState<'PERCENTAGE' | 'FIXED'>('PERCENTAGE');
   const [taxValue, setTaxValue] = useState('');
+  const [cdwLabels, setCdwLabels] = useState<string[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
 
   // Admin CDW settings
@@ -101,6 +140,9 @@ export default function CDWPage() {
     setTaxType(cdwData.cdwTaxType || 'PERCENTAGE');
     setTaxValue(cdwData.cdwTaxValue || '');
 
+    // CDW display labels (max 5)
+    setCdwLabels(Array.isArray(cdwData.cdwLabels) ? [...cdwData.cdwLabels] : []);
+
     // Load per-car-class percentages if applicable
     if (cdwData.scope === 'PER_CAR_CLASS' && cdwData.carClassPercentages) {
       const percentages = cdwData.carClassPercentages.map((ccp: { companyCarClassId: string; cdwPercentage: number }) => {
@@ -134,7 +176,7 @@ export default function CDWPage() {
   // Track changes
   useEffect(() => {
     setHasChanges(true);
-  }, [cdwEnabled, scope, wholeLocationPercentage, carClassPercentages, revenueMethod, taxEnabled, taxType, taxValue]);
+  }, [cdwEnabled, scope, wholeLocationPercentage, carClassPercentages, revenueMethod, taxEnabled, taxType, taxValue, cdwLabels]);
 
   // Validation (pass overrideEnabled when validating for toggle before state updates)
   const validateForm = (overrideEnabled?: boolean): { valid: boolean; message?: string } => {
@@ -194,7 +236,24 @@ export default function CDWPage() {
     } else {
       payload.taxOnCdwEnabled = false;
     }
+
+    if (cdwLabels.length > 0) {
+      payload.cdwLabels = cdwLabels.slice(0, 5);
+    } else {
+      payload.cdwLabels = [];
+    }
     return payload;
+  };
+
+  const handleLabelToggle = (label: string) => {
+    setCdwLabels((prev) => {
+      if (prev.includes(label)) return prev.filter((l) => l !== label);
+      if (prev.length > 4) {
+        toast.info('Maximum 5 labels allowed');
+        return prev;
+      }
+      return [...prev, label];
+    });
   };
 
   // Handle CDW enable/disable toggle - calls API immediately
@@ -267,6 +326,7 @@ export default function CDWPage() {
       setTaxEnabled(cdwData.taxOnCdwEnabled ?? cdwData.cdwTaxApplicable ?? false);
       setTaxType(cdwData.cdwTaxType || 'PERCENTAGE');
       setTaxValue(cdwData.cdwTaxValue || '');
+      setCdwLabels(Array.isArray(cdwData.cdwLabels) ? [...cdwData.cdwLabels] : []);
       setHasChanges(false);
       toast.info('Changes discarded');
     }
@@ -572,6 +632,45 @@ export default function CDWPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* CDW – Offerable Coverage Items - select up to 5 */}
+          <Card className="rounded-xl border border-gray-200 shadow-sm">
+            <CardContent className="p-6">
+              <h3 className="text-base font-semibold text-gray-900 mb-1">CDW – Offerable Coverage Items</h3>
+              <p className="text-sm text-gray-500 mb-4">
+                Select up to 5 coverage items to show in quote and booking UI when CDW is offered to customers.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {CDW_LABEL_OPTIONS.map((label) => {
+                  const isSelected = cdwLabels.includes(label);
+                  const isDisabled = cdwLabels.length >= 5 && !isSelected;
+                  return (
+                    <div
+                      key={label}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => !isDisabled && handleLabelToggle(label)}
+                      onKeyDown={(e) => e.key === 'Enter' && !isDisabled && handleLabelToggle(label)}
+                      className={`flex items-center gap-3 rounded-lg border-2 px-4 py-3 cursor-pointer transition-all select-none ${
+                        isSelected
+                          ? 'border-[#F56304] bg-orange-50'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      } ${isDisabled ? 'opacity-60 cursor-not-allowed pointer-events-none' : ''}`}
+                    >
+                      <Checkbox
+                        checked={isSelected}
+                        className="data-[state=checked]:bg-[#F56304] data-[state=checked]:border-[#F56304] pointer-events-none"
+                      />
+                      <span className="text-sm font-medium text-gray-900">{label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-gray-500 mt-3">
+                Selected: {cdwLabels.length} / 5
+              </p>
+            </CardContent>
+          </Card>
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-3">

@@ -56,6 +56,7 @@ import {
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { CancelType } from '@/types/booking';
+import { getCdwCase } from '@/utils/cdw';
 import { Loader2 } from 'lucide-react';
 
 const paymentStatusStyles: Record<string, { bg: string; text: string }> = {
@@ -484,27 +485,16 @@ const BookingDetails: React.FC = () => {
                   <Navigation className="h-4 w-4 text-white dark:text-emerald-400" />
                 </div>
                 <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300 uppercase">
-                  Departure Location
+                  Pick-up Location
                 </p>
               </div>
-              <p className="text-sm text-[#1A1A1A] dark:text-emerald-300 mb-4">
-                {booking.pickupAddressLine || '—'}
-              </p>
-
-              <div className="space-y-3">
-                <div className='bg-[#FFFFFFD9] p-3 rounded-lg'>
-                  <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">Address on Google Map</p>
-                  <p className="text-sm text-foreground">
-                    {booking.operationalLocation?.addressLine}, {booking.operationalLocation?.city},{' '}
-                    {booking.operationalLocation?.state}, {booking.operationalLocation?.country}
-                  </p>
-                </div>
-                <div className='bg-[#FFFFFFD9] p-3 rounded-lg'>
-                  <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">GPS Coordinates</p>
-                  <p className="text-sm font-mono text-foreground">
-                    {booking.pickupLat}, {booking.pickupLng}
-                  </p>
-                </div>
+              <div className='bg-[#FFFFFFD9] dark:bg-background/80 p-3 rounded-lg'>
+                <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">Address</p>
+                <p className="text-sm text-foreground">
+                  {booking.pickupAddressLine && !/^-?\d+\.?\d*,\s*-?\d+\.?\d*$/.test(String(booking.pickupAddressLine).trim())
+                    ? booking.pickupAddressLine
+                    : `${booking.operationalLocation?.addressLine || ''}, ${booking.operationalLocation?.city || ''}, ${booking.operationalLocation?.state || ''}, ${booking.operationalLocation?.country || ''}`.replace(/^,\s*|,\s*$/g, '').trim() || '—'}
+                </p>
               </div>
             </div>
 
@@ -518,18 +508,18 @@ const BookingDetails: React.FC = () => {
                   Drop-off Location
                 </p>
               </div>
-              <p className="text-sm text-[#1A1A1A] dark:text-orange-300 mb-4">
-                {booking.dropoffAddressLine || '—'}
-              </p>
-
-              <div className='bg-[#FFFFFFD9] p-3 rounded-lg'>
-                <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">GPS Coordinates</p>
-                <p className="text-sm font-mono text-foreground">
-                  {booking.dropoffLat}, {booking.dropoffLng}
+              <div className='bg-[#FFFFFFD9] dark:bg-background/80 p-3 rounded-lg'>
+                <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">Address</p>
+                <p className="text-sm text-foreground">
+                  {booking.dropoffAddressLine && !/^-?\d+\.?\d*,\s*-?\d+\.?\d*$/.test(String(booking.dropoffAddressLine).trim())
+                    ? booking.dropoffAddressLine
+                    : `${booking.operationalLocation?.addressLine || ''}, ${booking.operationalLocation?.city || ''}, ${booking.operationalLocation?.state || ''}, ${booking.operationalLocation?.country || ''}`.replace(/^,\s*|,\s*$/g, '').trim() || '—'}
                 </p>
               </div>
             </div>
           </Card>
+
+           
         </div>
 
         {/* Sidebar - 1 column */}
@@ -566,18 +556,22 @@ const BookingDetails: React.FC = () => {
                     {booking.operationalLocation?.country || '—'}
                   </p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">Commission Rate</p>
-                  <p className="text-sm text-foreground">
-                    {booking.company?.settings?.effectiveCommissionRate || '0'}%
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Subscription Tier</p>
-                  <p className="text-sm font-semibold text-foreground">
-                    {booking.company?.settings?.currentTier || 'BASIC'}
-                  </p>
-                </div>
+                {isAdmin && (
+                  <>
+                    <div>
+                      <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">Commission Rate</p>
+                      <p className="text-sm text-foreground">
+                        {booking.company?.settings?.effectiveCommissionRate || '0'}%
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Subscription Tier</p>
+                      <p className="text-sm font-semibold text-foreground">
+                        {booking.company?.settings?.currentTier || 'BASIC'}
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </Card>
@@ -651,17 +645,16 @@ const BookingDetails: React.FC = () => {
                     </p>
                   </div>
                   <div className="p-3 rounded-lg bg-[#FAF5FF] border border-[#F3E8FF] text-center">
-                    <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">CDW Commission</p>
+                    <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">Operator Payout on CDW</p>
                     <p className="text-foreground font-medium">
-                      {(() => {
-                        const val = booking.cdwCommissionAmount ?? (booking as any).accountingBreakdown?.cdwCommissionAmount ?? (booking as any).accountingRecords?.[0]?.cdwCommissionAmount;
-                        return val != null && Number(val) !== 0 ? formatCurrency(val) : '—';
-                      })()}
+                      {formatCurrency((booking as any).accountingBreakdown?.operatorPayoutOnCdw ?? (booking as any).accountingRecords?.[0]?.operatorPayoutOnCdwAmount)}
                     </p>
                   </div>
                 </div>
                 {(() => {
-                  const taxOnCdw = (booking as any).cdwBreakdown?.taxOnCdwAmount;
+                  const cdwCase = getCdwCase(booking as any);
+                  if (cdwCase !== 3) return null;
+                  const taxOnCdw = (booking as any).cdwTaxAmount ?? (booking as any).cdwBreakdown?.taxOnCdwAmount;
                   if (taxOnCdw == null) return null;
                   const num = typeof taxOnCdw === 'string' ? parseFloat(taxOnCdw) : taxOnCdw;
                   if (isNaN(num) || num === 0) return null;
@@ -672,15 +665,9 @@ const BookingDetails: React.FC = () => {
                     </div>
                   );
                 })()}
-                {((booking as any).accountingBreakdown?.operatorPayoutOnCdw ?? (booking as any).accountingRecords?.[0]?.operatorPayoutOnCdwAmount) != null && (
-                  <div>
-                    <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">Operator Payout on CDW</p>
-                    <p className="font-medium text-foreground">
-                      {formatCurrency((booking as any).accountingBreakdown?.operatorPayoutOnCdw ?? (booking as any).accountingRecords?.[0]?.operatorPayoutOnCdwAmount)}
-                    </p>
-                  </div>
-                )}
-                {((booking as any).accountingBreakdown?.yalaRideCommissionOnCdw ?? (booking as any).accountingRecords?.[0]?.yalaRideCommissionOnCdwAmount) != null && (
+           
+                {isAdmin &&
+                  ((booking as any).accountingBreakdown?.yalaRideCommissionOnCdw ?? (booking as any).accountingRecords?.[0]?.yalaRideCommissionOnCdwAmount) != null && (
                   <div>
                     <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">YalaRide Commission on CDW</p>
                     <p className="font-medium text-foreground">
@@ -717,31 +704,93 @@ const BookingDetails: React.FC = () => {
             </div>
 
             <div className="space-y-4 m-6">
-              <div className="flex items-center justify-between pb-6 border-b">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-blue-200 flex items-center justify-center"> 
-                    <Receipt className="h-4 w-4 text-blue-700" /> 
-                  </div>
-                  <div>
-                    <p className="text-sm">Subtotal</p>
-                    <p className="text-xs text-muted-foreground">Base price</p>
-                  </div>
-                </div>
-                <p>{formatCurrency(booking.subTotal)}</p>
-              </div>
+              {(() => {
+                const cdwCase = getCdwCase(booking as any);
+                const taxOnCdw = (booking as any).cdwTaxAmount ?? (booking as any).cdwBreakdown?.taxOnCdwAmount;
+                const taxOnCdwNum = taxOnCdw != null ? Number(taxOnCdw) : 0;
+                const showTaxOnCdw = cdwCase === 3 && !isNaN(taxOnCdwNum) && taxOnCdwNum > 0;
 
-              <div className="flex items-center justify-between pb-6 border-b">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-[#FFFBEB] flex items-center justify-center"> 
-                    <Percent className="h-4 w-4 text-[#E17100]" /> 
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">Tax & Fees</p>
-                    <p className="text-xs text-muted-foreground">6.5% applied</p>
-                  </div>
-                </div>
-                <p>{formatCurrency(booking.taxTotal)}</p>
-              </div>
+                return (
+                  <>
+                    {/* Subtotal (rental) */}
+                    <div className="flex items-center justify-between pb-6 border-b">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-blue-200 flex items-center justify-center"> 
+                          <Receipt className="h-4 w-4 text-blue-700" /> 
+                        </div>
+                        <div>
+                          <p className="text-sm">Subtotal</p>
+                          <p className="text-xs text-muted-foreground">Rental base</p>
+                        </div>
+                      </div>
+                      <p>{formatCurrency(booking.subTotal)}</p>
+                    </div>
+
+                    {/* Case 1: CDW before Tax */}
+                    {cdwCase === 1 && booking.cdwAmount != null && (
+                      <div className="flex items-center justify-between pb-6 border-b">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-xl bg-blue-200 flex items-center justify-center"> 
+                            <Shield className="h-4 w-4 text-blue-700" /> 
+                          </div>
+                          <div>
+                            <p className="text-sm">CDW</p>
+                            <p className="text-xs text-muted-foreground">{booking.cdwPercentage}%</p>
+                          </div>
+                        </div>
+                        <p>{formatCurrency(booking.cdwAmount)}</p>
+                      </div>
+                    )}
+
+                    {/* Tax & Fees */}
+                    <div className="flex items-center justify-between pb-6 border-b">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-xl bg-[#FFFBEB] flex items-center justify-center"> 
+                          <Percent className="h-4 w-4 text-[#E17100]" /> 
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Tax & Fees</p>
+                          <p className="text-xs text-muted-foreground">
+                            {cdwCase === 1 ? 'Tax on rental + CDW' : 'Tax on rental'}
+                          </p>
+                        </div>
+                      </div>
+                      <p>{formatCurrency(booking.taxTotal)}</p>
+                    </div>
+
+                    {/* Case 2 & 3: CDW after Tax */}
+                    {(cdwCase === 2 || cdwCase === 3) && booking.cdwAmount != null && (
+                      <div className="flex items-center justify-between pb-6 border-b">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-xl bg-blue-200 flex items-center justify-center"> 
+                            <Shield className="h-4 w-4 text-blue-700" /> 
+                          </div>
+                          <div>
+                            <p className="text-sm">CDW</p>
+                            <p className="text-xs text-muted-foreground">{booking.cdwPercentage}%</p>
+                          </div>
+                        </div>
+                        <p>{formatCurrency(booking.cdwAmount)}</p>
+                      </div>
+                    )}
+
+                    {/* Case 3 only: Tax on CDW */}
+                    {showTaxOnCdw && (
+                      <div className="flex items-center justify-between pb-6 border-b">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-xl bg-[#FFFBEB] flex items-center justify-center"> 
+                            <Percent className="h-4 w-4 text-[#E17100]" /> 
+                          </div>
+                          <div>
+                            <p className="text-sm">Tax on CDW</p>
+                          </div>
+                        </div>
+                        <p>{formatCurrency(taxOnCdw)}</p>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
 
               <div className="p-4 rounded-2xl bg-black"> 
                 <div className="flex items-center justify-between">
@@ -759,6 +808,68 @@ const BookingDetails: React.FC = () => {
               </div>
             </div>
           </Card>
+
+          {/* Taxes Breakdown */}
+          {(booking as any).taxesBreakdown?.length > 0 && (
+            <Card className="p-6 bg-card border border-border rounded-xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-[#F56304] dark:bg-orange-900/30 flex items-center justify-center">
+                  <Percent className="h-5 w-5 text-white" />
+                </div>
+                <h2 className="text-lg font-medium text-foreground">Taxes Breakdown</h2>
+              </div>
+              <div className="space-y-3">
+                {((booking as any).taxesBreakdown as Array<{ name: string; amount: number; taxType: string; percentage?: number }>).map((tax, index) => (
+                  <div key={index} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{tax.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {tax.taxType === 'PERCENTAGE' && tax.percentage != null
+                          ? `${tax.percentage}%`
+                          : tax.taxType === 'FIXED'
+                          ? 'Fixed'
+                          : tax.taxType}
+                      </p>
+                    </div>
+                    <p className="text-sm font-semibold text-foreground">{formatCurrency(tax.amount)}</p>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Revenue Split - Operator sees their payout; Admin sees both Operator + YalaRide Commission */}
+          {(() => {
+            const yalaRideCommission = (booking as any).accountingBreakdown?.totalYalaRideCommission ?? (booking as any).accountingRecords?.[0]?.yalaRideCommissionAmount;
+            const operatorPayout = (booking as any).accountingBreakdown?.totalOperatorPayout ?? (booking as any).accountingRecords?.[0]?.operatorPayoutAmount;
+            if (yalaRideCommission == null && operatorPayout == null) return null;
+            return (
+              <Card className="p-6 bg-card border border-border rounded-xl">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-[#F56304] dark:bg-orange-900/30 flex items-center justify-center">
+                    <DollarSign className="h-5 w-5 text-white" />
+                  </div>
+                  <h2 className="text-lg font-medium text-foreground">Booking Revenue Split</h2>
+                </div>
+                <div className={cn('grid gap-4', isAdmin ? 'grid-cols-2' : 'grid-cols-1')}>
+                  <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
+                    <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400 uppercase tracking-wide mb-1">Operator Payout</p>
+                    <p className="text-xl font-semibold text-foreground">
+                      {operatorPayout != null ? formatCurrency(operatorPayout) : '—'}
+                    </p>
+                  </div>
+                  {isAdmin && (
+                    <div className="p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+                      <p className="text-sm font-medium text-orange-700 dark:text-orange-400 uppercase tracking-wide mb-1">YalaRide Commission</p>
+                      <p className="text-xl font-semibold text-foreground">
+                        {yalaRideCommission != null ? formatCurrency(yalaRideCommission) : '—'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            );
+          })()}
         </div>
       </div>
 

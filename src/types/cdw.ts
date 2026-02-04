@@ -51,6 +51,7 @@ export interface LocationCDWSettings {
   adminCdwMinPercentage: string;
   adminCdwMaxPercentage: string;
   cdwTaxOnCdwAllowed: boolean;
+  cdwLabels?: string[] | null;
 }
 
 /**
@@ -79,6 +80,7 @@ export interface UpdateLocationCDWFullPayload {
   taxOnCdwEnabled?: boolean;
   taxOnCdwType?: 'PERCENTAGE' | 'FIXED';
   taxOnCdwValue?: number;
+  cdwLabels?: string[];
 }
 
 /**
