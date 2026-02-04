@@ -18,7 +18,18 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { exportInvoiceToExcel } from '@/utils/excelExport';
-import { AccountingItem, AccountingApiResult, AccountingType } from '@/types/accounting';
+import { AccountingItem, AccountingApiResult, AccountingType, CompanyAccountingItem } from '@/types/accounting';
+import { cn } from '@/lib/utils';
+
+const isCompanyFormat = (item: AccountingItem | CompanyAccountingItem): item is CompanyAccountingItem =>
+  'bookingCode' in item && 'netBooking' in item;
+
+const statusStyles: Record<string, { bg: string; text: string; icon?: React.ReactNode; label: string }> = {
+  COMPLETED: { bg: 'bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700', text: 'text-blue-600 dark:text-blue-300', label: 'Completed' },
+  CANCELLED: { bg: 'bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-700', text: 'text-rose-600 dark:text-rose-300', label: 'Cancelled' },
+  PENDING: { bg: 'bg-[#F56304]/10 dark:bg-[#F56304]/20 border border-[#F56304]/30', text: 'text-[#F56304]', label: 'Pending' },
+  CONFIRMED: { bg: 'bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700', text: 'text-emerald-600 dark:text-emerald-300', label: 'Confirmed' },
+};
 import { PageLoadingSkeleton } from '@/components/ui/loading';
 import { toast } from 'sonner';
 import { fetchInvoice, fetchInvoiceJson } from '@/hooks/useAccounting';
@@ -33,10 +44,18 @@ const typeStyles: Record<AccountingType, string> = {
   PARTIAL_USE: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200',
 };
 
-const formatDate = (dateString: string) => {
-  if (!dateString) return '-';
+const formatDate = (dateString?: string | null) => {
+  if (!dateString) return '—';
   const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return '—';
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
+const formatCurrency = (value?: string | number | null) => {
+  if (value === undefined || value === null) return '$0.00';
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(numValue)) return '$0.00';
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(numValue);
 };
 
 const AdminAccountingResults: React.FC = () => {
@@ -373,18 +392,33 @@ const AdminAccountingResults: React.FC = () => {
             <Table className="min-w-[900px] w-full">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="whitespace-nowrap">Booking Code</TableHead>
-                  <TableHead className="whitespace-nowrap">Type</TableHead>
-                  <TableHead className="whitespace-nowrap">Status</TableHead>
-                  <TableHead className="whitespace-nowrap">Paid Status</TableHead>
-                  <TableHead className="whitespace-nowrap">Pickup Date</TableHead>
-                  <TableHead className="whitespace-nowrap">Drop Date</TableHead>
-                  <TableHead className="text-right whitespace-nowrap">Customer Refund</TableHead>
-                  <TableHead className="text-right whitespace-nowrap">Operator Payout</TableHead>
-                  <TableHead className="text-right whitespace-nowrap">Commission</TableHead>
-                  <TableHead className="whitespace-nowrap">Comm. Type</TableHead>
-                  <TableHead className="whitespace-nowrap">Comm. Value</TableHead>
-                  <TableHead className="text-right whitespace-nowrap">Amount Owed</TableHead>
+                  {items.length > 0 && isCompanyFormat(items[0]) ? (
+                    <>
+                      <TableHead className="whitespace-nowrap">Booking Code</TableHead>
+                      <TableHead className="whitespace-nowrap">Customer</TableHead>
+                      <TableHead className="whitespace-nowrap">Car Class</TableHead>
+                      <TableHead className="whitespace-nowrap">Pickup Date</TableHead>
+                      <TableHead className="whitespace-nowrap">Pickup Location</TableHead>
+                      <TableHead className="whitespace-nowrap">Status</TableHead>
+                      <TableHead className="whitespace-nowrap">Type</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Net Booking</TableHead>
+                    </>
+                  ) : (
+                    <>
+                      <TableHead className="whitespace-nowrap">Booking Code</TableHead>
+                      <TableHead className="whitespace-nowrap">Type</TableHead>
+                      <TableHead className="whitespace-nowrap">Status</TableHead>
+                      <TableHead className="whitespace-nowrap">Paid Status</TableHead>
+                      <TableHead className="whitespace-nowrap">Pickup Date</TableHead>
+                      <TableHead className="whitespace-nowrap">Drop Date</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Customer Refund</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Operator Payout</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Commission</TableHead>
+                      <TableHead className="whitespace-nowrap">Comm. Type</TableHead>
+                      <TableHead className="whitespace-nowrap">Comm. Value</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Amount Owed</TableHead>
+                    </>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -394,38 +428,76 @@ const AdminAccountingResults: React.FC = () => {
                       No accounting records found for the selected criteria.
                     </TableCell>
                   </TableRow>
+                ) : items.length > 0 && isCompanyFormat(items[0]) ? (
+                  items.map((item, index) => {
+                    const companyItem = item as CompanyAccountingItem;
+                    const statusKey = (companyItem.bookingStatus ?? '').toUpperCase() || 'PENDING';
+                    const statusStyle = statusStyles[statusKey] ?? { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-600 dark:text-gray-300', label: (companyItem.bookingStatus ?? '').replace(/_/g, ' ') || '—' };
+                    return (
+                      <TableRow key={`${companyItem.bookingCode}-${index}`} className="whitespace-nowrap">
+                        <TableCell className="font-medium font-mono text-sm">
+                          {companyItem.bookingId ? (
+                            <button
+                              onClick={() => navigate(`/all-bookings/${companyItem.bookingId}`)}
+                              className="text-orange-500 hover:text-orange-600 hover:underline transition-colors cursor-pointer"
+                            >
+                              {companyItem.bookingCode}
+                            </button>
+                          ) : (
+                            companyItem.bookingCode
+                          )}
+                        </TableCell>
+                        <TableCell>{companyItem.customerName}</TableCell>
+                        <TableCell className="font-mono text-sm">{companyItem.carClass}</TableCell>
+                        <TableCell>{formatDate(companyItem.pickupDate)}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{companyItem.pickupLocation}</TableCell>
+                        <TableCell>
+                          <span className={cn('inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-normal rounded-lg', statusStyle.bg, statusStyle.text)}>
+                            {statusStyle.label}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{(companyItem.bookingType ?? '').replace(/_/g, ' ')}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-mono font-semibold">{formatCurrency(companyItem.netBooking)}</TableCell>
+                      </TableRow>
+                    );
+                  })
                 ) : (
-                  items.map((item: AccountingItem) => (
-                    <TableRow key={item.id} className="whitespace-nowrap">
-                      <TableCell className="font-medium">
-                        <button
-                          onClick={() => navigate(`/all-bookings/${item.bookingid}`)}
-                          className="text-orange-500 hover:text-orange-600 hover:underline transition-colors cursor-pointer"
-                        >
-                          {item.bookingcode || item.bookingid}
-                        </button>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={typeStyles[item.type as AccountingType] || ''}>
-                          {item.type?.replace(/_/g, ' ') || '-'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{item.status || '-'}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{item.paidstatus || '-'}</Badge>
-                      </TableCell>
-                      <TableCell>{formatDate(item.pickupat)}</TableCell>
-                      <TableCell>{formatDate(item.dropat)}</TableCell>
-                      <TableCell className="text-right">{item.customerrefund ?? '0.00'}</TableCell>
-                      <TableCell className="text-right">{item.operatorpayout ?? '0.00'}</TableCell>
-                      <TableCell className="text-right">{item.yalacommission ?? '0.00'}</TableCell>
-                      <TableCell>{item.commissiontype ?? '-'}</TableCell>
-                      <TableCell>{item.commissionvalue ?? '-'}</TableCell>
-                      <TableCell className="text-right">{item.amountowed ?? '0.00'}</TableCell>
-                    </TableRow>
-                  ))
+                  items.map((item) => {
+                    const legacyItem = item as AccountingItem;
+                    return (
+                      <TableRow key={legacyItem.id} className="whitespace-nowrap">
+                        <TableCell className="font-medium">
+                          <button
+                            onClick={() => navigate(`/all-bookings/${legacyItem.bookingid}`)}
+                            className="text-orange-500 hover:text-orange-600 hover:underline transition-colors cursor-pointer"
+                          >
+                            {legacyItem.bookingcode || legacyItem.bookingid}
+                          </button>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={typeStyles[legacyItem.type as AccountingType] || ''}>
+                            {legacyItem.type?.replace(/_/g, ' ') || '-'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{legacyItem.status || '-'}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{legacyItem.paidstatus || '-'}</Badge>
+                        </TableCell>
+                        <TableCell>{formatDate(legacyItem.pickupat)}</TableCell>
+                        <TableCell>{formatDate(legacyItem.dropat)}</TableCell>
+                        <TableCell className="text-right">{legacyItem.customerrefund ?? '0.00'}</TableCell>
+                        <TableCell className="text-right">{legacyItem.operatorpayout ?? '0.00'}</TableCell>
+                        <TableCell className="text-right">{legacyItem.yalacommission ?? '0.00'}</TableCell>
+                        <TableCell>{legacyItem.commissiontype ?? '-'}</TableCell>
+                        <TableCell>{legacyItem.commissionvalue ?? '-'}</TableCell>
+                        <TableCell className="text-right">{legacyItem.amountowed ?? '0.00'}</TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>

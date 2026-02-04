@@ -33,7 +33,10 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { exportInvoiceToExcel } from '@/utils/excelExport';
-import { AccountingItem, AccountingType } from '@/types/accounting';
+import { AccountingItem, AccountingType, CompanyAccountingItem } from '@/types/accounting';
+
+const isCompanyFormat = (item: AccountingItem | CompanyAccountingItem): item is CompanyAccountingItem =>
+  'bookingCode' in item && 'netBooking' in item;
 import { cn } from '@/lib/utils';
 import { PageLoadingSkeleton } from '@/components/ui/loading';
 import { toast } from 'sonner';
@@ -466,12 +469,19 @@ const AdminAccounting: React.FC = () => {
   const currentPage = appliedFilters.page;
 
   // 🔑 Apply client-side search/status filter only (companyId is handled by API)
-  const filteredItems = items.filter((item: AccountingItem) => {
-    const matchesSearch = !tableSearchQuery ||
-      item.bookingid.toLowerCase().includes(tableSearchQuery.toLowerCase()) ||
-      (item.companyname && item.companyname.toLowerCase().includes(tableSearchQuery.toLowerCase()));
+  const filteredItems = items.filter((item: AccountingItem | CompanyAccountingItem) => {
+    const matchesSearch = !tableSearchQuery || (() => {
+      if (isCompanyFormat(item)) {
+        return (item.bookingCode?.toLowerCase().includes(tableSearchQuery.toLowerCase()) ?? false) ||
+          (item.customerName?.toLowerCase().includes(tableSearchQuery.toLowerCase()) ?? false);
+      }
+      const legacy = item as AccountingItem;
+      return (legacy.bookingid?.toLowerCase().includes(tableSearchQuery.toLowerCase()) ?? false) ||
+        (legacy.companyname?.toLowerCase().includes(tableSearchQuery.toLowerCase()) ?? false);
+    })();
 
-    const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
+    const status = isCompanyFormat(item) ? item.bookingStatus : (item as AccountingItem).status;
+    const matchesStatus = statusFilter === 'all' || status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
@@ -854,63 +864,116 @@ const AdminAccounting: React.FC = () => {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/50">
-                          <TableHead className="font-semibold text-foreground truncate">Type</TableHead>
-                          <TableHead className="font-semibold text-foreground truncate">BookingID</TableHead>
-                          <TableHead className="font-semibold text-foreground truncate">Company</TableHead>
-                          <TableHead className="font-semibold text-foreground truncate">Status</TableHead>
-                          <TableHead className="font-semibold text-foreground truncate">Pickup Date</TableHead>
-                          <TableHead className="font-semibold text-foreground truncate">Drop Date</TableHead>
-                          <TableHead className="font-semibold text-foreground text-center truncate">Customer Refund</TableHead>
-                          <TableHead className="font-semibold text-foreground text-center truncate">Operator Payout</TableHead>
-                          <TableHead className="font-semibold text-foreground text-center truncate">Commission</TableHead>
-                          <TableHead className="font-semibold text-foreground text-center truncate">Created</TableHead>
+                          {filteredItems.length > 0 && isCompanyFormat(filteredItems[0]) ? (
+                            <>
+                              <TableHead className="font-semibold text-foreground truncate">Booking Code</TableHead>
+                              <TableHead className="font-semibold text-foreground truncate">Customer</TableHead>
+                              <TableHead className="font-semibold text-foreground truncate">Car Class</TableHead>
+                              <TableHead className="font-semibold text-foreground truncate">Pickup Date</TableHead>
+                              <TableHead className="font-semibold text-foreground truncate">Pickup Location</TableHead>
+                              <TableHead className="font-semibold text-foreground truncate">Status</TableHead>
+                              <TableHead className="font-semibold text-foreground truncate">Type</TableHead>
+                              <TableHead className="font-semibold text-foreground text-center truncate">Net Booking</TableHead>
+                            </>
+                          ) : (
+                            <>
+                              <TableHead className="font-semibold text-foreground truncate">Type</TableHead>
+                              <TableHead className="font-semibold text-foreground truncate">BookingID</TableHead>
+                              <TableHead className="font-semibold text-foreground truncate">Company</TableHead>
+                              <TableHead className="font-semibold text-foreground truncate">Status</TableHead>
+                              <TableHead className="font-semibold text-foreground truncate">Pickup Date</TableHead>
+                              <TableHead className="font-semibold text-foreground truncate">Drop Date</TableHead>
+                              <TableHead className="font-semibold text-foreground text-center truncate">Customer Refund</TableHead>
+                              <TableHead className="font-semibold text-foreground text-center truncate">Operator Payout</TableHead>
+                              <TableHead className="font-semibold text-foreground text-center truncate">Commission</TableHead>
+                              <TableHead className="font-semibold text-foreground text-center truncate">Created</TableHead>
+                            </>
+                          )}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredItems.map((item: AccountingItem) => (
-                          <TableRow key={item.id} className="hover:bg-muted/50">
-                            <TableCell>
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  'text-xs font-semibold px-2 py-1 border',
-                                  typeStyles[item.type]
-                                )}
-                              >
-                                {item.type.replace('_', ' ')}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="font-mono text-sm text-muted-foreground">
-                              {item.bookingid.slice(0, 8)}
-                            </TableCell>
-                            <TableCell className="font-medium text-foreground truncate">
-                              {item.companyname || 'N/A'}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="text-xs bg-muted text-foreground border-border">
-                                {item.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {formatDate(item.pickupat)}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {formatDate(item.dropat)}
-                            </TableCell>
-                            <TableCell className="text-center font-mono text-foreground">
-                              {formatCurrency(item.customerrefund)}
-                            </TableCell>
-                            <TableCell className="text-center font-mono text-foreground">
-                              {formatCurrency(item.operatorpayout)}
-                            </TableCell>
-                            <TableCell className="text-center font-mono text-foreground">
-                              {formatCurrency(item.yalacommission)}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm truncate">
-                              {formatDateTime(item.createdat)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {filteredItems.length > 0 && isCompanyFormat(filteredItems[0])
+                          ? filteredItems.map((item, index) => {
+                              const companyItem = item as CompanyAccountingItem;
+                              return (
+                                <TableRow key={`${companyItem.bookingCode}-${index}`} className="hover:bg-muted/50">
+                                  <TableCell className="font-medium font-mono text-sm">
+                                    {companyItem.bookingId ? (
+                                      <button
+                                        onClick={() => navigate(`/all-bookings/${companyItem.bookingId}`)}
+                                        className="text-orange-500 hover:text-orange-600 hover:underline transition-colors cursor-pointer"
+                                      >
+                                        {companyItem.bookingCode}
+                                      </button>
+                                    ) : (
+                                      companyItem.bookingCode
+                                    )}
+                                  </TableCell>
+                                  <TableCell>{companyItem.customerName}</TableCell>
+                                  <TableCell className="font-mono text-sm">{companyItem.carClass}</TableCell>
+                                  <TableCell className="text-muted-foreground">{formatDate(companyItem.pickupDate)}</TableCell>
+                                  <TableCell className="text-muted-foreground text-sm">{companyItem.pickupLocation}</TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline" className="text-xs bg-muted text-foreground border-border">
+                                      {(companyItem.bookingStatus ?? '').replace(/_/g, ' ')}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant="secondary">{(companyItem.bookingType ?? '').replace(/_/g, ' ')}</Badge>
+                                  </TableCell>
+                                  <TableCell className="text-center font-mono text-foreground font-semibold">
+                                    {formatCurrency(companyItem.netBooking)}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                          : filteredItems.map((item) => {
+                              const legacyItem = item as AccountingItem;
+                              return (
+                                <TableRow key={legacyItem.id} className="hover:bg-muted/50">
+                                  <TableCell>
+                                    <Badge
+                                      variant="outline"
+                                      className={cn(
+                                        'text-xs font-semibold px-2 py-1 border',
+                                        typeStyles[legacyItem.type]
+                                      )}
+                                    >
+                                      {(legacyItem.type ?? '').replace(/_/g, ' ')}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="font-mono text-sm text-muted-foreground">
+                                    {legacyItem.bookingid?.slice(0, 8) ?? legacyItem.bookingcode ?? '—'}
+                                  </TableCell>
+                                  <TableCell className="font-medium text-foreground truncate">
+                                    {legacyItem.companyname || 'N/A'}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline" className="text-xs bg-muted text-foreground border-border">
+                                      {legacyItem.status}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground">
+                                    {formatDate(legacyItem.pickupat)}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground">
+                                    {formatDate(legacyItem.dropat)}
+                                  </TableCell>
+                                  <TableCell className="text-center font-mono text-foreground">
+                                    {formatCurrency(legacyItem.customerrefund)}
+                                  </TableCell>
+                                  <TableCell className="text-center font-mono text-foreground">
+                                    {formatCurrency(legacyItem.operatorpayout)}
+                                  </TableCell>
+                                  <TableCell className="text-center font-mono text-foreground">
+                                    {formatCurrency(legacyItem.yalacommission)}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground text-sm truncate">
+                                    {legacyItem.createdat ? formatDateTime(legacyItem.createdat) : '—'}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
                       </TableBody>
                     </Table>
                   </div>

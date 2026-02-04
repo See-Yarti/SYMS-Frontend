@@ -33,7 +33,10 @@ import { exportInvoiceToExcel } from '@/utils/excelExport';
 import { PageLoadingSkeleton } from '@/components/ui/loading';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { AccountingItem, AccountingType } from '@/types/accounting';
+import { AccountingItem, AccountingType, CompanyAccountingItem } from '@/types/accounting';
+
+const isCompanyFormat = (item: AccountingItem | CompanyAccountingItem): item is CompanyAccountingItem =>
+  'bookingCode' in item && 'netBooking' in item;
 
 const statusStyles: Record<string, { bg: string; text: string; icon?: React.ReactNode; label: string }> = {
   PENDING: {
@@ -142,7 +145,7 @@ const OperatorAccountingResults: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [invoiceLoading, setInvoiceLoading] = useState(false);
 
-  // API params
+  // API params - include locationId when "Single Location" was selected
   const operatorParams = useMemo(() => {
     if (!companyId || !dateFrom || !dateTo) {
       return null;
@@ -152,8 +155,9 @@ const OperatorAccountingResults: React.FC = () => {
       dateTo,
       page,
       limit,
+      locationId: locationId && locationId !== 'all' ? locationId : null,
     };
-  }, [companyId, dateFrom, dateTo, page, limit]);
+  }, [companyId, dateFrom, dateTo, page, limit, locationId]);
 
   // Fetch accounting data
   const { data, isLoading, isError, refetch } = useOperatorAccounting(
@@ -299,13 +303,15 @@ const OperatorAccountingResults: React.FC = () => {
   const currentPage = page;
 
   // Apply client-side search/status filter
-  // Response structure: items have bookingcode, status, paidstatus, etc.
-  const filteredItems = items.filter((item: any) => {
-    const bookingCode = item.bookingcode || item.bookingid || '';
+  const filteredItems = items.filter((item: AccountingItem | CompanyAccountingItem) => {
+    const bookingCode = isCompanyFormat(item)
+      ? item.bookingCode
+      : (item as AccountingItem).bookingcode || (item as AccountingItem).bookingid || '';
     const matchesSearch = !tableSearchQuery ||
       bookingCode.toLowerCase().includes(tableSearchQuery.toLowerCase());
 
-    const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
+    const status = isCompanyFormat(item) ? item.bookingStatus : (item as AccountingItem).status;
+    const matchesStatus = statusFilter === 'all' || status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
@@ -490,88 +496,158 @@ const OperatorAccountingResults: React.FC = () => {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
-                      <TableHead className="font-semibold text-foreground truncate">Booking Code</TableHead>
-                      <TableHead className="font-semibold text-foreground truncate">Type</TableHead>
-                      <TableHead className="font-semibold text-foreground truncate">Status</TableHead>
-                      <TableHead className="font-semibold text-foreground truncate">Paid Status</TableHead>
-                      <TableHead className="font-semibold text-foreground truncate">Pickup Date</TableHead>
-                      <TableHead className="font-semibold text-foreground truncate">Drop Date</TableHead>
-                      <TableHead className="font-semibold text-foreground text-right truncate">Customer Refund</TableHead>
-                      <TableHead className="font-semibold text-foreground text-right truncate">Operator Payout</TableHead>
-                      <TableHead className="font-semibold text-foreground text-right truncate">Commission</TableHead>
-                      <TableHead className="font-semibold text-foreground truncate">Created</TableHead>
+                      {items.length > 0 && isCompanyFormat(items[0]) ? (
+                        <>
+                          <TableHead className="font-semibold text-foreground truncate">Booking Code</TableHead>
+                          <TableHead className="font-semibold text-foreground truncate">Customer</TableHead>
+                          <TableHead className="font-semibold text-foreground truncate">Car Class</TableHead>
+                          <TableHead className="font-semibold text-foreground truncate">Pickup Date</TableHead>
+                          <TableHead className="font-semibold text-foreground truncate">Pickup Location</TableHead>
+                          <TableHead className="font-semibold text-foreground truncate">Status</TableHead>
+                          <TableHead className="font-semibold text-foreground truncate">Type</TableHead>
+                          <TableHead className="font-semibold text-foreground text-right truncate">Net Booking</TableHead>
+                        </>
+                      ) : (
+                        <>
+                          <TableHead className="font-semibold text-foreground truncate">Booking Code</TableHead>
+                          <TableHead className="font-semibold text-foreground truncate">Type</TableHead>
+                          <TableHead className="font-semibold text-foreground truncate">Status</TableHead>
+                          <TableHead className="font-semibold text-foreground truncate">Paid Status</TableHead>
+                          <TableHead className="font-semibold text-foreground truncate">Pickup Date</TableHead>
+                          <TableHead className="font-semibold text-foreground truncate">Drop Date</TableHead>
+                          <TableHead className="font-semibold text-foreground text-right truncate">Customer Refund</TableHead>
+                          <TableHead className="font-semibold text-foreground text-right truncate">Operator Payout</TableHead>
+                          <TableHead className="font-semibold text-foreground text-right truncate">Commission</TableHead>
+                          <TableHead className="font-semibold text-foreground truncate">Created</TableHead>
+                        </>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredItems.map((item: AccountingItem) => {
-                      const statusKey = item.status?.toUpperCase() ?? 'PENDING';
-                      const statusStyle = statusStyles[statusKey] ?? {
-                        bg: 'bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-600',
-                        text: 'text-gray-600 dark:text-gray-300',
-                        label: item.status || 'Pending'
-                      };
-                      const paymentKey = item.paidstatus?.toUpperCase() ?? 'UNPAID';
-                      const paymentStyle = paymentStyles[paymentKey] ?? paymentStyles.UNPAID;
+                    {items.length > 0 && isCompanyFormat(items[0])
+                      ? filteredItems.map((item, index) => {
+                          const companyItem = item as CompanyAccountingItem;
+                          const statusKey = (companyItem.bookingStatus ?? '').toUpperCase() || 'PENDING';
+                          const statusStyle = statusStyles[statusKey] ?? {
+                            bg: 'bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-600',
+                            text: 'text-gray-600 dark:text-gray-300',
+                            label: (companyItem.bookingStatus ?? '').replace(/_/g, ' ') || 'Pending'
+                          };
+                          return (
+                            <TableRow key={`${companyItem.bookingCode}-${index}`} className="hover:bg-muted/50">
+                              <TableCell className="font-medium font-mono text-sm">
+                                {companyItem.bookingId ? (
+                                  <button
+                                    onClick={() => navigate(`/all-bookings/${companyItem.bookingId}`)}
+                                    className="text-orange-500 hover:text-orange-600 hover:underline transition-colors cursor-pointer"
+                                  >
+                                    {companyItem.bookingCode}
+                                  </button>
+                                ) : (
+                                  companyItem.bookingCode
+                                )}
+                              </TableCell>
+                              <TableCell>{companyItem.customerName}</TableCell>
+                              <TableCell className="font-mono text-sm">{companyItem.carClass}</TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {formatDate(companyItem.pickupDate)}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-sm">
+                                {companyItem.pickupLocation}
+                              </TableCell>
+                              <TableCell>
+                                <span
+                                  className={cn(
+                                    'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-normal rounded-lg',
+                                    statusStyle.bg,
+                                    statusStyle.text
+                                  )}
+                                >
+                                  {statusStyle.icon}
+                                  {statusStyle.label}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="secondary">
+                                  {(companyItem.bookingType ?? '').replace(/_/g, ' ')}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-foreground font-semibold">
+                                {formatCurrency(companyItem.netBooking)}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      : filteredItems.map((item) => {
+                          const legacyItem = item as AccountingItem;
+                          const statusKey = legacyItem.status?.toUpperCase() ?? 'PENDING';
+                          const statusStyle = statusStyles[statusKey] ?? {
+                            bg: 'bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-600',
+                            text: 'text-gray-600 dark:text-gray-300',
+                            label: legacyItem.status || 'Pending'
+                          };
+                          const paymentKey = legacyItem.paidstatus?.toUpperCase() ?? 'UNPAID';
+                          const paymentStyle = paymentStyles[paymentKey] ?? paymentStyles.UNPAID;
 
-                      return (
-                        <TableRow key={item.id} className="hover:bg-muted/50">
-                          <TableCell className="font-medium">
-                            <button
-                              onClick={() => navigate(`/all-bookings/${item.bookingid}`)}
-                              className="text-orange-500 hover:text-orange-600 hover:underline transition-colors cursor-pointer"
-                            >
-                              {item.bookingcode || item.bookingid}
-                            </button>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={typeStyles[item.type] || ''}>
-                              {item.type.replace(/_/g, ' ')}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <span
-                              className={cn(
-                                'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-normal rounded-lg',
-                                statusStyle.bg,
-                                statusStyle.text
-                              )}
-                            >
-                              {statusStyle.icon}
-                              {statusStyle.label}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <span
-                              className={cn(
-                                'inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg',
-                                paymentStyle.bg,
-                                paymentStyle.text
-                              )}
-                            >
-                              {item.paidstatus?.toUpperCase() || 'UNPAID'}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {formatDate(item.pickupat)}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {formatDate(item.dropat)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-foreground">
-                            {formatCurrency(item.customerrefund)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-foreground">
-                            {formatCurrency(item.operatorpayout)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-foreground font-semibold">
-                            {formatCurrency(item.yalacommission)}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {item.createdat ? formatDate(item.createdat) : '—'}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                          return (
+                            <TableRow key={legacyItem.id} className="hover:bg-muted/50">
+                              <TableCell className="font-medium">
+                                <button
+                                  onClick={() => navigate(`/all-bookings/${legacyItem.bookingid}`)}
+                                  className="text-orange-500 hover:text-orange-600 hover:underline transition-colors cursor-pointer"
+                                >
+                                  {legacyItem.bookingcode || legacyItem.bookingid}
+                                </button>
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={typeStyles[legacyItem.type] || ''}>
+                                  {(legacyItem.type ?? 'Unknown').replace(/_/g, ' ')}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <span
+                                  className={cn(
+                                    'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-normal rounded-lg',
+                                    statusStyle.bg,
+                                    statusStyle.text
+                                  )}
+                                >
+                                  {statusStyle.icon}
+                                  {statusStyle.label}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <span
+                                  className={cn(
+                                    'inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg',
+                                    paymentStyle.bg,
+                                    paymentStyle.text
+                                  )}
+                                >
+                                  {legacyItem.paidstatus?.toUpperCase() || 'UNPAID'}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {formatDate(legacyItem.pickupat)}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {formatDate(legacyItem.dropat)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-foreground">
+                                {formatCurrency(legacyItem.customerrefund)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-foreground">
+                                {formatCurrency(legacyItem.operatorpayout)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-foreground font-semibold">
+                                {formatCurrency(legacyItem.yalacommission)}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-sm">
+                                {legacyItem.createdat ? formatDate(legacyItem.createdat) : '—'}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                   </TableBody>
                 </Table>
               </div>

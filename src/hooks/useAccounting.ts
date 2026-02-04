@@ -8,6 +8,7 @@ interface AccountingParams {
   dateTo?: string;
   page?: number;
   limit?: number;
+  locationId?: string | null;
 }
 
 // Admin accounting hook
@@ -32,12 +33,11 @@ export const useAdminAccounting = (params: AccountingParams) => {
   });
 };
 
-// Operator accounting hook
+// Operator accounting hook - uses location-specific endpoint when locationId is provided
 export const useOperatorAccounting = (companyId: string, params: AccountingParams) => {
   return useQuery<AccountingResponse>({
-    queryKey: ['operator-accounting', companyId, params],
+    queryKey: ['operator-accounting', companyId, params.locationId, params],
     queryFn: async () => {
-      // Use URLSearchParams for proper encoding like other hooks
       const searchParams = new URLSearchParams();
       if (params.dateFrom) searchParams.append('dateFrom', params.dateFrom);
       if (params.dateTo) searchParams.append('dateTo', params.dateTo);
@@ -45,9 +45,13 @@ export const useOperatorAccounting = (companyId: string, params: AccountingParam
       if (params.limit && params.limit !== 20) searchParams.append('limit', String(params.limit));
 
       const queryString = searchParams.toString();
-      const fullUrl = queryString ? `accounting/company/${companyId}?${queryString}` : `accounting/company/${companyId}`;
 
-      const { data } = await axiosInstance.get(fullUrl);
+      // When locationId is provided, use location-specific endpoint to get that location's data only
+      const endpoint = params.locationId && params.locationId !== 'all'
+        ? `accounting/company/${companyId}/location/${params.locationId}${queryString ? `?${queryString}` : ''}`
+        : `accounting/company/${companyId}${queryString ? `?${queryString}` : ''}`;
+
+      const { data } = await axiosInstance.get(endpoint);
       return data;
     },
     enabled: !!(companyId && params.dateFrom && params.dateTo),

@@ -1,5 +1,6 @@
 // src/pages/accounting/Accounting.tsx
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '@/store';
 import { useAdminAccounting, useOperatorAccounting } from '@/hooks/useAccounting';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,10 @@ import {
   Receipt,
   AlertCircle,
 } from 'lucide-react';
-import { AccountingItem, AccountingType } from '@/types/accounting';
+import { AccountingItem, AccountingType, CompanyAccountingItem } from '@/types/accounting';
+
+const isCompanyFormat = (item: AccountingItem | CompanyAccountingItem): item is CompanyAccountingItem =>
+  'bookingCode' in item && 'netBooking' in item;
 import { cn } from '@/lib/utils';
 import { PageLoadingSkeleton } from '@/components/ui/loading';
 import { toast } from 'sonner';
@@ -70,6 +74,7 @@ const formatDate = (value: string) => {
 };
 
 const Accounting: React.FC = () => {
+  const navigate = useNavigate();
   const { user, otherInfo } = useAppSelector((state) => state.auth);
   const isAdmin = user?.role === 'admin';
   const companyId = otherInfo?.companyId || '';
@@ -368,59 +373,116 @@ const Accounting: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Booking ID</TableHead>
-                    {isAdmin && <TableHead>Company</TableHead>}
-                    <TableHead>Status</TableHead>
-                    <TableHead>Pickup Date</TableHead>
-                    <TableHead>Drop Date</TableHead>
-                    <TableHead className="text-right">Customer Refund</TableHead>
-                    <TableHead className="text-right">Operator Payout</TableHead>
-                    <TableHead className="text-right">Commission</TableHead>
-                    <TableHead>Created</TableHead>
+                    {isCompanyFormat(items[0]) ? (
+                      <>
+                        <TableHead>Booking Code</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Car Class</TableHead>
+                        <TableHead>Pickup Date</TableHead>
+                        <TableHead>Pickup Location</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead className="text-right">Net Booking</TableHead>
+                      </>
+                    ) : (
+                      <>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Booking ID</TableHead>
+                        {isAdmin && <TableHead>Company</TableHead>}
+                        <TableHead>Status</TableHead>
+                        <TableHead>Pickup Date</TableHead>
+                        <TableHead>Drop Date</TableHead>
+                        <TableHead className="text-right">Customer Refund</TableHead>
+                        <TableHead className="text-right">Operator Payout</TableHead>
+                        <TableHead className="text-right">Commission</TableHead>
+                        <TableHead>Created</TableHead>
+                      </>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {items.map((item: AccountingItem) => (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <Badge className={cn('accounting-type-badge', typeStyles[item.type])}>
-                          {item.type.replace('_', ' ')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {item.bookingid.slice(0, 8)}
-                      </TableCell>
-                      {isAdmin && (
-                        <TableCell>
-                          {item.companyname || 'N/A'}
-                        </TableCell>
-                      )}
-                      <TableCell>
-                        <Badge variant="outline">
-                          {item.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {formatDate(item.pickupat)}
-                      </TableCell>
-                      <TableCell>
-                        {formatDate(item.dropat)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatCurrency(item.customerrefund)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatCurrency(item.operatorpayout)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {formatCurrency(item.yalacommission)}
-                      </TableCell>
-                      <TableCell>
-                        {formatDateTime(item.createdat)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {isCompanyFormat(items[0])
+                    ? items.map((item, index) => {
+                        const companyItem = item as CompanyAccountingItem;
+                        return (
+                          <TableRow key={`${companyItem.bookingCode}-${index}`}>
+                            <TableCell className="font-mono text-sm font-medium">
+                              {companyItem.bookingId ? (
+                                <button
+                                  onClick={() => navigate(`/all-bookings/${companyItem.bookingId}`)}
+                                  className="text-orange-500 hover:text-orange-600 hover:underline transition-colors cursor-pointer"
+                                >
+                                  {companyItem.bookingCode}
+                                </button>
+                              ) : (
+                                companyItem.bookingCode
+                              )}
+                            </TableCell>
+                            <TableCell>{companyItem.customerName}</TableCell>
+                            <TableCell className="font-mono text-sm">{companyItem.carClass}</TableCell>
+                            <TableCell>{formatDate(companyItem.pickupDate)}</TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {companyItem.pickupLocation}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline">
+                                {(companyItem.bookingStatus ?? '').replace(/_/g, ' ')}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">
+                                {(companyItem.bookingType ?? '').replace(/_/g, ' ')}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right font-mono font-medium">
+                              {formatCurrency(companyItem.netBooking)}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    : items.map((item) => {
+                        const legacyItem = item as AccountingItem;
+                        return (
+                        <TableRow key={legacyItem.id}>
+                          <TableCell>
+                            <Badge className={cn('accounting-type-badge', typeStyles[legacyItem.type])}>
+                              {(legacyItem.type ?? 'Unknown').replace(/_/g, ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {legacyItem.bookingid?.slice(0, 8) ?? legacyItem.bookingcode ?? '—'}
+                          </TableCell>
+                          {isAdmin && (
+                            <TableCell>
+                              {legacyItem.companyname || 'N/A'}
+                            </TableCell>
+                          )}
+                          <TableCell>
+                            <Badge variant="outline">
+                              {legacyItem.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {formatDate(legacyItem.pickupat)}
+                          </TableCell>
+                          <TableCell>
+                            {formatDate(legacyItem.dropat)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {formatCurrency(legacyItem.customerrefund)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {formatCurrency(legacyItem.operatorpayout)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            {formatCurrency(legacyItem.yalacommission)}
+                          </TableCell>
+                          <TableCell>
+                            {formatDateTime(legacyItem.createdat)}
+                          </TableCell>
+                        </TableRow>
+                        );
+                      })}
                 </TableBody>
               </Table>
             </div>

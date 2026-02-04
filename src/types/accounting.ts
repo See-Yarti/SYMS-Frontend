@@ -33,6 +33,18 @@ export interface AccountingItem {
   createdat: string;
 }
 
+export interface CompanyAccountingItem {
+  bookingId?: string;
+  bookingCode: string;
+  customerName: string;
+  carClass: string;
+  pickupDate: string;
+  pickupLocation: string;
+  bookingStatus: string;
+  bookingType: string;
+  netBooking: string;
+}
+
 export interface AccountingSummary {
   totalRefund: string;
   totalPayout: string;
@@ -54,7 +66,7 @@ export interface AccountingApiResult {
   page: number;
   limit: number;
   summary: AccountingSummary;
-  items: AccountingItem[];
+  items: (AccountingItem | CompanyAccountingItem)[];
 }
 
 export interface AccountingResponse {
