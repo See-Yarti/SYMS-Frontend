@@ -137,33 +137,33 @@ const BookingDetails: React.FC = () => {
   const { data: booking, isLoading, isError, error, refetch } = useBookingById(bookingId);
   const cancelBooking = useCancelBooking();
   const completeBooking = useCompleteBooking();
-  
+
   // Get user role from Redux
   const { user, otherInfo } = useAppSelector((state) => state.auth);
   const isAdmin = user?.role === 'admin';
   const isOperator = user?.role === 'operator';
-  
+
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [cancelType, setCancelType] = useState<CancelType>('LATE_CANCEL');
   const [cancelNote, setCancelNote] = useState('');
   const [cancelResponse, setCancelResponse] = useState<any>(null);
-  
+
   const [isCompleteDialogOpen, setIsCompleteDialogOpen] = useState(false);
   const [completeResponse, setCompleteResponse] = useState<any>(null);
-  
+
   // Permission checks
   const hasBeenModified = booking?.status === 'COMPLETED' || booking?.status === 'CANCELLED';
-  
+
   // Complete button visibility
-  const canShowComplete = isAdmin 
+  const canShowComplete = isAdmin
     ? booking?.status !== 'COMPLETED'  // Admin: can complete unless already completed
     : (isOperator && booking?.status !== 'COMPLETED' && booking?.status !== 'CANCELLED'); // Operator: only if untouched
-  
+
   // Cancel button visibility
   const canShowCancel = isAdmin
     ? booking?.status !== 'CANCELLED'  // Admin: can cancel unless already cancelled
     : (isOperator && booking?.status !== 'COMPLETED' && booking?.status !== 'CANCELLED'); // Operator: only if untouched
-  
+
   // Edit cancellation visibility (ADMIN ONLY)
   const canEditCancellation = isAdmin && booking?.status === 'CANCELLED';
 
@@ -286,7 +286,7 @@ const BookingDetails: React.FC = () => {
           <Button variant="outline" size="sm" className="gap-2 rounded-xl h-12 w-14">
             <Share2 className="h-4 w-4" />
           </Button>
-          
+
           {/* Actions Dropdown Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -303,10 +303,10 @@ const BookingDetails: React.FC = () => {
                   Edit Cancellation
                 </DropdownMenuItem>
               )}
-              
+
               {/* Complete Booking - Role-based visibility */}
               {canShowComplete && (
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={handleCompleteBooking}
                   disabled={completeBooking.isPending}
                   className="text-green-600 focus:text-green-600"
@@ -324,15 +324,15 @@ const BookingDetails: React.FC = () => {
                   )}
                 </DropdownMenuItem>
               )}
-              
+
               {/* Separator before cancel option */}
               {(canShowComplete || canEditCancellation) && canShowCancel && (
                 <DropdownMenuSeparator />
               )}
-              
+
               {/* Cancel Booking - Role-based visibility */}
               {canShowCancel && (
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={() => setIsCancelDialogOpen(true)}
                   className="text-red-600 focus:text-red-600"
                 >
@@ -340,7 +340,7 @@ const BookingDetails: React.FC = () => {
                   Cancel Booking
                 </DropdownMenuItem>
               )}
-              
+
               {/* Show message if operator already modified */}
               {isOperator && hasBeenModified && !canShowComplete && !canShowCancel && (
                 <>
@@ -519,7 +519,7 @@ const BookingDetails: React.FC = () => {
             </div>
           </Card>
 
-           
+
         </div>
 
         {/* Sidebar - 1 column */}
@@ -665,16 +665,23 @@ const BookingDetails: React.FC = () => {
                     </div>
                   );
                 })()}
-           
-                {isAdmin &&
-                  ((booking as any).accountingBreakdown?.yalaRideCommissionOnCdw ?? (booking as any).accountingRecords?.[0]?.yalaRideCommissionOnCdwAmount) != null && (
+
+                {booking.cdwOption && (booking as any).totalWithCdw != null && (
                   <div>
-                    <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">YalaRide Commission on CDW</p>
-                    <p className="font-medium text-foreground">
-                      {formatCurrency((booking as any).accountingBreakdown?.yalaRideCommissionOnCdw ?? (booking as any).accountingRecords?.[0]?.yalaRideCommissionOnCdwAmount)}
-                    </p>
+                    <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">Total CDW Amount</p>
+                    <p className="text-sm text-foreground font-medium">{formatCurrency((booking as any).totalWithCdw)}</p>
                   </div>
                 )}
+
+                {isAdmin &&
+                  ((booking as any).accountingBreakdown?.yalaRideCommissionOnCdw ?? (booking as any).accountingRecords?.[0]?.yalaRideCommissionOnCdwAmount) != null && (
+                    <div>
+                      <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">YalaRide Commission on CDW</p>
+                      <p className="font-medium text-foreground">
+                        {formatCurrency((booking as any).accountingBreakdown?.yalaRideCommissionOnCdw ?? (booking as any).accountingRecords?.[0]?.yalaRideCommissionOnCdwAmount)}
+                      </p>
+                    </div>
+                  )}
                 {booking.cdwOption && (
                   <div>
                     <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">CDW Option</p>
@@ -698,9 +705,9 @@ const BookingDetails: React.FC = () => {
           <Card className="bg-card border border-border rounded-xl">
             <div className="flex items-center gap-3 mb-6 p-6 bg-[#FF802E] rounded-t-xl">
               <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center">
-                <DollarSign className="h-5 w-5 text-[#FF802E]" /> 
+                <DollarSign className="h-5 w-5 text-[#FF802E]" />
               </div>
-              <h2 className="text-lg text-white font-semibold">Pricing Summary</h2> 
+              <h2 className="text-lg text-white font-semibold">Pricing Summary</h2>
             </div>
 
             <div className="space-y-4 m-6">
@@ -715,8 +722,8 @@ const BookingDetails: React.FC = () => {
                     {/* Subtotal (rental) */}
                     <div className="flex items-center justify-between pb-6 border-b">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-xl bg-blue-200 flex items-center justify-center"> 
-                          <Receipt className="h-4 w-4 text-blue-700" /> 
+                        <div className="w-8 h-8 rounded-xl bg-blue-200 flex items-center justify-center">
+                          <Receipt className="h-4 w-4 text-blue-700" />
                         </div>
                         <div>
                           <p className="text-sm">Subtotal</p>
@@ -730,8 +737,8 @@ const BookingDetails: React.FC = () => {
                     {cdwCase === 1 && booking.cdwAmount != null && (
                       <div className="flex items-center justify-between pb-6 border-b">
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-xl bg-blue-200 flex items-center justify-center"> 
-                            <Shield className="h-4 w-4 text-blue-700" /> 
+                          <div className="w-8 h-8 rounded-xl bg-blue-200 flex items-center justify-center">
+                            <Shield className="h-4 w-4 text-blue-700" />
                           </div>
                           <div>
                             <p className="text-sm">CDW</p>
@@ -745,8 +752,8 @@ const BookingDetails: React.FC = () => {
                     {/* Tax & Fees */}
                     <div className="flex items-center justify-between pb-6 border-b">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-xl bg-[#FFFBEB] flex items-center justify-center"> 
-                          <Percent className="h-4 w-4 text-[#E17100]" /> 
+                        <div className="w-8 h-8 rounded-xl bg-[#FFFBEB] flex items-center justify-center">
+                          <Percent className="h-4 w-4 text-[#E17100]" />
                         </div>
                         <div>
                           <p className="text-sm font-medium">Tax & Fees</p>
@@ -762,8 +769,8 @@ const BookingDetails: React.FC = () => {
                     {(cdwCase === 2 || cdwCase === 3) && booking.cdwAmount != null && (
                       <div className="flex items-center justify-between pb-6 border-b">
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-xl bg-blue-200 flex items-center justify-center"> 
-                            <Shield className="h-4 w-4 text-blue-700" /> 
+                          <div className="w-8 h-8 rounded-xl bg-blue-200 flex items-center justify-center">
+                            <Shield className="h-4 w-4 text-blue-700" />
                           </div>
                           <div>
                             <p className="text-sm">CDW</p>
@@ -778,8 +785,8 @@ const BookingDetails: React.FC = () => {
                     {showTaxOnCdw && (
                       <div className="flex items-center justify-between pb-6 border-b">
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-xl bg-[#FFFBEB] flex items-center justify-center"> 
-                            <Percent className="h-4 w-4 text-[#E17100]" /> 
+                          <div className="w-8 h-8 rounded-xl bg-[#FFFBEB] flex items-center justify-center">
+                            <Percent className="h-4 w-4 text-[#E17100]" />
                           </div>
                           <div>
                             <p className="text-sm">Tax on CDW</p>
@@ -792,7 +799,7 @@ const BookingDetails: React.FC = () => {
                 );
               })()}
 
-              <div className="p-4 rounded-2xl bg-black"> 
+              <div className="p-4 rounded-2xl bg-black">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-xl bg-[#FFFFFF1A] border border-[#FFFFFF33] flex items-center justify-center">
@@ -827,8 +834,8 @@ const BookingDetails: React.FC = () => {
                         {tax.taxType === 'PERCENTAGE' && tax.percentage != null
                           ? `${tax.percentage}%`
                           : tax.taxType === 'FIXED'
-                          ? 'Fixed'
-                          : tax.taxType}
+                            ? 'Fixed'
+                            : tax.taxType}
                       </p>
                     </div>
                     <p className="text-sm font-semibold text-foreground">{formatCurrency(tax.amount)}</p>
@@ -881,7 +888,7 @@ const BookingDetails: React.FC = () => {
               {booking?.status === 'CANCELLED' ? 'Update Cancellation Details' : 'Cancel Booking'}
             </DialogTitle>
             <DialogDescription>
-              {booking?.status === 'CANCELLED' 
+              {booking?.status === 'CANCELLED'
                 ? 'Update the cancellation type and note. This will recalculate the accounting.'
                 : 'Select the cancellation type and provide a note. This action cannot be undone.'}
             </DialogDescription>
@@ -1013,8 +1020,8 @@ const BookingDetails: React.FC = () => {
                       onSuccess: (data) => {
                         setCancelResponse(data);
                         toast.success(
-                          booking?.status === 'CANCELLED' 
-                            ? 'Cancellation details updated successfully' 
+                          booking?.status === 'CANCELLED'
+                            ? 'Cancellation details updated successfully'
                             : 'Booking cancelled successfully'
                         );
                         refetch();
@@ -1049,7 +1056,7 @@ const BookingDetails: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Complete Booking</DialogTitle>
             <DialogDescription>
-              {!completeResponse 
+              {!completeResponse
                 ? 'Are you sure you want to mark this booking as completed? This will calculate the final commission and operator payout.'
                 : 'Booking has been completed successfully. Here are the accounting details:'}
             </DialogDescription>
