@@ -48,7 +48,14 @@ const scheduleTokenRefresh = () => {
       const state = store.getState();
       const refreshToken = state.auth._rT;
 
-      if (!refreshToken) return;
+      if (!refreshToken) {
+        console.log('[Token] No refresh token found');
+        return;
+      }
+
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Token] Refreshing token...');
+      }
 
       const refreshResponse = await axios.get(
         process.env.NEXT_PUBLIC_API_REFRESH_TOKEN_URL as string,
@@ -61,9 +68,21 @@ const scheduleTokenRefresh = () => {
       store.dispatch(AuthActions.updateAccessToken(newAccessToken));
       store.dispatch(AuthActions.updateRefreshToken(newRefreshToken));
 
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Token] ✅ Token refreshed successfully');
+      }
+
       scheduleTokenRefresh();
-    } catch (error) {
-      console.error('[Token] Refresh failed:', error);
+    } catch (error: any) {
+      console.error('[Token] ❌ Refresh failed:', error?.response?.status, error?.response?.data);
+      
+      // If refresh token invalid (400/401), logout user
+      if (error?.response?.status === 400 || error?.response?.status === 401) {
+        console.log('[Token] Refresh token expired/invalid - logging out...');
+        store.dispatch(logoutUser());
+        localStorage.removeItem('persist:root');
+        window.location.href = '/auth/login';
+      }
     }
   }, refreshIn);
 };

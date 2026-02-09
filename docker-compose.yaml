@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  yalaride-crm:
+    image: ${DOCKER_IMAGE:-yalaride-crm:latest}
+    container_name: yalaride-crm
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - NODE_ENV=production
+      - PORT=5173
+    env_file:
+      - .env.production
+    networks:
+      - yalaride-network
+
+networks:
+  yalaride-network:
+    driver: bridge
