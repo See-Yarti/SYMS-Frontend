@@ -1,26 +1,47 @@
+'use client';
+
 // src/components/Rates/EditRateDialog.tsx
 
 import * as React from 'react';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Select, SelectTrigger, SelectContent, SelectItem, SelectValue,
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
 } from '@/components/ui/select';
-import { useFetchData, usePatchDataBlackout } from '@/hooks/useOperatorCarClass';
+import {
+  useFetchData,
+  usePatchDataBlackout,
+} from '@/hooks/useOperatorCarClass';
 import { toast } from 'sonner';
 
 // ---------------- Types ----------------
 type CarClassOption = { value: string; label: string };
 
 type DailyLOR = {
-  first: number; second: number; third: number; fourth: number; fifth: number; sixth: number;
+  first: number;
+  second: number;
+  third: number;
+  fourth: number;
+  fifth: number;
+  sixth: number;
 };
 type WeeklyLOR = {
-  first: number; second: number; third: number; fourth: number;
+  first: number;
+  second: number;
+  third: number;
+  fourth: number;
 };
 
 // The shape we need from the server list (edit screen uses just these fields)
@@ -62,8 +83,20 @@ type RateListBag = Record<string, unknown> & {
 };
 
 // ---------------- Consts ----------------
-const DEFAULT_DAILY_LOR: DailyLOR = { first: 0, second: 0, third: 0, fourth: 0, fifth: 0, sixth: 0 };
-const DEFAULT_WEEKLY_LOR: WeeklyLOR = { first: 0, second: 0, third: 0, fourth: 0 };
+const DEFAULT_DAILY_LOR: DailyLOR = {
+  first: 0,
+  second: 0,
+  third: 0,
+  fourth: 0,
+  fifth: 0,
+  sixth: 0,
+};
+const DEFAULT_WEEKLY_LOR: WeeklyLOR = {
+  first: 0,
+  second: 0,
+  third: 0,
+  fourth: 0,
+};
 
 // ---------------- Helpers ----------------
 const toApiDate = (yyyyMmDd: string) => {
@@ -88,24 +121,33 @@ const toInputDate = (raw?: string) => {
 function getErrMessage(e: unknown): string {
   if (typeof e === 'string') return e;
   if (e && typeof e === 'object') {
-    const maybe =
-      (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+    const maybe = (e as { response?: { data?: { message?: string } } })
+      ?.response?.data?.message;
     if (typeof maybe === 'string' && maybe) return maybe;
   }
   return 'Something went wrong.';
 }
 
 function isRateServerItem(v: unknown): v is RateServerItem {
-  return !!v && typeof v === 'object' && typeof (v as { id?: unknown }).id === 'string';
+  return (
+    !!v &&
+    typeof v === 'object' &&
+    typeof (v as { id?: unknown }).id === 'string'
+  );
 }
 
-function extractServerItem(listRaw: unknown, rateId: string | null): RateServerItem | null {
+function extractServerItem(
+  listRaw: unknown,
+  rateId: string | null,
+): RateServerItem | null {
   if (!rateId) return null;
   const bag = (listRaw as { data?: unknown })?.data ?? listRaw;
   if (!bag || typeof bag !== 'object') return null;
 
   const obj = bag as RateListBag;
-  const keys = Object.keys(obj).filter((k) => !['total', 'page', 'limit'].includes(k));
+  const keys = Object.keys(obj).filter(
+    (k) => !['total', 'page', 'limit'].includes(k),
+  );
   for (const k of keys) {
     const candidate = obj[k];
     if (isRateServerItem(candidate) && candidate.id === rateId) {
@@ -150,7 +192,8 @@ function NumberInput({
         const v = e.target.value;
         setText(v);
         if (v === '' || v === '-' || v === '.' || v === '-.') {
-          onValue(0); return;
+          onValue(0);
+          return;
         }
         const n = Number(v);
         onValue(Number.isFinite(n) ? n : 0);
@@ -158,7 +201,8 @@ function NumberInput({
       onBlur={() => {
         setFocused(false);
         if (text === '' || text === '-' || text === '.' || text === '-.') {
-          setText('0'); onValue(0);
+          setText('0');
+          onValue(0);
         } else {
           const n = Number(text);
           setText(String(Number.isFinite(n) ? n : 0));
@@ -198,12 +242,12 @@ export default function EditRateDialog({
   } = useFetchData<unknown>(
     open && locationId ? `company-car-class-rate/get-all/${locationId}` : '',
     ['rate-list-for-edit', locationId],
-    { enabled: Boolean(open && locationId) }
+    { enabled: Boolean(open && locationId) },
   );
 
   const serverItem = React.useMemo<RateServerItem | null>(
     () => extractServerItem(listRaw, rateId),
-    [listRaw, rateId]
+    [listRaw, rateId],
   );
 
   // Local state (same as New)
@@ -216,26 +260,34 @@ export default function EditRateDialog({
   const [dailyBaseKm, setDailyBaseKm] = React.useState<number>(0);
   const [dailyExtraHourRate, setDailyExtraHourRate] = React.useState<number>(0);
   const [dailyExtraDayRate, setDailyExtraDayRate] = React.useState<number>(0);
-  const [dailyLOR, setDailyLOR] = React.useState<DailyLOR>({ ...DEFAULT_DAILY_LOR });
+  const [dailyLOR, setDailyLOR] = React.useState<DailyLOR>({
+    ...DEFAULT_DAILY_LOR,
+  });
 
   const [weeklyBaseRate, setWeeklyBaseRate] = React.useState<number>(0);
   const [weeklyBaseKm, setWeeklyBaseKm] = React.useState<number>(0);
   const [weeklyExtraDayKm, setWeeklyExtraDayKm] = React.useState<number>(0);
-  const [weeklyExtraHourRate, setWeeklyExtraHourRate] = React.useState<number>(0);
+  const [weeklyExtraHourRate, setWeeklyExtraHourRate] =
+    React.useState<number>(0);
   const [weeklyExtraDayRate, setWeeklyExtraDayRate] = React.useState<number>(0);
-  const [weeklyLOR, setWeeklyLOR] = React.useState<WeeklyLOR>({ ...DEFAULT_WEEKLY_LOR });
+  const [weeklyLOR, setWeeklyLOR] = React.useState<WeeklyLOR>({
+    ...DEFAULT_WEEKLY_LOR,
+  });
 
   const [monthlyBaseRate, setMonthlyBaseRate] = React.useState<number>(0);
   const [monthlyBaseKm, setMonthlyBaseKm] = React.useState<number>(0);
   const [monthlyExtraDayKm, setMonthlyExtraDayKm] = React.useState<number>(0);
-  const [monthlyExtraHourRate, setMonthlyExtraHourRate] = React.useState<number>(0);
-  const [monthlyExtraDayRate, setMonthlyExtraDayRate] = React.useState<number>(0);
+  const [monthlyExtraHourRate, setMonthlyExtraHourRate] =
+    React.useState<number>(0);
+  const [monthlyExtraDayRate, setMonthlyExtraDayRate] =
+    React.useState<number>(0);
 
   // Hydrate when item is found
   React.useEffect(() => {
     if (!open || !serverItem) return;
 
-    const cccId = serverItem.companyCarClassId || serverItem.companyCarClass?.id || '';
+    const cccId =
+      serverItem.companyCarClassId || serverItem.companyCarClass?.id || '';
     setCompanyCarClassId(cccId);
 
     setStartDate(toInputDate(serverItem.startDateTime));
@@ -276,10 +328,15 @@ export default function EditRateDialog({
 
   // keep a copy to diff for PATCH
   const originalRef = React.useRef<RateServerItem | null>(null);
-  React.useEffect(() => { originalRef.current = serverItem; }, [serverItem]);
+  React.useEffect(() => {
+    originalRef.current = serverItem;
+  }, [serverItem]);
 
   const { mutateAsync: patchRate, isPending: saving } = usePatchDataBlackout({
-    onSuccess: () => { toast.success('Rate updated'); onSaved?.(); },
+    onSuccess: () => {
+      toast.success('Rate updated');
+      onSaved?.();
+    },
     onError: (err: unknown) => toast.error(getErrMessage(err)),
   });
 
@@ -299,7 +356,10 @@ export default function EditRateDialog({
       }
     };
 
-    put('companyCarClassId', companyCarClassId || o.companyCarClassId || o.companyCarClass?.id);
+    put(
+      'companyCarClassId',
+      companyCarClassId || o.companyCarClassId || o.companyCarClass?.id,
+    );
     put('startDateTime', toApiDate(startDate || toInputDate(o.startDateTime)));
     put('endDateTime', toApiDate(endDate || toInputDate(o.endDateTime)));
 
@@ -310,9 +370,12 @@ export default function EditRateDialog({
     put('dailyExtraHourRate', dailyExtraHourRate);
     put('dailyExtraDayRate', dailyExtraDayRate);
     const dailyAdj: DailyLOR = {
-      first: dailyLOR.first, second: dailyLOR.second,
-      third: dailyLOR.third, fourth: dailyLOR.fourth,
-      fifth: dailyLOR.fifth, sixth: dailyLOR.sixth,
+      first: dailyLOR.first,
+      second: dailyLOR.second,
+      third: dailyLOR.third,
+      fourth: dailyLOR.fourth,
+      fifth: dailyLOR.fifth,
+      sixth: dailyLOR.sixth,
     };
     put('dailyLORAdjustments', dailyAdj);
 
@@ -322,7 +385,10 @@ export default function EditRateDialog({
     put('weeklyExtraHourRate', weeklyExtraHourRate);
     put('weeklyExtraDayRate', weeklyExtraDayRate);
     const weeklyAdj: WeeklyLOR = {
-      first: weeklyLOR.first, second: weeklyLOR.second, third: weeklyLOR.third, fourth: weeklyLOR.fourth
+      first: weeklyLOR.first,
+      second: weeklyLOR.second,
+      third: weeklyLOR.third,
+      fourth: weeklyLOR.fourth,
     };
     put('weeklyLORAdjustments', weeklyAdj);
 
@@ -339,9 +405,13 @@ export default function EditRateDialog({
     if (!rateId) return;
     const body = makePatchPayload();
     if (Object.keys(body).length === 0) {
-      toast.info('No changes to save'); return;
+      toast.info('No changes to save');
+      return;
     }
-    await patchRate({ endpoint: `company-car-class-rate/${rateId}`, data: body });
+    await patchRate({
+      endpoint: `company-car-class-rate/${rateId}`,
+      data: body,
+    });
   };
 
   const dailyTotals = React.useMemo(
@@ -353,7 +423,7 @@ export default function EditRateDialog({
       dailyBaseRate + (dailyLOR.fifth || 0),
       dailyBaseRate + (dailyLOR.sixth || 0),
     ],
-    [dailyBaseRate, dailyLOR]
+    [dailyBaseRate, dailyLOR],
   );
   const weeklyTotals = React.useMemo(
     () => [
@@ -362,9 +432,12 @@ export default function EditRateDialog({
       weeklyBaseRate + (weeklyLOR.third || 0),
       weeklyBaseRate + (weeklyLOR.fourth || 0),
     ],
-    [weeklyBaseRate, weeklyLOR]
+    [weeklyBaseRate, weeklyLOR],
   );
-  const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+  const currency = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  });
   const fmt = (n: number) => currency.format(Number.isFinite(n) ? n : 0);
 
   return (
@@ -374,11 +447,19 @@ export default function EditRateDialog({
           <div className="flex items-center justify-between px-6 pt-4 pb-3">
             <DialogTitle className="text-xl md:text-2xl">Edit Rate</DialogTitle>
             <div className="flex items-center gap-2">
-              <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
+              <Button variant="outline" type="button" onClick={onClose}>
+                Cancel
+              </Button>
               <Button
                 type="submit"
                 form="edit-rate-form"
-                disabled={saving || listLoading || !companyCarClassId || !startDate || !endDate}
+                disabled={
+                  saving ||
+                  listLoading ||
+                  !companyCarClassId ||
+                  !startDate ||
+                  !endDate
+                }
                 className="bg-[#F56304] hover:bg-[#e05503] text-white"
               >
                 Save
@@ -395,14 +476,22 @@ export default function EditRateDialog({
                 disabled={listLoading || isError}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder={listLoading ? 'Loading…' : 'Select Car Class'} />
+                  <SelectValue
+                    placeholder={listLoading ? 'Loading…' : 'Select Car Class'}
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {carClasses.filter(c => !!c.value).map((c) => (
-                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                  ))}
+                  {carClasses
+                    .filter((c) => !!c.value)
+                    .map((c) => (
+                      <SelectItem key={c.value} value={c.value}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
                   {(!carClasses || carClasses.length === 0) && (
-                    <SelectItem value="__NO_DATA__" disabled>No classes available</SelectItem>
+                    <SelectItem value="__NO_DATA__" disabled>
+                      No classes available
+                    </SelectItem>
                   )}
                 </SelectContent>
               </Select>
@@ -410,49 +499,135 @@ export default function EditRateDialog({
 
             <div className="space-y-2">
               <Label>Start Date *</Label>
-              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} disabled={listLoading} required />
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                disabled={listLoading}
+                required
+              />
             </div>
 
             <div className="space-y-2">
               <Label>End Date *</Label>
-              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} disabled={listLoading} required />
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                disabled={listLoading}
+                required
+              />
             </div>
 
             <div className="space-y-2">
               <Label>Extra KM Rate ($ / km)</Label>
-              <NumberInput value={extraKmRate} onValue={setExtraKmRate} min={0} step="0.01" />
+              <NumberInput
+                value={extraKmRate}
+                onValue={setExtraKmRate}
+                min={0}
+                step="0.01"
+              />
             </div>
           </div>
         </div>
 
         <div className="px-6 py-5 overflow-y-auto flex-1">
           {isError && (
-            <div className="text-destructive mb-4">
-              {getErrMessage(error)}
-            </div>
+            <div className="text-destructive mb-4">{getErrMessage(error)}</div>
           )}
 
-          <form id="edit-rate-form" className="space-y-8" onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+          <form
+            id="edit-rate-form"
+            className="space-y-8"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSave();
+            }}
+          >
             {/* Daily */}
             <div className="space-y-4">
               <h3 className="font-medium text-lg">Daily</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="space-y-2"><Label>Base Rate ($)</Label><NumberInput value={dailyBaseRate} onValue={setDailyBaseRate} min={0} step="0.01" /></div>
-                <div className="space-y-2"><Label>Base KM</Label><NumberInput value={dailyBaseKm} onValue={setDailyBaseKm} min={0} /></div>
-                <div className="space-y-2"><Label>Extra Hour ($)</Label><NumberInput value={dailyExtraHourRate} onValue={setDailyExtraHourRate} min={0} step="0.01" /></div>
-                <div className="space-y-2"><Label>Extra Day ($)</Label><NumberInput value={dailyExtraDayRate} onValue={setDailyExtraDayRate} min={0} step="0.01" /></div>
+                <div className="space-y-2">
+                  <Label>Base Rate ($)</Label>
+                  <NumberInput
+                    value={dailyBaseRate}
+                    onValue={setDailyBaseRate}
+                    min={0}
+                    step="0.01"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Base KM</Label>
+                  <NumberInput
+                    value={dailyBaseKm}
+                    onValue={setDailyBaseKm}
+                    min={0}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Extra Hour ($)</Label>
+                  <NumberInput
+                    value={dailyExtraHourRate}
+                    onValue={setDailyExtraHourRate}
+                    min={0}
+                    step="0.01"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Extra Day ($)</Label>
+                  <NumberInput
+                    value={dailyExtraDayRate}
+                    onValue={setDailyExtraDayRate}
+                    min={0}
+                    step="0.01"
+                  />
+                </div>
               </div>
 
               <div className="rounded-lg border p-3 md:p-4 overflow-x-auto">
                 <table className="w-full text-sm min-w-[600px]">
-                  <thead><tr className="border-b">{['1st Day', '2nd Day', '3rd Day', '4th Day', '5th Day', '6th Day'].map((h) => (<th key={h} className="text-left p-2 whitespace-nowrap">{h}</th>))}</tr></thead>
+                  <thead>
+                    <tr className="border-b">
+                      {[
+                        '1st Day',
+                        '2nd Day',
+                        '3rd Day',
+                        '4th Day',
+                        '5th Day',
+                        '6th Day',
+                      ].map((h) => (
+                        <th key={h} className="text-left p-2 whitespace-nowrap">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
                   <tbody>
                     <tr>
-                      {(['first', 'second', 'third', 'fourth', 'fifth', 'sixth'] as const).map((key, idx) => (
+                      {(
+                        [
+                          'first',
+                          'second',
+                          'third',
+                          'fourth',
+                          'fifth',
+                          'sixth',
+                        ] as const
+                      ).map((key, idx) => (
                         <td key={key} className="p-2 align-top">
                           <div className="flex flex-col items-center gap-1">
-                            <NumberInput value={dailyLOR[key]} onValue={(n) => setDailyLOR((p) => ({ ...p, [key]: n }))} step="0.01" className="w-28 text-center" />
-                            <div className="text-xs text-muted-foreground">{fmt(dailyTotals[idx])}</div>
+                            <NumberInput
+                              value={dailyLOR[key]}
+                              onValue={(n) =>
+                                setDailyLOR((p) => ({ ...p, [key]: n }))
+                              }
+                              step="0.01"
+                              className="w-28 text-center"
+                            />
+                            <div className="text-xs text-muted-foreground">
+                              {fmt(dailyTotals[idx])}
+                            </div>
                           </div>
                         </td>
                       ))}
@@ -466,26 +641,88 @@ export default function EditRateDialog({
             <div className="space-y-4">
               <h3 className="font-medium text-lg">Weekly</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                <div className="space-y-2"><Label>Base Rate ($)</Label><NumberInput value={weeklyBaseRate} onValue={setWeeklyBaseRate} min={0} step="0.01" /></div>
-                <div className="space-y-2"><Label>Base KM</Label><NumberInput value={weeklyBaseKm} onValue={setWeeklyBaseKm} min={0} /></div>
-                <div className="space-y-2"><Label>Extra Day KM</Label><NumberInput value={weeklyExtraDayKm} onValue={setWeeklyExtraDayKm} min={0} /></div>
-                <div className="space-y-2"><Label>Extra Hour ($)</Label><NumberInput value={weeklyExtraHourRate} onValue={setWeeklyExtraHourRate} min={0} step="0.01" /></div>
-                <div className="space-y-2"><Label>Extra Day ($)</Label><NumberInput value={weeklyExtraDayRate} onValue={setWeeklyExtraDayRate} min={0} step="0.01" /></div>
+                <div className="space-y-2">
+                  <Label>Base Rate ($)</Label>
+                  <NumberInput
+                    value={weeklyBaseRate}
+                    onValue={setWeeklyBaseRate}
+                    min={0}
+                    step="0.01"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Base KM</Label>
+                  <NumberInput
+                    value={weeklyBaseKm}
+                    onValue={setWeeklyBaseKm}
+                    min={0}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Extra Day KM</Label>
+                  <NumberInput
+                    value={weeklyExtraDayKm}
+                    onValue={setWeeklyExtraDayKm}
+                    min={0}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Extra Hour ($)</Label>
+                  <NumberInput
+                    value={weeklyExtraHourRate}
+                    onValue={setWeeklyExtraHourRate}
+                    min={0}
+                    step="0.01"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Extra Day ($)</Label>
+                  <NumberInput
+                    value={weeklyExtraDayRate}
+                    onValue={setWeeklyExtraDayRate}
+                    min={0}
+                    step="0.01"
+                  />
+                </div>
               </div>
 
               <div className="rounded-lg border p-3 md:p-4 overflow-x-auto">
                 <table className="w-full text-sm min-w-[480px]">
-                  <thead><tr className="border-b">{['1st Week', '2nd Week', '3rd Week', '4th Week'].map((h) => (<th key={h} className="text-left p-2 whitespace-nowrap">{h}</th>))}</tr></thead>
+                  <thead>
+                    <tr className="border-b">
+                      {['1st Week', '2nd Week', '3rd Week', '4th Week'].map(
+                        (h) => (
+                          <th
+                            key={h}
+                            className="text-left p-2 whitespace-nowrap"
+                          >
+                            {h}
+                          </th>
+                        ),
+                      )}
+                    </tr>
+                  </thead>
                   <tbody>
                     <tr>
-                      {(['first', 'second', 'third', 'fourth'] as const).map((key, idx) => (
-                        <td key={key} className="p-2 align-top">
-                          <div className="flex flex-col items-center gap-1">
-                            <NumberInput value={weeklyLOR[key]} onValue={(n) => setWeeklyLOR((p) => ({ ...p, [key]: n }))} step="0.01" className="w-28 text-center" />
-                            <div className="text-xs text-muted-foreground">{fmt(weeklyTotals[idx])}</div>
-                          </div>
-                        </td>
-                      ))}
+                      {(['first', 'second', 'third', 'fourth'] as const).map(
+                        (key, idx) => (
+                          <td key={key} className="p-2 align-top">
+                            <div className="flex flex-col items-center gap-1">
+                              <NumberInput
+                                value={weeklyLOR[key]}
+                                onValue={(n) =>
+                                  setWeeklyLOR((p) => ({ ...p, [key]: n }))
+                                }
+                                step="0.01"
+                                className="w-28 text-center"
+                              />
+                              <div className="text-xs text-muted-foreground">
+                                {fmt(weeklyTotals[idx])}
+                              </div>
+                            </div>
+                          </td>
+                        ),
+                      )}
                     </tr>
                   </tbody>
                 </table>
@@ -496,16 +733,53 @@ export default function EditRateDialog({
             <div className="space-y-4">
               <h3 className="font-medium text-lg">Monthly</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                <div className="space-y-2"><Label>Base Rate ($)</Label><NumberInput value={monthlyBaseRate} onValue={setMonthlyBaseRate} min={0} step="0.01" /></div>
-                <div className="space-y-2"><Label>Base KM</Label><NumberInput value={monthlyBaseKm} onValue={setMonthlyBaseKm} min={0} /></div>
-                <div className="space-y-2"><Label>Extra Day KM</Label><NumberInput value={monthlyExtraDayKm} onValue={setMonthlyExtraDayKm} min={0} /></div>
-                <div className="space-y-2"><Label>Extra Hour ($)</Label><NumberInput value={monthlyExtraHourRate} onValue={setMonthlyExtraHourRate} min={0} step="0.01" /></div>
-                <div className="space-y-2"><Label>Extra Day ($)</Label><NumberInput value={monthlyExtraDayRate} onValue={setMonthlyExtraDayRate} min={0} step="0.01" /></div>
+                <div className="space-y-2">
+                  <Label>Base Rate ($)</Label>
+                  <NumberInput
+                    value={monthlyBaseRate}
+                    onValue={setMonthlyBaseRate}
+                    min={0}
+                    step="0.01"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Base KM</Label>
+                  <NumberInput
+                    value={monthlyBaseKm}
+                    onValue={setMonthlyBaseKm}
+                    min={0}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Extra Day KM</Label>
+                  <NumberInput
+                    value={monthlyExtraDayKm}
+                    onValue={setMonthlyExtraDayKm}
+                    min={0}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Extra Hour ($)</Label>
+                  <NumberInput
+                    value={monthlyExtraHourRate}
+                    onValue={setMonthlyExtraHourRate}
+                    min={0}
+                    step="0.01"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Extra Day ($)</Label>
+                  <NumberInput
+                    value={monthlyExtraDayRate}
+                    onValue={setMonthlyExtraDayRate}
+                    min={0}
+                    step="0.01"
+                  />
+                </div>
               </div>
             </div>
           </form>
         </div>
-
       </DialogContent>
     </Dialog>
   );

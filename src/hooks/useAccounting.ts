@@ -1,6 +1,6 @@
 // src/hooks/useAccounting.ts
 import { useQuery } from '@tanstack/react-query';
-import { axiosInstance } from '@/lib/API';
+import { apiClient } from '@/api/client';
 import { AccountingResponse } from '@/types/accounting';
 
 interface AccountingParams {
@@ -20,13 +20,17 @@ export const useAdminAccounting = (params: AccountingParams) => {
       const searchParams = new URLSearchParams();
       if (params.dateFrom) searchParams.append('dateFrom', params.dateFrom);
       if (params.dateTo) searchParams.append('dateTo', params.dateTo);
-      if (params.page && params.page > 1) searchParams.append('page', String(params.page));
-      if (params.limit && params.limit !== 20) searchParams.append('limit', String(params.limit));
+      if (params.page && params.page > 1)
+        searchParams.append('page', String(params.page));
+      if (params.limit && params.limit !== 20)
+        searchParams.append('limit', String(params.limit));
 
       const queryString = searchParams.toString();
-      const fullUrl = queryString ? `accounting/admin?${queryString}` : 'accounting/admin';
+      const fullUrl = queryString
+        ? `accounting/admin?${queryString}`
+        : 'accounting/admin';
 
-      const { data } = await axiosInstance.get(fullUrl);
+      const { data } = await apiClient.get(fullUrl);
       return data;
     },
     enabled: !!(params.dateFrom && params.dateTo),
@@ -34,24 +38,30 @@ export const useAdminAccounting = (params: AccountingParams) => {
 };
 
 // Operator accounting hook - uses location-specific endpoint when locationId is provided
-export const useOperatorAccounting = (companyId: string, params: AccountingParams) => {
+export const useOperatorAccounting = (
+  companyId: string,
+  params: AccountingParams,
+) => {
   return useQuery<AccountingResponse>({
     queryKey: ['operator-accounting', companyId, params.locationId, params],
     queryFn: async () => {
       const searchParams = new URLSearchParams();
       if (params.dateFrom) searchParams.append('dateFrom', params.dateFrom);
       if (params.dateTo) searchParams.append('dateTo', params.dateTo);
-      if (params.page && params.page > 1) searchParams.append('page', String(params.page));
-      if (params.limit && params.limit !== 20) searchParams.append('limit', String(params.limit));
+      if (params.page && params.page > 1)
+        searchParams.append('page', String(params.page));
+      if (params.limit && params.limit !== 20)
+        searchParams.append('limit', String(params.limit));
 
       const queryString = searchParams.toString();
 
       // When locationId is provided, use location-specific endpoint to get that location's data only
-      const endpoint = params.locationId && params.locationId !== 'all'
-        ? `accounting/company/${companyId}/location/${params.locationId}${queryString ? `?${queryString}` : ''}`
-        : `accounting/company/${companyId}${queryString ? `?${queryString}` : ''}`;
+      const endpoint =
+        params.locationId && params.locationId !== 'all'
+          ? `accounting/company/${companyId}/location/${params.locationId}${queryString ? `?${queryString}` : ''}`
+          : `accounting/company/${companyId}${queryString ? `?${queryString}` : ''}`;
 
-      const { data } = await axiosInstance.get(endpoint);
+      const { data } = await apiClient.get(endpoint);
       return data;
     },
     enabled: !!(companyId && params.dateFrom && params.dateTo),
@@ -66,22 +76,29 @@ interface CompanyAccountingParams extends AccountingParams {
 
 export const useCompanyAccounting = (params: CompanyAccountingParams) => {
   return useQuery<AccountingResponse>({
-    queryKey: ['company-accounting', params.companyId, params.locationId, params],
+    queryKey: [
+      'company-accounting',
+      params.companyId,
+      params.locationId,
+      params,
+    ],
     queryFn: async () => {
       const searchParams = new URLSearchParams();
       if (params.dateFrom) searchParams.append('dateFrom', params.dateFrom);
       if (params.dateTo) searchParams.append('dateTo', params.dateTo);
-      if (params.page && params.page > 1) searchParams.append('page', String(params.page));
-      if (params.limit && params.limit !== 20) searchParams.append('limit', String(params.limit));
+      if (params.page && params.page > 1)
+        searchParams.append('page', String(params.page));
+      if (params.limit && params.limit !== 20)
+        searchParams.append('limit', String(params.limit));
 
       const queryString = searchParams.toString();
-      
+
       // For admin: Use admin company endpoint for all locations, or location endpoint for single location
       const endpoint = params.locationId
         ? `accounting/company/${params.companyId}/location/${params.locationId}${queryString ? `?${queryString}` : ''}`
         : `accounting/admin/company/${params.companyId}${queryString ? `?${queryString}` : ''}`;
 
-      const { data } = await axiosInstance.get(endpoint);
+      const { data } = await apiClient.get(endpoint);
       return data;
     },
     enabled: !!(params.companyId && params.dateFrom && params.dateTo),
@@ -97,7 +114,7 @@ interface InvoiceParams {
 export const fetchInvoice = async (
   companyId: string,
   operationalLocationId: string | null,
-  params: InvoiceParams
+  params: InvoiceParams,
 ) => {
   if (!companyId) {
     throw new Error('Company ID is required');
@@ -112,7 +129,7 @@ export const fetchInvoice = async (
   if (params.to) searchParams.append('to', params.to);
 
   const queryString = searchParams.toString();
-  
+
   // Use multi-location endpoint if no location is provided, otherwise use single location endpoint
   const endpoint = operationalLocationId
     ? `accounting/invoice/${companyId}/${operationalLocationId}/pdf${queryString ? `?${queryString}` : ''}`
@@ -120,7 +137,7 @@ export const fetchInvoice = async (
 
   try {
     // Request PDF as blob
-    const response = await axiosInstance.get(endpoint, {
+    const response = await apiClient.get(endpoint, {
       responseType: 'blob',
       validateStatus: () => true, // Allow all status codes to handle errors manually
     });
@@ -130,7 +147,7 @@ export const fetchInvoice = async (
       // Error response - try to parse as JSON from blob
       let errorText = '';
       let errorJson: any = null;
-      
+
       try {
         // Read blob as text only once
         errorText = await (response.data as Blob).text();
@@ -140,17 +157,21 @@ export const fetchInvoice = async (
         // If JSON parsing fails, use text as is
         console.log('Error parsing JSON, using text:', errorText);
       }
-      
+
       // Extract error message
-      const errorMessage = errorJson?.message || errorJson?.error || errorText || `Server returned error status ${response.status}`;
-      
+      const errorMessage =
+        errorJson?.message ||
+        errorJson?.error ||
+        errorText ||
+        `Server returned error status ${response.status}`;
+
       // Create error with proper structure
       const error = new Error(errorMessage);
       (error as any).response = {
         status: response.status,
         data: errorJson || { message: errorText || errorMessage },
       };
-      
+
       throw error;
     }
 
@@ -174,7 +195,7 @@ export const fetchInvoice = async (
           link.click();
           document.body.removeChild(link);
           window.URL.revokeObjectURL(url);
-        }
+        },
       };
     }
 
@@ -197,7 +218,9 @@ export const fetchInvoice = async (
     }
 
     // Handle unexpected errors (network, etc.)
-    throw new Error(error?.message || 'Failed to generate invoice. Please try again.');
+    throw new Error(
+      error?.message || 'Failed to generate invoice. Please try again.',
+    );
   }
 };
 
@@ -205,7 +228,7 @@ export const fetchInvoice = async (
 export const fetchInvoiceJson = async (
   companyId: string,
   operationalLocationId: string | null,
-  params: InvoiceParams
+  params: InvoiceParams,
 ) => {
   if (!companyId) {
     throw new Error('Company ID is required');
@@ -220,17 +243,20 @@ export const fetchInvoiceJson = async (
   if (params.to) searchParams.append('to', params.to);
 
   const queryString = searchParams.toString();
-  
+
   // Use multi-location endpoint if no location is provided, otherwise use single location endpoint
   const endpoint = operationalLocationId
     ? `accounting/invoice/${companyId}/${operationalLocationId}/json${queryString ? `?${queryString}` : ''}`
     : `accounting/invoice/multi-location/${companyId}/json${queryString ? `?${queryString}` : ''}`;
 
   try {
-    const { data } = await axiosInstance.get(endpoint);
+    const { data } = await apiClient.get(endpoint);
     return data;
   } catch (error: any) {
-    const errorMessage = error?.response?.data?.message || error?.message || 'Failed to fetch invoice data';
+    const errorMessage =
+      error?.response?.data?.message ||
+      error?.message ||
+      'Failed to fetch invoice data';
     throw new Error(errorMessage);
   }
 };

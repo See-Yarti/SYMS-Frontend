@@ -1,26 +1,44 @@
+'use client';
+
 // src/components/Rates/NewRateDialog.tsx
 
 // src/components/Rates/NewRateDialog.tsx
 
 import * as React from 'react';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Select, SelectTrigger, SelectContent, SelectItem, SelectValue,
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
 } from '@/components/ui/select';
 
 // ---------- Types ----------
 type CarClassOption = { value: string; label: string };
 
 type DailyLOR = {
-  first: number; second: number; third: number; fourth: number; fifth: number; sixth: number;
+  first: number;
+  second: number;
+  third: number;
+  fourth: number;
+  fifth: number;
+  sixth: number;
 };
 type WeeklyLOR = {
-  first: number; second: number; third: number; fourth: number;
+  first: number;
+  second: number;
+  third: number;
+  fourth: number;
 };
 
 export type CreateRatePayload = {
@@ -58,10 +76,25 @@ export type NewRateDialogProps = {
 };
 
 // ---------- Helpers ----------
-const DEFAULT_DAILY_LOR: DailyLOR = { first: 0, second: 0, third: 0, fourth: 0, fifth: 0, sixth: 0 };
-const DEFAULT_WEEKLY_LOR: WeeklyLOR = { first: 0, second: 0, third: 0, fourth: 0 };
+const DEFAULT_DAILY_LOR: DailyLOR = {
+  first: 0,
+  second: 0,
+  third: 0,
+  fourth: 0,
+  fifth: 0,
+  sixth: 0,
+};
+const DEFAULT_WEEKLY_LOR: WeeklyLOR = {
+  first: 0,
+  second: 0,
+  third: 0,
+  fourth: 0,
+};
 
-const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const currency = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+});
 const fmt = (n: number) => currency.format(Number.isFinite(n) ? n : 0);
 
 function NumberInput({
@@ -125,7 +158,12 @@ function NumberInput({
 }
 
 // ---------- Component ----------
-export default function NewRateDialog({ open, onClose, onAddRate, carClasses }: NewRateDialogProps) {
+export default function NewRateDialog({
+  open,
+  onClose,
+  onAddRate,
+  carClasses,
+}: NewRateDialogProps) {
   // top-level
   const [companyCarClassId, setCompanyCarClassId] = React.useState('');
   const [startDate, setStartDate] = React.useState('');
@@ -137,22 +175,29 @@ export default function NewRateDialog({ open, onClose, onAddRate, carClasses }: 
   const [dailyBaseKm, setDailyBaseKm] = React.useState<number>(0);
   const [dailyExtraHourRate, setDailyExtraHourRate] = React.useState<number>(0);
   const [dailyExtraDayRate, setDailyExtraDayRate] = React.useState<number>(0);
-  const [dailyLOR, setDailyLOR] = React.useState<DailyLOR>({ ...DEFAULT_DAILY_LOR });
+  const [dailyLOR, setDailyLOR] = React.useState<DailyLOR>({
+    ...DEFAULT_DAILY_LOR,
+  });
 
   // weekly
   const [weeklyBaseRate, setWeeklyBaseRate] = React.useState<number>(0);
   const [weeklyBaseKm, setWeeklyBaseKm] = React.useState<number>(0);
   const [weeklyExtraDayKm, setWeeklyExtraDayKm] = React.useState<number>(0);
-  const [weeklyExtraHourRate, setWeeklyExtraHourRate] = React.useState<number>(0);
+  const [weeklyExtraHourRate, setWeeklyExtraHourRate] =
+    React.useState<number>(0);
   const [weeklyExtraDayRate, setWeeklyExtraDayRate] = React.useState<number>(0);
-  const [weeklyLOR, setWeeklyLOR] = React.useState<WeeklyLOR>({ ...DEFAULT_WEEKLY_LOR });
+  const [weeklyLOR, setWeeklyLOR] = React.useState<WeeklyLOR>({
+    ...DEFAULT_WEEKLY_LOR,
+  });
 
   // monthly
   const [monthlyBaseRate, setMonthlyBaseRate] = React.useState<number>(0);
   const [monthlyBaseKm, setMonthlyBaseKm] = React.useState<number>(0);
   const [monthlyExtraDayKm, setMonthlyExtraDayKm] = React.useState<number>(0);
-  const [monthlyExtraHourRate, setMonthlyExtraHourRate] = React.useState<number>(0);
-  const [monthlyExtraDayRate, setMonthlyExtraDayRate] = React.useState<number>(0);
+  const [monthlyExtraHourRate, setMonthlyExtraHourRate] =
+    React.useState<number>(0);
+  const [monthlyExtraDayRate, setMonthlyExtraDayRate] =
+    React.useState<number>(0);
 
   const resetForm = () => {
     setCompanyCarClassId('');
@@ -180,7 +225,9 @@ export default function NewRateDialog({ open, onClose, onAddRate, carClasses }: 
     setMonthlyExtraDayRate(0);
   };
 
-  React.useEffect(() => { if (!open) resetForm(); }, [open]);
+  React.useEffect(() => {
+    if (!open) resetForm();
+  }, [open]);
 
   const toApiDate = (yyyyMmDd: string) => {
     if (!yyyyMmDd) return '';
@@ -229,7 +276,7 @@ export default function NewRateDialog({ open, onClose, onAddRate, carClasses }: 
       dailyBaseRate + (dailyLOR.fifth || 0),
       dailyBaseRate + (dailyLOR.sixth || 0),
     ],
-    [dailyBaseRate, dailyLOR]
+    [dailyBaseRate, dailyLOR],
   );
 
   const weeklyTotals = React.useMemo(
@@ -239,10 +286,17 @@ export default function NewRateDialog({ open, onClose, onAddRate, carClasses }: 
       weeklyBaseRate + (weeklyLOR.third || 0),
       weeklyBaseRate + (weeklyLOR.fourth || 0),
     ],
-    [weeklyBaseRate, weeklyLOR]
+    [weeklyBaseRate, weeklyLOR],
   );
 
-  const DailyHeaders = ['1st Day', '2nd Day', '3rd Day', '4th Day', '5th Day', '6th Day'];
+  const DailyHeaders = [
+    '1st Day',
+    '2nd Day',
+    '3rd Day',
+    '4th Day',
+    '5th Day',
+    '6th Day',
+  ];
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -255,18 +309,25 @@ export default function NewRateDialog({ open, onClose, onAddRate, carClasses }: 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 px-6 pb-4">
             <div className="space-y-2">
               <Label>Car Class *</Label>
-              <Select value={companyCarClassId} onValueChange={setCompanyCarClassId}>
+              <Select
+                value={companyCarClassId}
+                onValueChange={setCompanyCarClassId}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Car Class" />
                 </SelectTrigger>
                 <SelectContent>
-                  {carClasses.filter(c => !!c.value).map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      {c.label}
-                    </SelectItem>
-                  ))}
+                  {carClasses
+                    .filter((c) => !!c.value)
+                    .map((c) => (
+                      <SelectItem key={c.value} value={c.value}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
                   {carClasses.length === 0 && (
-                    <SelectItem value="__NO_DATA__" disabled>No classes available</SelectItem>
+                    <SelectItem value="__NO_DATA__" disabled>
+                      No classes available
+                    </SelectItem>
                   )}
                 </SelectContent>
               </Select>
@@ -274,17 +335,32 @@ export default function NewRateDialog({ open, onClose, onAddRate, carClasses }: 
 
             <div className="space-y-2">
               <Label>Start Date *</Label>
-              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required />
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                required
+              />
             </div>
 
             <div className="space-y-2">
               <Label>End Date *</Label>
-              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required />
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                required
+              />
             </div>
 
             <div className="space-y-2">
               <Label>Extra KM Rate ($ / km)</Label>
-              <NumberInput value={extraKmRate} onValue={setExtraKmRate} min={0} step="0.01" />
+              <NumberInput
+                value={extraKmRate}
+                onValue={setExtraKmRate}
+                min={0}
+                step="0.01"
+              />
             </div>
           </div>
 
@@ -301,27 +377,82 @@ export default function NewRateDialog({ open, onClose, onAddRate, carClasses }: 
               <div className="space-y-4">
                 <h3 className="font-medium text-lg">Daily</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="space-y-2"><Label>Base Rate ($)</Label><NumberInput value={dailyBaseRate} onValue={setDailyBaseRate} min={0} step="0.01" /></div>
-                  <div className="space-y-2"><Label>Base KM</Label><NumberInput value={dailyBaseKm} onValue={setDailyBaseKm} min={0} /></div>
-                  <div className="space-y-2"><Label>Extra Hour ($)</Label><NumberInput value={dailyExtraHourRate} onValue={setDailyExtraHourRate} min={0} step="0.01" /></div>
-                  <div className="space-y-2"><Label>Extra Day ($)</Label><NumberInput value={dailyExtraDayRate} onValue={setDailyExtraDayRate} min={0} step="0.01" /></div>
+                  <div className="space-y-2">
+                    <Label>Base Rate ($)</Label>
+                    <NumberInput
+                      value={dailyBaseRate}
+                      onValue={setDailyBaseRate}
+                      min={0}
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Base KM</Label>
+                    <NumberInput
+                      value={dailyBaseKm}
+                      onValue={setDailyBaseKm}
+                      min={0}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Extra Hour ($)</Label>
+                    <NumberInput
+                      value={dailyExtraHourRate}
+                      onValue={setDailyExtraHourRate}
+                      min={0}
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Extra Day ($)</Label>
+                    <NumberInput
+                      value={dailyExtraDayRate}
+                      onValue={setDailyExtraDayRate}
+                      min={0}
+                      step="0.01"
+                    />
+                  </div>
                 </div>
 
                 <div className="rounded-lg border p-3 md:p-4 overflow-x-auto">
                   <table className="w-full text-sm min-w-[600px]">
-                    <thead><tr className="border-b">{DailyHeaders.map((h) => (<th key={h} className="text-left p-2 whitespace-nowrap">{h}</th>))}</tr></thead>
+                    <thead>
+                      <tr className="border-b">
+                        {DailyHeaders.map((h) => (
+                          <th
+                            key={h}
+                            className="text-left p-2 whitespace-nowrap"
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
                     <tbody>
                       <tr>
-                        {(['first', 'second', 'third', 'fourth', 'fifth', 'sixth'] as const).map((key, idx) => (
+                        {(
+                          [
+                            'first',
+                            'second',
+                            'third',
+                            'fourth',
+                            'fifth',
+                            'sixth',
+                          ] as const
+                        ).map((key, idx) => (
                           <td key={key} className="p-2 align-top">
                             <div className="flex flex-col items-center gap-1">
                               <NumberInput
                                 value={dailyLOR[key]}
-                                onValue={(n) => setDailyLOR((p) => ({ ...p, [key]: n }))}
+                                onValue={(n) =>
+                                  setDailyLOR((p) => ({ ...p, [key]: n }))
+                                }
                                 step="0.01"
                                 className="w-28 text-center"
                               />
-                              <div className="text-xs text-muted-foreground">{fmt(dailyTotals[idx])}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {fmt(dailyTotals[idx])}
+                              </div>
                             </div>
                           </td>
                         ))}
@@ -335,31 +466,88 @@ export default function NewRateDialog({ open, onClose, onAddRate, carClasses }: 
               <div className="space-y-4">
                 <h3 className="font-medium text-lg">Weekly</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  <div className="space-y-2"><Label>Base Rate ($)</Label><NumberInput value={weeklyBaseRate} onValue={setWeeklyBaseRate} min={0} step="0.01" /></div>
-                  <div className="space-y-2"><Label>Base KM</Label><NumberInput value={weeklyBaseKm} onValue={setWeeklyBaseKm} min={0} /></div>
-                  <div className="space-y-2"><Label>Extra Day KM</Label><NumberInput value={weeklyExtraDayKm} onValue={setWeeklyExtraDayKm} min={0} /></div>
-                  <div className="space-y-2"><Label>Extra Hour ($)</Label><NumberInput value={weeklyExtraHourRate} onValue={setWeeklyExtraHourRate} min={0} step="0.01" /></div>
-                  <div className="space-y-2"><Label>Extra Day ($)</Label><NumberInput value={weeklyExtraDayRate} onValue={setWeeklyExtraDayRate} min={0} step="0.01" /></div>
+                  <div className="space-y-2">
+                    <Label>Base Rate ($)</Label>
+                    <NumberInput
+                      value={weeklyBaseRate}
+                      onValue={setWeeklyBaseRate}
+                      min={0}
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Base KM</Label>
+                    <NumberInput
+                      value={weeklyBaseKm}
+                      onValue={setWeeklyBaseKm}
+                      min={0}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Extra Day KM</Label>
+                    <NumberInput
+                      value={weeklyExtraDayKm}
+                      onValue={setWeeklyExtraDayKm}
+                      min={0}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Extra Hour ($)</Label>
+                    <NumberInput
+                      value={weeklyExtraHourRate}
+                      onValue={setWeeklyExtraHourRate}
+                      min={0}
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Extra Day ($)</Label>
+                    <NumberInput
+                      value={weeklyExtraDayRate}
+                      onValue={setWeeklyExtraDayRate}
+                      min={0}
+                      step="0.01"
+                    />
+                  </div>
                 </div>
 
                 <div className="rounded-lg border p-3 md:p-4 overflow-x-auto">
                   <table className="w-full text-sm min-w-[480px]">
-                    <thead><tr className="border-b">{['1st Week', '2nd Week', '3rd Week', '4th Week'].map((h) => (<th key={h} className="text-left p-2 whitespace-nowrap">{h}</th>))}</tr></thead>
+                    <thead>
+                      <tr className="border-b">
+                        {['1st Week', '2nd Week', '3rd Week', '4th Week'].map(
+                          (h) => (
+                            <th
+                              key={h}
+                              className="text-left p-2 whitespace-nowrap"
+                            >
+                              {h}
+                            </th>
+                          ),
+                        )}
+                      </tr>
+                    </thead>
                     <tbody>
                       <tr>
-                        {(['first', 'second', 'third', 'fourth'] as const).map((key, idx) => (
-                          <td key={key} className="p-2 align-top">
-                            <div className="flex flex-col items-center gap-1">
-                              <NumberInput
-                                value={weeklyLOR[key]}
-                                onValue={(n) => setWeeklyLOR((p) => ({ ...p, [key]: n }))}
-                                step="0.01"
-                                className="w-28 text-center"
-                              />
-                              <div className="text-xs text-muted-foreground">{fmt(weeklyTotals[idx])}</div>
-                            </div>
-                          </td>
-                        ))}
+                        {(['first', 'second', 'third', 'fourth'] as const).map(
+                          (key, idx) => (
+                            <td key={key} className="p-2 align-top">
+                              <div className="flex flex-col items-center gap-1">
+                                <NumberInput
+                                  value={weeklyLOR[key]}
+                                  onValue={(n) =>
+                                    setWeeklyLOR((p) => ({ ...p, [key]: n }))
+                                  }
+                                  step="0.01"
+                                  className="w-28 text-center"
+                                />
+                                <div className="text-xs text-muted-foreground">
+                                  {fmt(weeklyTotals[idx])}
+                                </div>
+                              </div>
+                            </td>
+                          ),
+                        )}
                       </tr>
                     </tbody>
                   </table>
@@ -370,19 +558,64 @@ export default function NewRateDialog({ open, onClose, onAddRate, carClasses }: 
               <div className="space-y-4">
                 <h3 className="font-medium text-lg">Monthly</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                  <div className="space-y-2"><Label>Base Rate ($)</Label><NumberInput value={monthlyBaseRate} onValue={setMonthlyBaseRate} min={0} step="0.01" /></div>
-                  <div className="space-y-2"><Label>Base KM</Label><NumberInput value={monthlyBaseKm} onValue={setMonthlyBaseKm} min={0} /></div>
-                  <div className="space-y-2"><Label>Extra Day KM</Label><NumberInput value={monthlyExtraDayKm} onValue={setMonthlyExtraDayKm} min={0} /></div>
-                  <div className="space-y-2"><Label>Extra Hour ($)</Label><NumberInput value={monthlyExtraHourRate} onValue={setMonthlyExtraHourRate} min={0} step="0.01" /></div>
-                  <div className="space-y-2"><Label>Extra Day ($)</Label><NumberInput value={monthlyExtraDayRate} onValue={setMonthlyExtraDayRate} min={0} step="0.01" /></div>
+                  <div className="space-y-2">
+                    <Label>Base Rate ($)</Label>
+                    <NumberInput
+                      value={monthlyBaseRate}
+                      onValue={setMonthlyBaseRate}
+                      min={0}
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Base KM</Label>
+                    <NumberInput
+                      value={monthlyBaseKm}
+                      onValue={setMonthlyBaseKm}
+                      min={0}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Extra Day KM</Label>
+                    <NumberInput
+                      value={monthlyExtraDayKm}
+                      onValue={setMonthlyExtraDayKm}
+                      min={0}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Extra Hour ($)</Label>
+                    <NumberInput
+                      value={monthlyExtraHourRate}
+                      onValue={setMonthlyExtraHourRate}
+                      min={0}
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Extra Day ($)</Label>
+                    <NumberInput
+                      value={monthlyExtraDayRate}
+                      onValue={setMonthlyExtraDayRate}
+                      min={0}
+                      step="0.01"
+                    />
+                  </div>
                 </div>
               </div>
             </form>
           </div>
 
           <DialogFooter className="px-6 py-4 gap-2">
-            <Button variant="outline" type="button" onClick={onClose}>Cancel</Button>
-            <Button type="submit" form="rate-form" disabled={!(companyCarClassId && startDate && endDate)} className="bg-[#F56304] hover:bg-[#e05503] text-white">
+            <Button variant="outline" type="button" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="rate-form"
+              disabled={!(companyCarClassId && startDate && endDate)}
+              className="bg-[#F56304] hover:bg-[#e05503] text-white"
+            >
               Add Rate
             </Button>
           </DialogFooter>

@@ -1,3 +1,5 @@
+'use client';
+
 // src/components/SideBar/sidebar-back-button.tsx
 import React from 'react';
 import { ChevronLeft } from 'lucide-react';

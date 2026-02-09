@@ -1,6 +1,6 @@
 // src/types/accounting.ts
 
-export type AccountingType = 
+export type AccountingType =
   | 'BOOKING_COMPLETED'
   | 'NO_SHOW'
   | 'FREE_CANCEL'

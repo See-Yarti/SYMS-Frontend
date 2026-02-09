@@ -25,6 +25,6 @@ export function getCdwCase(booking: BookingWithCdw): CdwCase {
   if (booking.cdwOption === 'PART_OF_RENTAL') return 1;
   const taxOnCdw =
     booking.cdwBreakdown?.taxOnCdwApplicable === true ||
-    (Number(booking.cdwBreakdown?.taxOnCdwAmount ?? 0) > 0);
+    Number(booking.cdwBreakdown?.taxOnCdwAmount ?? 0) > 0;
   return taxOnCdw ? 3 : 2;
 }

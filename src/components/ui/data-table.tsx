@@ -1,5 +1,5 @@
-"use client"
-import * as React from "react"
+'use client';
+import * as React from 'react';
 import {
   ColumnDef,
   flexRender,
@@ -12,25 +12,32 @@ import {
   ColumnFiltersState,
   VisibilityState,
   RowSelectionState,
-} from "@tanstack/react-table"
+} from '@tanstack/react-table';
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { ChevronDown } from "lucide-react"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { ChevronDown } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from '@/components/ui/dropdown-menu';
 
 type DataTableProps<TData, TValue> = {
-  columns: ColumnDef<TData, TValue>[]
-  data: TData[]
-  searchColumn?: keyof TData
-  pageSize?: number
-}
+  columns: ColumnDef<TData, TValue>[];
+  data: TData[];
+  searchColumn?: keyof TData;
+  pageSize?: number;
+};
 
 export function DataTable<TData, TValue>({
   columns,
@@ -38,10 +45,13 @@ export function DataTable<TData, TValue>({
   searchColumn,
   pageSize = 10,
 }: DataTableProps<TData, TValue>) {
-  const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
-  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({})
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    [],
+  );
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
 
   const table = useReactTable({
     data,
@@ -63,14 +73,14 @@ export function DataTable<TData, TValue>({
     initialState: {
       pagination: { pageSize },
     },
-  })
+  });
 
   // SEARCH (if searchColumn is provided)
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (searchColumn) {
-      table.getColumn(searchColumn as string)?.setFilterValue(e.target.value)
+      table.getColumn(searchColumn as string)?.setFilterValue(e.target.value);
     }
-  }
+  };
 
   return (
     <div className="w-full">
@@ -78,7 +88,11 @@ export function DataTable<TData, TValue>({
         <div className="flex items-center py-2 gap-2">
           <Input
             placeholder={`Search...`}
-            value={(table.getColumn(searchColumn as string)?.getFilterValue() as string) ?? ""}
+            value={
+              (table
+                .getColumn(searchColumn as string)
+                ?.getFilterValue() as string) ?? ''
+            }
             onChange={handleSearch}
             className="max-w-xs"
           />
@@ -97,7 +111,9 @@ export function DataTable<TData, TValue>({
                     key={column.id}
                     className="capitalize"
                     checked={column.getIsVisible()}
-                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                    onCheckedChange={(value) =>
+                      column.toggleVisibility(!!value)
+                    }
                   >
                     {column.id}
                   </DropdownMenuCheckboxItem>
@@ -113,7 +129,12 @@ export function DataTable<TData, TValue>({
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHead key={header.id}>
-                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -122,17 +143,26 @@ export function DataTable<TData, TValue>({
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && 'selected'}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
                   No results.
                 </TableCell>
               </TableRow>
@@ -160,5 +190,5 @@ export function DataTable<TData, TValue>({
         </Button>
       </div>
     </div>
-  )
+  );
 }

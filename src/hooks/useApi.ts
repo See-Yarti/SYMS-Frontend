@@ -1,11 +1,7 @@
 // src/hooks/useApi.ts
-import { axiosInstance } from '@/lib/API';
-import {
-  useQuery,
-  useMutation,
-  useInfiniteQuery,
-} from '@tanstack/react-query';
-import { queryClient } from '@/Provider';
+import { apiClient } from '@/api/client';
+import { useQuery, useMutation, useInfiniteQuery } from '@tanstack/react-query';
+import { queryClient } from '@/app/providers';
 
 // Fetch data (simple GET)
 export const useFetchData = <T = unknown>(
@@ -16,7 +12,7 @@ export const useFetchData = <T = unknown>(
   return useQuery<T>({
     queryKey: Array.isArray(queryKey) ? queryKey : [queryKey],
     queryFn: async () => {
-      const { data } = await axiosInstance.get(endpoint);
+      const { data } = await apiClient.get(endpoint);
       return data.data;
     },
     ...options,
@@ -43,7 +39,7 @@ export const useFetchInfiniteData = <T = unknown>({
     queryKey: [queryKey, extraParams],
     initialPageParam: 1,
     queryFn: async ({ pageParam = 1 }) => {
-      const { data } = await axiosInstance.get<{ data: T[] }>(endpoint, {
+      const { data } = await apiClient.get<{ data: T[] }>(endpoint, {
         params: { page: pageParam, limit, ...extraParams },
       });
       return data.data;
@@ -62,7 +58,7 @@ export const usePostData = <TData = unknown, TResponse = unknown>(
 ) => {
   return useMutation<TResponse, Error, TData>({
     mutationFn: async (data: TData) => {
-      const { data: responseData } = await axiosInstance.post(endpoint, data);
+      const { data: responseData } = await apiClient.post(endpoint, data);
       return responseData.data;
     },
     ...options,
@@ -76,7 +72,7 @@ export const usePatchData = <TData = unknown, TResponse = unknown>(
 ) => {
   return useMutation<TResponse, Error, TData>({
     mutationFn: async (data: TData) => {
-      const { data: responseData } = await axiosInstance.patch(endpoint, data);
+      const { data: responseData } = await apiClient.patch(endpoint, data);
       return responseData.data;
     },
     ...options,
@@ -89,7 +85,7 @@ export const usePutData = <TData = unknown, TResponse = unknown>(
 ) => {
   return useMutation<TResponse, Error, { endpoint: string; data?: TData }>({
     mutationFn: async ({ endpoint, data }) => {
-      const { data: responseData } = await axiosInstance.put(endpoint, data);
+      const { data: responseData } = await apiClient.put(endpoint, data);
       return responseData.data;
     },
     ...options,
@@ -100,7 +96,7 @@ export const usePutData = <TData = unknown, TResponse = unknown>(
 export const useDeleteData = (options?: any) => {
   return useMutation<any, Error, { endpoint: string }>({
     mutationFn: async ({ endpoint }) => {
-      const { data } = await axiosInstance.delete(endpoint);
+      const { data } = await apiClient.delete(endpoint);
       return data.data;
     },
     ...options,
@@ -111,7 +107,7 @@ export const useDeleteData = (options?: any) => {
 export const useUploadFile = <TResponse = unknown>(endpoint: string) => {
   return useMutation<TResponse, Error, FormData>({
     mutationFn: async (formData: FormData) => {
-      const { data } = await axiosInstance.post(endpoint, formData, {
+      const { data } = await apiClient.post(endpoint, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

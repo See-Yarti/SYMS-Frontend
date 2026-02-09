@@ -1,7 +1,7 @@
 // src/hooks/useCompanyTaxes.ts
-import { axiosInstance } from '@/lib/API';
+import { apiClient } from '@/api/client';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { queryClient } from '@/Provider';
+import { queryClient } from '@/app/providers';
 
 export interface CompanyTaxItem {
   id: string;
@@ -76,7 +76,7 @@ export const useCompanyTaxes = (companyId: string, enabled = true) =>
     queryKey: ['company-taxes', companyId],
     queryFn: async () => {
       // Fetch with a high limit to avoid missing items due to pagination
-      const { data } = await axiosInstance.get(
+      const { data } = await apiClient.get(
         `/company-location-taxes/${companyId}?page=1&limit=1000`,
       );
       return data;
@@ -94,7 +94,7 @@ export const useCompanyTax = (
   useQuery<CompanyTaxDetailResponse, Error>({
     queryKey: ['company-tax', companyId, taxId],
     queryFn: async () => {
-      const { data } = await axiosInstance.get(
+      const { data } = await apiClient.get(
         `/company-location-taxes/${companyId}/tax/${taxId}`,
       );
       return data;
@@ -108,7 +108,7 @@ export const useCompanyTax = (
 export const useCreateCompanyTax = (companyId: string) =>
   useMutation<CompanyTaxDetailResponse, Error, CreateTaxBody>({
     mutationFn: async (payload) => {
-      const { data } = await axiosInstance.post(
+      const { data } = await apiClient.post(
         `/company-location-taxes/${companyId}`,
         payload,
       );
@@ -126,7 +126,7 @@ export const useUpdateCompanyTax = (companyId: string) =>
     { taxId: string; payload: UpdateTaxBody }
   >({
     mutationFn: async ({ taxId, payload }) => {
-      const { data } = await axiosInstance.patch(
+      const { data } = await apiClient.patch(
         `/company-location-taxes/${companyId}/tax/${taxId}`,
         payload,
       );
@@ -143,7 +143,7 @@ export const useUpdateCompanyTax = (companyId: string) =>
 export const useToggleCompanyTax = (companyId: string) =>
   useMutation<CompanyTaxDetailResponse, Error, { taxId: string }>({
     mutationFn: async ({ taxId }) => {
-      const { data } = await axiosInstance.patch(
+      const { data } = await apiClient.patch(
         `/company-location-taxes/${companyId}/tax/${taxId}/toggle`,
       );
       return data;
@@ -163,7 +163,7 @@ export const useDeleteCompanyTax = (companyId: string) =>
     { taxId: string }
   >({
     mutationFn: async ({ taxId }) => {
-      const { data } = await axiosInstance.delete(
+      const { data } = await apiClient.delete(
         `/company-location-taxes/${companyId}/tax/${taxId}`,
       );
       return data;

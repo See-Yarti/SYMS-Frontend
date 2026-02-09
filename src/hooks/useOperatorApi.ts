@@ -1,11 +1,7 @@
 // src/hooks/useOperatorApi.ts
 
-import { axiosInstance } from '@/lib/API';
-import {
-  useQuery,
-  useMutation,
-  keepPreviousData,
-} from '@tanstack/react-query';
+import { apiClient } from '@/api/client';
+import { useQuery, useMutation, keepPreviousData } from '@tanstack/react-query';
 import { useAppSelector } from '@/store';
 import {
   AddOperatorPayload,
@@ -13,7 +9,7 @@ import {
   UpdateOperatorPayload,
 } from '@/types/company';
 import { selectCompanyId } from '@/store/features/auth.slice';
-import { queryClient } from '@/Provider';
+import { queryClient } from '@/app/providers';
 
 // Shared query options
 const defaultQueryOptions = {
@@ -56,7 +52,6 @@ type GetUserResponse = {
   timestamp: string;
 };
 
-
 // Operator API hooks
 export const useGetAllOperators = ({
   search,
@@ -92,7 +87,7 @@ export const useGetAllOperators = ({
       if (limit) params.append('limit', String(limit));
       if (page) params.append('page', String(page));
 
-      const { data } = await axiosInstance.get(
+      const { data } = await apiClient.get(
         `${endpoint}?${params.toString()}`,
       );
       return {
@@ -112,7 +107,7 @@ export const useDeleteOperator = () => {
   const { companyId } = useAppSelector((state) => state.auth);
   return useMutation({
     mutationFn: async (operatorId: string) => {
-      await axiosInstance.delete(`/operator/${companyId}/${operatorId}`);
+      await apiClient.delete(`/operator/${companyId}/${operatorId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['operators'] });
@@ -127,7 +122,7 @@ export const useAddOperator = () => {
     mutationFn: async (payload) => {
       if (!companyId)
         throw new Error('Company ID is required to add an operator');
-      const { data } = await axiosInstance.patch(
+      const { data } = await apiClient.patch(
         `/operator/add-new-operator/${companyId}`,
         payload,
       );
@@ -143,7 +138,6 @@ export const useAddOperator = () => {
   });
 };
 
-
 // Update operator password --> Profile Page
 export const useUpdateOperatorPassword = () => {
   return useMutation<
@@ -152,7 +146,7 @@ export const useUpdateOperatorPassword = () => {
     { previousPassword: string; newPassword: string }
   >({
     mutationFn: async ({ previousPassword, newPassword }) => {
-      const { data } = await axiosInstance.patch(
+      const { data } = await apiClient.patch(
         '/operator/update-operator-password',
         { previousPassword, newPassword },
       );
@@ -168,7 +162,7 @@ export const useGetUserByEmail = (email: string) => {
   return useQuery<GetUserResponse>({
     queryKey: ['user', email],
     queryFn: async () => {
-      const { data } = await axiosInstance.get(`/users/${email}`);
+      const { data } = await apiClient.get(`/users/${email}`);
       return data;
     },
     enabled: !!email,
@@ -192,7 +186,7 @@ export const useUpdateOperator = () => {
         formData.append('phoneNumber', payload.phoneNumber);
       if (payload.gender) formData.append('gender', payload.gender);
 
-      const { data } = await axiosInstance.patch(`/operator/update`, formData, {
+      const { data } = await apiClient.patch(`/operator/update`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       return data.data.data.operator;
@@ -212,23 +206,20 @@ type UpdateAdminPayload = {
 };
 
 export const useUpdateAdmin = () => {
-  return useMutation<
-    User,
-    Error,
-    { payload: UpdateAdminPayload }
-  >({
+  return useMutation<User, Error, { payload: UpdateAdminPayload }>({
     mutationFn: async ({ payload }) => {
       const formData = new FormData();
       if (payload.name) formData.append('name', payload.name);
       if (payload.avatar) formData.append('avatar', payload.avatar);
-      if (payload.phoneNumber) formData.append('phoneNumber', payload.phoneNumber);
+      if (payload.phoneNumber)
+        formData.append('phoneNumber', payload.phoneNumber);
       if (payload.gender) formData.append('gender', payload.gender);
 
       // Explicit absolute URL per requirement
-      const { data } = await axiosInstance.patch(
+      const { data } = await apiClient.patch(
         'http://localhost:3000/api/admin/update',
         formData,
-        { headers: { 'Content-Type': 'multipart/form-data' } }
+        { headers: { 'Content-Type': 'multipart/form-data' } },
       );
 
       // Assuming a similar response shape to operator update; adjust if your API differs
@@ -245,9 +236,9 @@ export const useUpdateAdminPassword = () => {
     { previousPassword: string; newPassword: string }
   >({
     mutationFn: async ({ previousPassword, newPassword }) => {
-      const { data } = await axiosInstance.patch(
+      const { data } = await apiClient.patch(
         'http://localhost:3000/api/admin/update-password',
-        { previousPassword, newPassword }
+        { previousPassword, newPassword },
       );
       // Normalize a bit just in case the API shape differs
       return data?.data ?? data;

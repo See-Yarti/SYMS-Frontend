@@ -1,6 +1,8 @@
+'use client';
+
 // Commission Settings Edit page - form populated from API, mode toggle with warning modal
 
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from '@/hooks/useNextNavigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useGetCompany } from '@/hooks/useCompanyApi';
 import {
@@ -9,7 +11,11 @@ import {
   useSetFixedCancellationAmounts,
   useSetEdgeCaseHandling,
 } from '@/hooks/usePlansApi';
-import { useGetCompanySettings, useUpdateCompanyCDWSettings, validateCDWRange } from '@/hooks/useCDWApi';
+import {
+  useGetCompanySettings,
+  useUpdateCompanyCDWSettings,
+  validateCDWRange,
+} from '@/hooks/useCDWApi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -37,7 +43,10 @@ import {
   AlertTriangle,
   Info,
 } from 'lucide-react';
-import type { StatusCommissionSetting, StatusCommissionSettingsPayload } from '@/types/company';
+import type {
+  StatusCommissionSetting,
+  StatusCommissionSettingsPayload,
+} from '@/types/company';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
@@ -47,24 +56,45 @@ function CompanyCommissionSettingsEditPage() {
   const { companyId } = useParams<{ companyId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { data: companyRes, isLoading: companyLoading, error: companyError } = useGetCompany(companyId || '');
+  const {
+    data: companyRes,
+    isLoading: companyLoading,
+    error: companyError,
+  } = useGetCompany(companyId || '');
   const { data: settingsResOld } = useGetCompanySettingsOld(companyId || '');
-  const { data: settingsRes, isLoading: settingsLoading } = useGetCompanySettings(companyId || '');
+  const { data: settingsRes, isLoading: settingsLoading } =
+    useGetCompanySettings(companyId || '');
   const setStatusSettings = useSetStatusCommissionSettings(companyId || '');
   const setFixedAmounts = useSetFixedCancellationAmounts(companyId || '');
   const setEdgeCase = useSetEdgeCaseHandling(companyId || '');
   const updateCDWSettings = useUpdateCompanyCDWSettings(companyId || '');
 
   const [modeChangeModalOpen, setModeChangeModalOpen] = useState(false);
-  const [pendingMode, setPendingMode] = useState<'PERCENTAGE' | 'FIXED' | null>(null);
+  const [pendingMode, setPendingMode] = useState<'PERCENTAGE' | 'FIXED' | null>(
+    null,
+  );
 
-  const [commissionType, setCommissionType] = useState<'PERCENTAGE' | 'FIXED'>('PERCENTAGE');
+  const [commissionType, setCommissionType] = useState<'PERCENTAGE' | 'FIXED'>(
+    'PERCENTAGE',
+  );
   const [platformCommissionPct, setPlatformCommissionPct] = useState('10');
   const [platformCommissionFixed, setPlatformCommissionFixed] = useState('10');
   const [operatorFaultPct, setOperatorFaultPct] = useState('15');
-  const [lateCancel, setLateCancel] = useState({ penaltyPct: '30', yalaRideShare: '10', remainingToOperator: true });
-  const [noShow, setNoShow] = useState({ penaltyPct: '25', yalaRideShare: '15', remainingToOperator: true });
-  const [customerFault, setCustomerFault] = useState({ penaltyPct: '20', yalaRideShare: '8', remainingToOperator: true });
+  const [lateCancel, setLateCancel] = useState({
+    penaltyPct: '30',
+    yalaRideShare: '10',
+    remainingToOperator: true,
+  });
+  const [noShow, setNoShow] = useState({
+    penaltyPct: '25',
+    yalaRideShare: '15',
+    remainingToOperator: true,
+  });
+  const [customerFault, setCustomerFault] = useState({
+    penaltyPct: '20',
+    yalaRideShare: '8',
+    remainingToOperator: true,
+  });
   const [cdwEnabled, setCdwEnabled] = useState(false);
   const [cdwMin, setCdwMin] = useState('5');
   const [cdwMax, setCdwMax] = useState('20');
@@ -78,33 +108,55 @@ function CompanyCommissionSettingsEditPage() {
     if (!settingsResOld?.data?.settings) return;
     const s = settingsResOld.data.settings as any;
     const scs = s.statusCommissionSettings ?? {};
-    const completedSetting = scs.COMPLETED as StatusCommissionSetting | undefined;
+    const completedSetting = scs.COMPLETED as
+      | StatusCommissionSetting
+      | undefined;
     // Prefer COMPLETED.type (same source as view page)
-    const type = (completedSetting?.type || s.commissionType || 'PERCENTAGE') as 'PERCENTAGE' | 'FIXED';
+    const type = (completedSetting?.type ||
+      s.commissionType ||
+      'PERCENTAGE') as 'PERCENTAGE' | 'FIXED';
     setCommissionType(type);
     // Use COMPLETED values when available, else fallback to column fields
-    const rate = completedSetting?.percentageRate ?? s.effectiveCommissionRate ?? s.baseCommissionRate ?? '10';
-    const fixedAmt = completedSetting?.fixedAmount ?? s.fixedCommissionAmount ?? rate;
+    const rate =
+      completedSetting?.percentageRate ??
+      s.effectiveCommissionRate ??
+      s.baseCommissionRate ??
+      '10';
+    const fixedAmt =
+      completedSetting?.fixedAmount ?? s.fixedCommissionAmount ?? rate;
     setPlatformCommissionPct(String(rate));
-    setPlatformCommissionFixed(typeof fixedAmt === 'number' ? String(fixedAmt) : String(fixedAmt ?? '10'));
+    setPlatformCommissionFixed(
+      typeof fixedAmt === 'number'
+        ? String(fixedAmt)
+        : String(fixedAmt ?? '10'),
+    );
     const opFault = scs.OPERATOR_FAULT as StatusCommissionSetting | undefined;
     setOperatorFaultPct(String(opFault?.penaltyPercentage ?? 15));
     const late = scs.LATE_CANCEL as StatusCommissionSetting | undefined;
     setLateCancel({
       penaltyPct: String(late?.percentageRate ?? 30),
-      yalaRideShare: late?.fixedAmount != null ? String(late.fixedAmount) : String(late?.splitPercentage ?? 10),
+      yalaRideShare:
+        late?.fixedAmount != null
+          ? String(late.fixedAmount)
+          : String(late?.splitPercentage ?? 10),
       remainingToOperator: true,
     });
     const noShowS = scs.NO_SHOW as StatusCommissionSetting | undefined;
     setNoShow({
       penaltyPct: String(noShowS?.percentageRate ?? 25),
-      yalaRideShare: noShowS?.fixedAmount != null ? String(noShowS.fixedAmount) : String(noShowS?.splitPercentage ?? 15),
+      yalaRideShare:
+        noShowS?.fixedAmount != null
+          ? String(noShowS.fixedAmount)
+          : String(noShowS?.splitPercentage ?? 15),
       remainingToOperator: true,
     });
     const cust = scs.CUSTOMER_FAULT as StatusCommissionSetting | undefined;
     setCustomerFault({
       penaltyPct: String(cust?.percentageRate ?? 20),
-      yalaRideShare: cust?.fixedAmount != null ? String(cust.fixedAmount) : String(cust?.splitPercentage ?? 8),
+      yalaRideShare:
+        cust?.fixedAmount != null
+          ? String(cust.fixedAmount)
+          : String(cust?.splitPercentage ?? 8),
       remainingToOperator: true,
     });
     setEdgeCaseOWE((s.edgeCaseHandling ?? 'CAP') === 'OWE');
@@ -115,12 +167,14 @@ function CompanyCommissionSettingsEditPage() {
   useEffect(() => {
     // useFetchData already extracts data.data, so settingsRes is CompanySettingsResponse directly
     if (!settingsRes?.settings?.cdw) return;
-    
+
     const cdw = settingsRes.settings.cdw;
     setCdwEnabled(cdw.cdwEnabled ?? false);
     setCdwMin(cdw.cdwMinPercentage ? String(cdw.cdwMinPercentage) : '5');
     setCdwMax(cdw.cdwMaxPercentage ? String(cdw.cdwMaxPercentage) : '20');
-    setCdwCommission(cdw.cdwCommissionPercentage ? String(cdw.cdwCommissionPercentage) : '10');
+    setCdwCommission(
+      cdw.cdwCommissionPercentage ? String(cdw.cdwCommissionPercentage) : '10',
+    );
   }, [settingsRes]);
 
   if (companyLoading || !companyId) {
@@ -135,7 +189,12 @@ function CompanyCommissionSettingsEditPage() {
     return (
       <div className="rounded-lg border border-destructive p-4 text-destructive">
         <p>Error loading company.</p>
-        <Button variant="outline" size="sm" className="mt-2" onClick={() => navigate('/companies/list')}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-2"
+          onClick={() => navigate('/companies/list')}
+        >
           Back to list
         </Button>
       </div>
@@ -161,13 +220,27 @@ function CompanyCommissionSettingsEditPage() {
       setPlatformCommissionPct('');
       setPlatformCommissionFixed('');
       setOperatorFaultPct('');
-      setLateCancel({ penaltyPct: '', yalaRideShare: '', remainingToOperator: true });
-      setNoShow({ penaltyPct: '', yalaRideShare: '', remainingToOperator: true });
-      setCustomerFault({ penaltyPct: '', yalaRideShare: '', remainingToOperator: true });
+      setLateCancel({
+        penaltyPct: '',
+        yalaRideShare: '',
+        remainingToOperator: true,
+      });
+      setNoShow({
+        penaltyPct: '',
+        yalaRideShare: '',
+        remainingToOperator: true,
+      });
+      setCustomerFault({
+        penaltyPct: '',
+        yalaRideShare: '',
+        remainingToOperator: true,
+      });
       setEdgeCaseOWE(false);
       setEdgeCaseCAP(true);
 
-      toast.info(`Mode changed to ${pendingMode === 'FIXED' ? 'Fixed' : 'Percentage'}. Fill in the fields and click "Save Settings" to apply.`);
+      toast.info(
+        `Mode changed to ${pendingMode === 'FIXED' ? 'Fixed' : 'Percentage'}. Fill in the fields and click "Save Settings" to apply.`,
+      );
       setPendingMode(null);
       setModeChangeModalOpen(false);
     }
@@ -182,43 +255,76 @@ function CompanyCommissionSettingsEditPage() {
     if (isFixedMode) {
       const fixed = parseFloat(platformCommissionFixed);
       if (isNaN(fixed) || fixed < MIN) {
-        return { valid: false, message: 'Platform Commission (Fixed) must be at least 0.01 USD' };
+        return {
+          valid: false,
+          message: 'Platform Commission (Fixed) must be at least 0.01 USD',
+        };
       }
       if (fixed > 9999.99) {
-        return { valid: false, message: 'Platform Commission (Fixed) must not exceed 9999.99 USD' };
+        return {
+          valid: false,
+          message: 'Platform Commission (Fixed) must not exceed 9999.99 USD',
+        };
       }
     } else {
       const pct = parseFloat(platformCommissionPct);
       if (isNaN(pct) || pct < MIN || pct > MAX) {
-        return { valid: false, message: 'Platform Commission (%) must be between 0.01 and 100' };
+        return {
+          valid: false,
+          message: 'Platform Commission (%) must be between 0.01 and 100',
+        };
       }
     }
 
     // Operator Fault
     const opPct = parseFloat(operatorFaultPct);
     if (isNaN(opPct) || opPct < MIN || opPct > MAX) {
-      return { valid: false, message: 'Operator Fault penalty (%) must be between 0.01 and 100' };
+      return {
+        valid: false,
+        message: 'Operator Fault penalty (%) must be between 0.01 and 100',
+      };
     }
 
     // Late Cancel, No Show, Customer Fault
     const penaltyFields = [
-      { name: 'Late Cancel', penaltyPct: lateCancel.penaltyPct, share: lateCancel.yalaRideShare },
-      { name: 'No Show', penaltyPct: noShow.penaltyPct, share: noShow.yalaRideShare },
-      { name: 'Customer Fault', penaltyPct: customerFault.penaltyPct, share: customerFault.yalaRideShare },
+      {
+        name: 'Late Cancel',
+        penaltyPct: lateCancel.penaltyPct,
+        share: lateCancel.yalaRideShare,
+      },
+      {
+        name: 'No Show',
+        penaltyPct: noShow.penaltyPct,
+        share: noShow.yalaRideShare,
+      },
+      {
+        name: 'Customer Fault',
+        penaltyPct: customerFault.penaltyPct,
+        share: customerFault.yalaRideShare,
+      },
     ];
     for (const f of penaltyFields) {
       const penalty = parseFloat(f.penaltyPct);
       if (isNaN(penalty) || penalty < MIN || penalty > MAX) {
-        return { valid: false, message: `${f.name}: Penalty rate must be between 0.01 and 100` };
+        return {
+          valid: false,
+          message: `${f.name}: Penalty rate must be between 0.01 and 100`,
+        };
       }
       const share = parseFloat(f.share);
       if (isFixedMode) {
         if (isNaN(share) || share < MIN) {
-          return { valid: false, message: `${f.name}: YalaRide share (USD) must be at least 0.01` };
+          return {
+            valid: false,
+            message: `${f.name}: YalaRide share (USD) must be at least 0.01`,
+          };
         }
       } else {
         if (isNaN(share) || share < 0 || share > MAX) {
-          return { valid: false, message: `${f.name}: YalaRide share (%) must be between 0 and 100` };
+          return {
+            valid: false,
+            message: `${f.name}: YalaRide share (%) must be between 0 and 100`,
+          };
         }
       }
     }
@@ -239,13 +345,13 @@ function CompanyCommissionSettingsEditPage() {
       const minNum = parseFloat(cdwMin);
       const maxNum = parseFloat(cdwMax);
       const commNum = parseFloat(cdwCommission);
-      
+
       const rangeValidation = validateCDWRange(minNum, maxNum);
       if (!rangeValidation.valid) {
         toast.error(rangeValidation.message);
         return;
       }
-      
+
       if (commNum < 0 || commNum > 100) {
         toast.error('CDW commission must be between 0 and 100');
         return;
@@ -256,8 +362,12 @@ function CompanyCommissionSettingsEditPage() {
     const payload: StatusCommissionSettingsPayload = {
       COMPLETED: {
         type: commissionType,
-        percentageRate: isFixedMode ? undefined : parseFloat(platformCommissionPct),
-        fixedAmount: isFixedMode ? parseFloat(platformCommissionFixed) : undefined,
+        percentageRate: isFixedMode
+          ? undefined
+          : parseFloat(platformCommissionPct),
+        fixedAmount: isFixedMode
+          ? parseFloat(platformCommissionFixed)
+          : undefined,
       },
       OPERATOR_FAULT: {
         type: 'PERCENTAGE',
@@ -267,23 +377,33 @@ function CompanyCommissionSettingsEditPage() {
       LATE_CANCEL: {
         type: commissionType,
         percentageRate: parseFloat(lateCancel.penaltyPct),
-        splitPercentage: isFixedMode ? undefined : parseFloat(lateCancel.yalaRideShare),
-        fixedAmount: isFixedMode ? parseFloat(lateCancel.yalaRideShare) : undefined,
+        splitPercentage: isFixedMode
+          ? undefined
+          : parseFloat(lateCancel.yalaRideShare),
+        fixedAmount: isFixedMode
+          ? parseFloat(lateCancel.yalaRideShare)
+          : undefined,
       },
       NO_SHOW: {
         type: commissionType,
         percentageRate: parseFloat(noShow.penaltyPct),
-        splitPercentage: isFixedMode ? undefined : parseFloat(noShow.yalaRideShare),
+        splitPercentage: isFixedMode
+          ? undefined
+          : parseFloat(noShow.yalaRideShare),
         fixedAmount: isFixedMode ? parseFloat(noShow.yalaRideShare) : undefined,
       },
       CUSTOMER_FAULT: {
         type: commissionType,
         percentageRate: parseFloat(customerFault.penaltyPct),
-        splitPercentage: isFixedMode ? undefined : parseFloat(customerFault.yalaRideShare),
-        fixedAmount: isFixedMode ? parseFloat(customerFault.yalaRideShare) : undefined,
+        splitPercentage: isFixedMode
+          ? undefined
+          : parseFloat(customerFault.yalaRideShare),
+        fixedAmount: isFixedMode
+          ? parseFloat(customerFault.yalaRideShare)
+          : undefined,
       },
     };
-    
+
     const executeSave = async () => {
       // 1. Commission settings (main)
       await setStatusSettings.mutateAsync(payload);
@@ -295,7 +415,9 @@ function CompanyCommissionSettingsEditPage() {
           noShow: parseFloat(noShow.yalaRideShare) || 0,
           customerFault: parseFloat(customerFault.yalaRideShare) || 0,
         });
-        await setEdgeCase.mutateAsync({ edgeCaseHandling: edgeCaseCAP ? 'CAP' : 'OWE' });
+        await setEdgeCase.mutateAsync({
+          edgeCaseHandling: edgeCaseCAP ? 'CAP' : 'OWE',
+        });
       }
 
       // 3. CDW settings
@@ -309,8 +431,12 @@ function CompanyCommissionSettingsEditPage() {
       });
 
       // 4. Invalidate queries once at the end
-      await queryClient.invalidateQueries({ queryKey: ['company-settings', companyId] });
-      await queryClient.invalidateQueries({ queryKey: ['company-cdw-settings', companyId] });
+      await queryClient.invalidateQueries({
+        queryKey: ['company-settings', companyId],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ['company-cdw-settings', companyId],
+      });
     };
 
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -337,16 +463,24 @@ function CompanyCommissionSettingsEditPage() {
     }
 
     if (lastError?.response?.status === 429) {
-      toast.error('Too many requests. Please wait 30–60 seconds and try again.');
+      toast.error(
+        'Too many requests. Please wait 30–60 seconds and try again.',
+      );
     } else if (lastError?.response?.status === 422) {
       // Show API validation constraints
       const errData = lastError?.response?.data;
-      const errors = errData?.errors as Array<{ field?: string; constraints?: string[] }> | undefined;
+      const errors = errData?.errors as
+        | Array<{ field?: string; constraints?: string[] }>
+        | undefined;
       const constraints = errors?.flatMap((e) => e.constraints ?? []) ?? [];
-      const uniqueMsg = [...new Set(constraints)].join('. ') || errData?.message || 'Validation failed';
+      const uniqueMsg =
+        [...new Set(constraints)].join('. ') ||
+        errData?.message ||
+        'Validation failed';
       toast.error(uniqueMsg);
     } else {
-      const errorMsg = lastError?.response?.data?.message || 'Failed to save settings';
+      const errorMsg =
+        lastError?.response?.data?.message || 'Failed to save settings';
       toast.error(errorMsg);
     }
     console.error('Save settings error:', lastError);
@@ -367,7 +501,10 @@ function CompanyCommissionSettingsEditPage() {
           </Button>
           <div className="flex items-center gap-2">
             {company.isVerified && (
-              <Button size="sm" className="rounded-full bg-green-600 px-4 py-1.5 text-white hover:bg-green-700">
+              <Button
+                size="sm"
+                className="rounded-full bg-green-600 px-4 py-1.5 text-white hover:bg-green-700"
+              >
                 <Check className="mr-1.5 h-4 w-4" />
                 Verified
               </Button>
@@ -376,7 +513,9 @@ function CompanyCommissionSettingsEditPage() {
               size="sm"
               variant="outline"
               className="rounded-full border-gray-300 px-4 py-1.5"
-              onClick={() => navigate(`/companies/${companyId}/commission-settings`)}
+              onClick={() =>
+                navigate(`/companies/${companyId}/commission-settings`)
+              }
             >
               <Pencil className="mr-1.5 h-4 w-4" />
               Edit
@@ -392,19 +531,27 @@ function CompanyCommissionSettingsEditPage() {
                 <Settings className="h-6 w-6" />
               </div>
               <div>
-                <h2 className="text-xl font-bold tracking-tight">Commission Settings</h2>
-                <p className="mt-0.5 text-sm text-zinc-400">View earning structure details</p>
+                <h2 className="text-xl font-bold tracking-tight">
+                  Commission Settings
+                </h2>
+                <p className="mt-0.5 text-sm text-zinc-400">
+                  View earning structure details
+                </p>
               </div>
             </div>
             <div className="flex rounded-full bg-white/10 p-1">
               <button
                 type="button"
                 className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                  !isFixedMode 
-                    ? 'text-white shadow' 
+                  !isFixedMode
+                    ? 'text-white shadow'
                     : 'text-zinc-300 hover:text-white'
                 }`}
-                style={!isFixedMode ? { backgroundColor: COMMISSION_ORANGE } : undefined}
+                style={
+                  !isFixedMode
+                    ? { backgroundColor: COMMISSION_ORANGE }
+                    : undefined
+                }
                 onClick={() => handleModeClick('PERCENTAGE')}
               >
                 % Percentage
@@ -412,11 +559,15 @@ function CompanyCommissionSettingsEditPage() {
               <button
                 type="button"
                 className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                  isFixedMode 
-                    ? 'text-white shadow' 
+                  isFixedMode
+                    ? 'text-white shadow'
                     : 'text-zinc-300 hover:text-white'
                 }`}
-                style={isFixedMode ? { backgroundColor: COMMISSION_ORANGE } : undefined}
+                style={
+                  isFixedMode
+                    ? { backgroundColor: COMMISSION_ORANGE }
+                    : undefined
+                }
                 onClick={() => handleModeClick('FIXED')}
               >
                 $ Fixed
@@ -438,12 +589,17 @@ function CompanyCommissionSettingsEditPage() {
                   <Info className="h-5 w-5 text-blue-600" />
                 </div>
                 <div className="min-w-0">
-                  <p className="font-semibold text-foreground">Commission Mode Guide</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    <strong>Percentage mode:</strong> Applies customer penalty first, then splits the deducted amount between YalaRide and operator.
+                  <p className="font-semibold text-foreground">
+                    Commission Mode Guide
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    <strong>Fixed mode:</strong> Directly deducts a fixed amount from the operator.
+                    <strong>Percentage mode:</strong> Applies customer penalty
+                    first, then splits the deducted amount between YalaRide and
+                    operator.
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    <strong>Fixed mode:</strong> Directly deducts a fixed amount
+                    from the operator.
                   </p>
                 </div>
               </CardContent>
@@ -458,10 +614,14 @@ function CompanyCommissionSettingsEditPage() {
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100">
                       <Percent className="h-4 w-4 text-[#F56304]" />
                     </div>
-                    <CardTitle className="text-sm font-semibold">Complete</CardTitle>
+                    <CardTitle className="text-sm font-semibold">
+                      Complete
+                    </CardTitle>
                   </div>
                   <p className="mt-3 text-xs text-muted-foreground">
-                    {isFixedMode ? 'Platform Commission (Fixed)' : 'Platform Commission (%)'}
+                    {isFixedMode
+                      ? 'Platform Commission (Fixed)'
+                      : 'Platform Commission (%)'}
                   </p>
                   <div className="mt-1.5 flex items-center">
                     <Input
@@ -469,12 +629,22 @@ function CompanyCommissionSettingsEditPage() {
                       min={0.01}
                       max={isFixedMode ? undefined : 100}
                       step={isFixedMode ? 0.01 : 0.5}
-                      value={isFixedMode ? platformCommissionFixed : platformCommissionPct}
-                      onChange={(e) => (isFixedMode ? setPlatformCommissionFixed(e.target.value) : setPlatformCommissionPct(e.target.value))}
+                      value={
+                        isFixedMode
+                          ? platformCommissionFixed
+                          : platformCommissionPct
+                      }
+                      onChange={(e) =>
+                        isFixedMode
+                          ? setPlatformCommissionFixed(e.target.value)
+                          : setPlatformCommissionPct(e.target.value)
+                      }
                       placeholder={isFixedMode ? 'e.g. 10' : '0.01–100'}
                       className="h-10 flex-1 rounded-lg border-gray-200 bg-gray-50"
                     />
-                    <span className="ml-2 text-sm text-muted-foreground">{isFixedMode ? 'USD' : '%'}</span>
+                    <span className="ml-2 text-sm text-muted-foreground">
+                      {isFixedMode ? 'USD' : '%'}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -486,10 +656,16 @@ function CompanyCommissionSettingsEditPage() {
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100">
                       <AlertTriangle className="h-4 w-4 text-purple-600" />
                     </div>
-                    <CardTitle className="text-sm font-semibold">Operator Fault</CardTitle>
+                    <CardTitle className="text-sm font-semibold">
+                      Operator Fault
+                    </CardTitle>
                   </div>
-                  <p className="mt-1 text-xs text-green-600">Percentage-based only • Charged from Customer</p>
-                  <p className="mt-3 text-xs text-muted-foreground">Penalty Rate (%)</p>
+                  <p className="mt-1 text-xs text-green-600">
+                    Percentage-based only • Charged from Customer
+                  </p>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Penalty Rate (%)
+                  </p>
                   <div className="mt-1.5 flex items-center">
                     <Input
                       type="number"
@@ -501,9 +677,14 @@ function CompanyCommissionSettingsEditPage() {
                       placeholder="0.01–100"
                       className="h-10 flex-1 rounded-lg border-gray-200 bg-gray-50"
                     />
-                    <span className="ml-2 text-sm text-muted-foreground">%</span>
+                    <span className="ml-2 text-sm text-muted-foreground">
+                      %
+                    </span>
                   </div>
-                  <p className="mt-2 text-xs italic text-muted-foreground">Full penalty amount goes to Yalaride (no split with operator)</p>
+                  <p className="mt-2 text-xs italic text-muted-foreground">
+                    Full penalty amount goes to Yalaride (no split with
+                    operator)
+                  </p>
                 </CardContent>
               </Card>
             </div>
@@ -514,27 +695,39 @@ function CompanyCommissionSettingsEditPage() {
                 title="Late Cancel"
                 icon={<Clock className="h-4 w-4 text-[#F56304]" />}
                 penaltyPct={lateCancel.penaltyPct}
-                setPenaltyPct={(v) => setLateCancel((p) => ({ ...p, penaltyPct: v }))}
+                setPenaltyPct={(v) =>
+                  setLateCancel((p) => ({ ...p, penaltyPct: v }))
+                }
                 yalaRideShare={lateCancel.yalaRideShare}
-                setYalaRideShare={(v) => setLateCancel((p) => ({ ...p, yalaRideShare: v }))}
+                setYalaRideShare={(v) =>
+                  setLateCancel((p) => ({ ...p, yalaRideShare: v }))
+                }
                 isFixedMode={isFixedMode}
               />
               <PenaltyEditCard
                 title="No Show"
                 icon={<XCircle className="h-4 w-4 text-red-500" />}
                 penaltyPct={noShow.penaltyPct}
-                setPenaltyPct={(v) => setNoShow((p) => ({ ...p, penaltyPct: v }))}
+                setPenaltyPct={(v) =>
+                  setNoShow((p) => ({ ...p, penaltyPct: v }))
+                }
                 yalaRideShare={noShow.yalaRideShare}
-                setYalaRideShare={(v) => setNoShow((p) => ({ ...p, yalaRideShare: v }))}
+                setYalaRideShare={(v) =>
+                  setNoShow((p) => ({ ...p, yalaRideShare: v }))
+                }
                 isFixedMode={isFixedMode}
               />
               <PenaltyEditCard
                 title="Customer Fault"
                 icon={<Users className="h-4 w-4 text-blue-500" />}
                 penaltyPct={customerFault.penaltyPct}
-                setPenaltyPct={(v) => setCustomerFault((p) => ({ ...p, penaltyPct: v }))}
+                setPenaltyPct={(v) =>
+                  setCustomerFault((p) => ({ ...p, penaltyPct: v }))
+                }
                 yalaRideShare={customerFault.yalaRideShare}
-                setYalaRideShare={(v) => setCustomerFault((p) => ({ ...p, yalaRideShare: v }))}
+                setYalaRideShare={(v) =>
+                  setCustomerFault((p) => ({ ...p, yalaRideShare: v }))
+                }
                 isFixedMode={isFixedMode}
               />
             </div>
@@ -550,46 +743,60 @@ function CompanyCommissionSettingsEditPage() {
                       </div>
                       <h3 className="text-sm font-semibold">Edge Case Rules</h3>
                     </div>
-                    <Switch 
+                    <Switch
                       checked={true}
-                      className="data-[state=checked]:bg-green-600" 
+                      className="data-[state=checked]:bg-green-600"
                     />
                   </div>
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <div 
+                    <div
                       className={`flex items-center justify-between rounded-lg border p-3 cursor-pointer transition-colors ${
-                        edgeCaseOWE ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-gray-50'
+                        edgeCaseOWE
+                          ? 'border-green-500 bg-green-50'
+                          : 'border-gray-200 bg-gray-50'
                       }`}
-                      onClick={() => { setEdgeCaseOWE(true); setEdgeCaseCAP(false); }}
+                      onClick={() => {
+                        setEdgeCaseOWE(true);
+                        setEdgeCaseCAP(false);
+                      }}
                     >
-                      <span className="text-sm font-medium">OWE - Company Owes Difference</span>
-                      <Switch 
-                        checked={edgeCaseOWE} 
+                      <span className="text-sm font-medium">
+                        OWE - Company Owes Difference
+                      </span>
+                      <Switch
+                        checked={edgeCaseOWE}
                         onCheckedChange={(checked) => {
                           if (checked) {
                             setEdgeCaseOWE(true);
                             setEdgeCaseCAP(false);
                           }
-                        }} 
-                        className="shrink-0 data-[state=checked]:bg-green-600" 
+                        }}
+                        className="shrink-0 data-[state=checked]:bg-green-600"
                       />
                     </div>
-                    <div 
+                    <div
                       className={`flex items-center justify-between rounded-lg border p-3 cursor-pointer transition-colors ${
-                        edgeCaseCAP ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-gray-50'
+                        edgeCaseCAP
+                          ? 'border-green-500 bg-green-50'
+                          : 'border-gray-200 bg-gray-50'
                       }`}
-                      onClick={() => { setEdgeCaseCAP(true); setEdgeCaseOWE(false); }}
+                      onClick={() => {
+                        setEdgeCaseCAP(true);
+                        setEdgeCaseOWE(false);
+                      }}
                     >
-                      <span className="text-sm font-medium">CAP - Commission Capped at Penalty Amount</span>
-                      <Switch 
-                        checked={edgeCaseCAP} 
+                      <span className="text-sm font-medium">
+                        CAP - Commission Capped at Penalty Amount
+                      </span>
+                      <Switch
+                        checked={edgeCaseCAP}
                         onCheckedChange={(checked) => {
                           if (checked) {
                             setEdgeCaseCAP(true);
                             setEdgeCaseOWE(false);
                           }
-                        }} 
-                        className="shrink-0 data-[state=checked]:bg-green-600" 
+                        }}
+                        className="shrink-0 data-[state=checked]:bg-green-600"
                       />
                     </div>
                   </div>
@@ -606,15 +813,25 @@ function CompanyCommissionSettingsEditPage() {
                       <Shield className="h-4 w-4 text-green-600" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-semibold">CDW (Collision Damage Waiver)</h3>
-                      <p className="text-xs text-muted-foreground">Insurance coverage settings</p>
+                      <h3 className="text-sm font-semibold">
+                        CDW (Collision Damage Waiver)
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Insurance coverage settings
+                      </p>
                     </div>
                   </div>
-                  <Switch checked={cdwEnabled} onCheckedChange={setCdwEnabled} className="data-[state=checked]:bg-green-600" />
+                  <Switch
+                    checked={cdwEnabled}
+                    onCheckedChange={setCdwEnabled}
+                    className="data-[state=checked]:bg-green-600"
+                  />
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">MIN BRACKET</Label>
+                    <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      MIN BRACKET
+                    </Label>
                     <div className="mt-1.5 flex items-center">
                       <Input
                         type="number"
@@ -624,11 +841,15 @@ function CompanyCommissionSettingsEditPage() {
                         disabled={!cdwEnabled}
                         className="h-10 flex-1 rounded-lg border-gray-200 bg-gray-50"
                       />
-                      <span className="ml-2 text-sm font-medium text-[#F56304]">%</span>
+                      <span className="ml-2 text-sm font-medium text-[#F56304]">
+                        %
+                      </span>
                     </div>
                   </div>
                   <div>
-                    <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">MAX BRACKET</Label>
+                    <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      MAX BRACKET
+                    </Label>
                     <div className="mt-1.5 flex items-center">
                       <Input
                         type="number"
@@ -638,11 +859,15 @@ function CompanyCommissionSettingsEditPage() {
                         disabled={!cdwEnabled}
                         className="h-10 flex-1 rounded-lg border-gray-200 bg-gray-50"
                       />
-                      <span className="ml-2 text-sm font-medium text-[#F56304]">%</span>
+                      <span className="ml-2 text-sm font-medium text-[#F56304]">
+                        %
+                      </span>
                     </div>
                   </div>
                   <div>
-                    <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">COMMISSION</Label>
+                    <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      COMMISSION
+                    </Label>
                     <div className="mt-1.5 flex items-center">
                       <Input
                         type="number"
@@ -652,13 +877,17 @@ function CompanyCommissionSettingsEditPage() {
                         disabled={!cdwEnabled}
                         className="h-10 flex-1 rounded-lg border-gray-200 bg-gray-50"
                       />
-                      <span className="ml-2 text-sm font-medium text-[#F56304]">%</span>
+                      <span className="ml-2 text-sm font-medium text-[#F56304]">
+                        %
+                      </span>
                     </div>
                   </div>
                 </div>
                 <div className="mt-4 flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2">
                   <Info className="h-4 w-4 shrink-0 text-blue-500" />
-                  <span className="text-xs text-blue-700">Operator sets CDW within bracket range</span>
+                  <span className="text-xs text-blue-700">
+                    Operator sets CDW within bracket range
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -690,16 +919,26 @@ function CompanyCommissionSettingsEditPage() {
       <Dialog open={modeChangeModalOpen} onOpenChange={setModeChangeModalOpen}>
         <DialogContent className="max-w-md rounded-lg">
           <DialogHeader>
-            <DialogTitle className="text-center">Mode Change Warning</DialogTitle>
-            <DialogDescription className="sr-only">Confirm commission mode change</DialogDescription>
+            <DialogTitle className="text-center">
+              Mode Change Warning
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Confirm commission mode change
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-3">
-              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" strokeWidth={2} />
+              <AlertTriangle
+                className="h-5 w-5 shrink-0 text-amber-500"
+                strokeWidth={2}
+              />
               <div className="text-sm">
                 <p className="font-semibold text-red-800">
-                  Data Loss Warning: Changing commission mode from {commissionType === 'PERCENTAGE' ? 'Percentage' : 'Fixed'} to{' '}
-                  {pendingMode === 'FIXED' ? 'Fixed' : 'Percentage'} will permanently delete all previously saved commission settings and data.
+                  Data Loss Warning: Changing commission mode from{' '}
+                  {commissionType === 'PERCENTAGE' ? 'Percentage' : 'Fixed'} to{' '}
+                  {pendingMode === 'FIXED' ? 'Fixed' : 'Percentage'} will
+                  permanently delete all previously saved commission settings
+                  and data.
                 </p>
               </div>
             </div>
@@ -709,14 +948,27 @@ function CompanyCommissionSettingsEditPage() {
               <li>Edge case rules will be removed</li>
             </ol>
             <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
-              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" strokeWidth={2} />
+              <AlertTriangle
+                className="h-5 w-5 shrink-0 text-amber-500"
+                strokeWidth={2}
+              />
               <div>
-                <p className="font-semibold text-blue-800">Important Note: This action cannot be undone. Make sure you have backed up any important data before proceeding.</p>
+                <p className="font-semibold text-blue-800">
+                  Important Note: This action cannot be undone. Make sure you
+                  have backed up any important data before proceeding.
+                </p>
               </div>
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" className="rounded-lg border-gray-300 bg-white text-gray-700 hover:bg-gray-50" onClick={() => { setModeChangeModalOpen(false); setPendingMode(null); }}>
+            <Button
+              variant="outline"
+              className="rounded-lg border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+              onClick={() => {
+                setModeChangeModalOpen(false);
+                setPendingMode(null);
+              }}
+            >
               Cancel
             </Button>
             <Button
@@ -752,10 +1004,14 @@ function PenaltyEditCard({
   className?: string;
 }) {
   return (
-    <Card className={`overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm ${className}`}>
+    <Card
+      className={`overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm ${className}`}
+    >
       <CardContent className="p-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100">{icon}</div>
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100">
+            {icon}
+          </div>
           <CardTitle className="text-sm font-semibold">{title}</CardTitle>
         </div>
         <div className="mt-4 space-y-4">
@@ -794,7 +1050,9 @@ function PenaltyEditCard({
                 placeholder={isFixedMode ? 'e.g. 10' : '0–100'}
                 className="h-10 flex-1 rounded-lg border-gray-200 bg-gray-50"
               />
-              <span className="ml-2 text-sm text-muted-foreground">{isFixedMode ? 'USD' : '%'}</span>
+              <span className="ml-2 text-sm text-muted-foreground">
+                {isFixedMode ? 'USD' : '%'}
+              </span>
             </div>
           </div>
           <div className="rounded-lg bg-green-50 px-3 py-2">

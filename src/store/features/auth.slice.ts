@@ -1,6 +1,7 @@
 // src/store/features/auth.slice.ts
 
-import { axiosInstance } from '@/lib/API';
+import { apiClient } from '@/api/client';
+export { apiClient as axiosInstance }; // Export for backward compatibility
 import { LoginFormValues } from '@/types/auth';
 import { LoginUserInitialData, User, Company, OtherInfo } from '@/types/user';
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
@@ -39,7 +40,7 @@ export const loginUser = createAsyncThunk<
   { rejectValue: string }
 >('auth/login', async (loginData, { rejectWithValue }) => {
   try {
-    const response = await axiosInstance.post(
+    const response = await apiClient.post(
       '/auth/controller/login',
       loginData,
     );
@@ -53,32 +54,31 @@ export const loginUser = createAsyncThunk<
 });
 
 // Thunk: logout
-export const logoutUser = createAsyncThunk(
-  'auth/logout',
-  async () => {
-    // Get token BEFORE clearing localStorage
-    const state = store.getState() as RootState;
-    const token = state.auth._rT;
-    
-    // Clear local state immediately for instant logout
-    localStorage.removeItem('persist:root');
-    localStorage.removeItem('theme');
-    
-    // Show toast immediately
-    toast.info('You have been logged out.');
-    
-    // Fire logout API call in background - don't wait for it (fire-and-forget)
-    if (token) {
-      axiosInstance.post(
+export const logoutUser = createAsyncThunk('auth/logout', async () => {
+  // Get token BEFORE clearing localStorage
+  const state = store.getState() as RootState;
+  const token = state.auth._rT;
+
+  // Clear local state immediately for instant logout
+  localStorage.removeItem('persist:root');
+  localStorage.removeItem('theme');
+
+  // Show toast immediately
+  toast.info('You have been logged out.');
+
+  // Fire logout API call in background - don't wait for it (fire-and-forget)
+  if (token) {
+    apiClient
+      .post(
         '/auth/controller/logout',
         {},
         { headers: { Authorization: `Bearer ${token}` } },
-      ).catch(() => {
+      )
+      .catch(() => {
         // Silently ignore all errors - user is already logged out locally
       });
-    }
-  },
-);
+  }
+});
 
 export const authSlice = createSlice({
   name: 'auth',

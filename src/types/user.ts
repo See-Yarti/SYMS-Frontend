@@ -1,4 +1,4 @@
-import { OperatorRole } from "./auth";
+import { OperatorRole } from './auth';
 
 export type Genders = 'male' | 'female' | 'other';
 

@@ -1,11 +1,11 @@
 // src/components/ui/calendar.tsx
-import * as React from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "./button";
-import { cn } from "@/lib/utils";
+import * as React from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from './button';
+import { cn } from '@/lib/utils';
 
 export type CalendarProps = React.HTMLAttributes<HTMLDivElement> & {
-  mode?: "single";
+  mode?: 'single';
   selected?: Date;
   onSelect?: (date: Date | undefined) => void;
   fromDate?: Date;
@@ -13,28 +13,24 @@ export type CalendarProps = React.HTMLAttributes<HTMLDivElement> & {
 
 export function Calendar({
   className,
-  mode = "single",
+  mode = 'single',
   selected,
   onSelect,
   fromDate,
   ...props
 }: CalendarProps) {
   const [currentMonth, setCurrentMonth] = React.useState(new Date());
-  
+
   const nextMonth = () => {
-    setCurrentMonth(new Date(
-      currentMonth.getFullYear(),
-      currentMonth.getMonth() + 1,
-      1
-    ));
+    setCurrentMonth(
+      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1),
+    );
   };
 
   const prevMonth = () => {
-    setCurrentMonth(new Date(
-      currentMonth.getFullYear(),
-      currentMonth.getMonth() - 1,
-      1
-    ));
+    setCurrentMonth(
+      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1),
+    );
   };
 
   const getDaysInMonth = (year: number, month: number) => {
@@ -49,7 +45,7 @@ export function Calendar({
     const date = new Date(
       currentMonth.getFullYear(),
       currentMonth.getMonth(),
-      day
+      day,
     );
     onSelect?.(date);
   };
@@ -58,7 +54,7 @@ export function Calendar({
     const date = new Date(
       currentMonth.getFullYear(),
       currentMonth.getMonth(),
-      day
+      day,
     );
     return fromDate ? date < fromDate : false;
   };
@@ -88,22 +84,22 @@ export function Calendar({
     for (let day = 1; day <= daysInMonth; day++) {
       const disabled = isDateDisabled(day);
       const selected = isDateSelected(day);
-      
+
       days.push(
         <button
           key={`day-${day}`}
           type="button"
           className={cn(
-            "w-8 h-8 rounded-full flex items-center justify-center text-sm",
-            selected && "bg-primary text-white",
-            disabled && "text-gray-400 cursor-not-allowed",
-            !selected && !disabled && "hover:bg-gray-100"
+            'w-8 h-8 rounded-full flex items-center justify-center text-sm',
+            selected && 'bg-primary text-white',
+            disabled && 'text-gray-400 cursor-not-allowed',
+            !selected && !disabled && 'hover:bg-gray-100',
           )}
           onClick={() => !disabled && handleDateClick(day)}
           disabled={disabled}
         >
           {day}
-        </button>
+        </button>,
       );
     }
 
@@ -111,12 +107,22 @@ export function Calendar({
   };
 
   const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
   return (
-    <div className={cn("p-3", className)} {...props}>
+    <div className={cn('p-3', className)} {...props}>
       <div className="flex items-center justify-between mb-4">
         <Button
           variant="ghost"
@@ -139,15 +145,16 @@ export function Calendar({
         </Button>
       </div>
       <div className="grid grid-cols-7 gap-1 mb-2">
-        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
-          <div key={day} className="w-8 h-8 flex items-center justify-center text-sm font-medium text-gray-500">
+        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
+          <div
+            key={day}
+            className="w-8 h-8 flex items-center justify-center text-sm font-medium text-gray-500"
+          >
             {day}
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-1">
-        {renderDays()}
-      </div>
+      <div className="grid grid-cols-7 gap-1">{renderDays()}</div>
     </div>
   );
 }

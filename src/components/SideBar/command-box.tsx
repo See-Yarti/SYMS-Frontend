@@ -1,3 +1,5 @@
+'use client';
+
 // src/components/SideBar/command-box.tsx:
 
 import React from 'react';

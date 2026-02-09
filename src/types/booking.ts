@@ -185,7 +185,7 @@ export type BookingDetail = {
 };
 
 // Cancellation types
-export type CancelType = 
+export type CancelType =
   | 'FREE_CANCEL'
   | 'LATE_CANCEL'
   | 'NO_SHOW'

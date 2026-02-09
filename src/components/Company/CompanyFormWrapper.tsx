@@ -1,12 +1,10 @@
+'use client';
+
 // src/components/CompanyFormWrapper.tsx
-import CompanyForm from '@/pages/company/CompanyForm';
+import CompanyForm from '@/components/pages/company/CompanyForm';
 
 const CompanyFormWrapper = () => {
-  
-  return (
-    <CompanyForm />
-  );
+  return <CompanyForm />;
 };
-
 
 export default CompanyFormWrapper;

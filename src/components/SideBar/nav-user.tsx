@@ -1,11 +1,8 @@
-import {
-  LogOutIcon,
-} from 'lucide-react';
-import {
-  SidebarMenu,
-  SidebarMenuItem,
-} from '@/components/ui/sidebar';
-import { useNavigate } from 'react-router-dom';
+'use client';
+
+import { LogOutIcon } from 'lucide-react';
+import { SidebarMenu, SidebarMenuItem } from '@/components/ui/sidebar';
+import { useNavigate } from '@/hooks/useNextNavigation';
 import { useAppDispatch, useAppSelector } from '@/store';
 import { logoutUser } from '@/store/features/auth.slice';
 import { useGetUserByEmail } from '@/hooks/useOperatorApi';
@@ -26,14 +23,15 @@ export function NavUser() {
   // Get role for display
   const getUserRole = () => {
     if (!user) return '';
-    const roleRaw = user.role === 'operator' && otherInfo?.operatorRole
-      ? otherInfo.operatorRole
-      : user.role;
-    
+    const roleRaw =
+      user.role === 'operator' && otherInfo?.operatorRole
+        ? otherInfo.operatorRole
+        : user.role;
+
     // Format role: camelCase -> "Camel Case" or "Administrator" for admin
     if (roleRaw === 'admin') return 'Administrator';
     if (!roleRaw) return '';
-    
+
     return roleRaw
       .split(/(?=[A-Z])/)
       .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -65,11 +63,13 @@ export function NavUser() {
               className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-opacity cursor-pointer"
             >
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[#F97316] text-white font-semibold text-sm flex-shrink-0">
-                {isLoading && !apiUser ? '...' : (user.name?.charAt(0)?.toUpperCase() || 'U')}
+                {isLoading && !apiUser
+                  ? '...'
+                  : user.name?.charAt(0)?.toUpperCase() || 'U'}
               </div>
               <div className="flex-1 min-w-0 text-left">
                 <div className="text-sm font-medium text-foreground truncate">
-                  {isLoading && !apiUser ? "Loading..." : user.name}
+                  {isLoading && !apiUser ? 'Loading...' : user.name}
                 </div>
                 {displayRole && (
                   <div className="text-xs text-muted-foreground truncate">
@@ -78,7 +78,7 @@ export function NavUser() {
                 )}
               </div>
             </button>
-            <button 
+            <button
               onClick={handleLogout}
               className="p-2 hover:bg-accent rounded-lg transition-colors flex-shrink-0"
               title="Logout"

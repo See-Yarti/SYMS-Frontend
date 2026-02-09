@@ -7,7 +7,11 @@ interface StepperProps {
   className?: string;
 }
 
-export const Stepper: React.FC<StepperProps> = ({ steps, currentStep, className }) => {
+export const Stepper: React.FC<StepperProps> = ({
+  steps,
+  currentStep,
+  className,
+}) => {
   return (
     <div className={`flex items-center justify-between ${className}`}>
       {steps.map((step, index) => (

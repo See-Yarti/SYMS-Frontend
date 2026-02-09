@@ -1,50 +1,53 @@
-# React + TypeScript + Vite
+# YalaRide CRM - Next.js 16
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Professional CRM built with Next.js 16, TypeScript, and Tailwind CSS.
 
-Currently, two official plugins are available:
+## 🚀 Quick Start
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+\`\`\`bash
+npm install
+npm run dev     # Development on port 5173
+npm run build   # Production build
+npm start       # Production server
+\`\`\`
 
-## Expanding the ESLint configuration
+## 📁 Professional Structure
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+\`\`\`
+src/
+├── api/           # API Layer (organized by domain)
+├── app/           # Next.js App Router
+├── components/    # React components
+├── hooks/         # Custom hooks
+├── store/         # Redux state
+├── types/         # TypeScript types
+└── validations/   # Zod schemas
+\`\`\`
 
-- Configure the top-level `parserOptions` property like this:
+## 🔧 Technology Stack
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+- Next.js 16.1.6 (Turbopack)
+- React 19
+- TypeScript
+- Tailwind CSS + Shadcn/ui
+- Redux Toolkit + Redux Persist
+- TanStack Query (React Query)
+- Zod validation
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+## 📚 Usage
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+### API Layer
+\`\`\`typescript
+import { companiesApi } from '@/api';
+const companies = await companiesApi.getCompanies({ page: 1 });
+\`\`\`
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
-```
+### Validations
+\`\`\`typescript
+import { loginSchema } from '@/validations';
+\`\`\`
+
+### Hooks
+\`\`\`typescript
+import { useNavigate, useApiQuery } from '@/hooks';
+\`\`\`

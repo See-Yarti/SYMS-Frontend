@@ -55,7 +55,9 @@ export const PageLoadingSkeleton: React.FC = () => {
   );
 };
 
-export const SectionLoadingSkeleton: React.FC<{ rows?: number }> = ({ rows = 4 }) => {
+export const SectionLoadingSkeleton: React.FC<{ rows?: number }> = ({
+  rows = 4,
+}) => {
   return (
     <div className="space-y-3">
       <Skeleton className="h-6 w-44" />
@@ -66,6 +68,6 @@ export const SectionLoadingSkeleton: React.FC<{ rows?: number }> = ({ rows = 4 }
   );
 };
 
-export const LoadingPlaceholder: React.FC<{ className?: string }> = ({ className }) => (
-  <Skeleton className={cn('h-4 w-24', className)} />
-);
+export const LoadingPlaceholder: React.FC<{ className?: string }> = ({
+  className,
+}) => <Skeleton className={cn('h-4 w-24', className)} />;

@@ -1,18 +1,14 @@
 // src/hooks/useCompanyApi.ts:
 
-import { axiosInstance } from '@/lib/API';
-import {
-  useQuery,
-  useMutation,
-  keepPreviousData,
-} from '@tanstack/react-query';
+import { apiClient } from '@/api/client';
+import { useQuery, useMutation, keepPreviousData } from '@tanstack/react-query';
 import {
   CompaniesResponse,
   CompanyResponse,
   UnverifyCompanyPayload,
   VerificationResponse,
 } from '@/types/company';
-import { queryClient } from '@/Provider';
+import { queryClient } from '@/app/providers';
 
 // Shared query options
 const defaultQueryOptions = {
@@ -36,7 +32,7 @@ export type CompanyQueryParams = {
 export const useVerifyCompany = () => {
   return useMutation<VerificationResponse, Error, string>({
     mutationFn: async (companyId: string) => {
-      const { data } = await axiosInstance.patch(
+      const { data } = await apiClient.patch(
         `/company/company-verify/${companyId}`,
       );
       return data;
@@ -57,7 +53,7 @@ export const useUnverifyCompany = () => {
     { companyId: string; payload: UnverifyCompanyPayload }
   >({
     mutationFn: async ({ companyId, payload }) => {
-      const { data } = await axiosInstance.patch(
+      const { data } = await apiClient.patch(
         `/company/company-un-verify/${companyId}`,
         payload,
       );
@@ -79,7 +75,7 @@ export const useGetCompany = (companyId: string) => {
     ...defaultQueryOptions,
     queryKey: ['company', companyId],
     queryFn: async () => {
-      const { data } = await axiosInstance.get(`/company/${companyId}`);
+      const { data } = await apiClient.get(`/company/${companyId}`);
       return data;
     },
     enabled: !!companyId,
@@ -105,7 +101,7 @@ export const useGetCompanies = ({
       if (sortOrder) params.append('sortOrder', sortOrder);
       if (page) params.append('page', String(page));
       if (limit) params.append('limit', String(limit));
-      const { data } = await axiosInstance.get(`/company?${params.toString()}`);
+      const { data } = await apiClient.get(`/company?${params.toString()}`);
       return data;
     },
     placeholderData: keepPreviousData,
@@ -123,10 +119,16 @@ export const useCheckCompanyKey = (companyKey: string) => {
   return useQuery<CheckCompanyKeyResponse, Error>({
     queryKey: ['company-key-check', companyKey],
     queryFn: async () => {
-      const { data } = await axiosInstance.get(`/company/check-key/${companyKey}`);
+      const { data } = await apiClient.get(
+        `/company/check-key/${companyKey}`,
+      );
       return data;
     },
-    enabled: !!companyKey && companyKey.length >= 2 && companyKey.length <= 3 && /^[A-Z]+$/.test(companyKey),
+    enabled:
+      !!companyKey &&
+      companyKey.length >= 2 &&
+      companyKey.length <= 3 &&
+      /^[A-Z]+$/.test(companyKey),
     ...defaultQueryOptions,
     staleTime: 0, // Always check fresh
   });
@@ -144,7 +146,10 @@ export interface SuggestKeysRequest {
 export const useSuggestCompanyKeys = () => {
   return useMutation<SuggestKeysResponse, Error, SuggestKeysRequest>({
     mutationFn: async (payload) => {
-      const { data } = await axiosInstance.post('/company/suggest-keys', payload);
+      const { data } = await apiClient.post(
+        '/company/suggest-keys',
+        payload,
+      );
       return data.data;
     },
     retry: false,
@@ -160,7 +165,9 @@ export interface DeleteCompanyResponse {
 export const useDeleteCompany = () => {
   return useMutation<DeleteCompanyResponse, Error, string>({
     mutationFn: async (companyId: string) => {
-      const { data } = await axiosInstance.delete(`/company/soft-delete/${companyId}`);
+      const { data } = await apiClient.delete(
+        `/company/soft-delete/${companyId}`,
+      );
       return data;
     },
     onSuccess: (_data, companyId) => {
@@ -188,23 +195,31 @@ export interface UpdateCompanyResponse {
 }
 
 export const useUpdateCompany = () => {
-  return useMutation<UpdateCompanyResponse, Error, { companyId: string; payload: FormData | UpdateCompanyPayload }>({
+  return useMutation<
+    UpdateCompanyResponse,
+    Error,
+    { companyId: string; payload: FormData | UpdateCompanyPayload }
+  >({
     mutationFn: async ({ companyId, payload }) => {
       // Check if payload is FormData (has files) or plain object
       const isFormData = payload instanceof FormData;
-      const { data } = await axiosInstance.patch(
-        `/company/update/${companyId}`, 
+      const { data } = await apiClient.patch(
+        `/company/update/${companyId}`,
         payload,
         {
-          headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : { 'Content-Type': 'application/json' }
-        }
+          headers: isFormData
+            ? { 'Content-Type': 'multipart/form-data' }
+            : { 'Content-Type': 'application/json' },
+        },
       );
       return data;
     },
     onSuccess: (_data, variables) => {
       // Invalidate companies list and this specific company's details
       queryClient.invalidateQueries({ queryKey: ['companies'] });
-      queryClient.invalidateQueries({ queryKey: ['company', variables.companyId] });
+      queryClient.invalidateQueries({
+        queryKey: ['company', variables.companyId],
+      });
     },
     retry: false,
   });

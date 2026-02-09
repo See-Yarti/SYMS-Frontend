@@ -1,4 +1,4 @@
-import { axiosInstance } from '@/lib/API';
+import { apiClient } from '@/api/client';
 import { Booking, BookingApiResult, BookingMeta } from '@/types/booking';
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 
@@ -21,15 +21,23 @@ const DEFAULT_META: BookingMeta = {
 
 const normalizeResponse = (data: unknown, fallbackMeta: BookingMeta) => {
   if (!data || typeof data !== 'object') {
-    return { bookings: [] as Booking[], meta: fallbackMeta } satisfies BookingApiResult;
+    return {
+      bookings: [] as Booking[],
+      meta: fallbackMeta,
+    } satisfies BookingApiResult;
   }
 
   const responseData = (data as any)?.data;
   if (!responseData) {
-    return { bookings: [] as Booking[], meta: fallbackMeta } satisfies BookingApiResult;
+    return {
+      bookings: [] as Booking[],
+      meta: fallbackMeta,
+    } satisfies BookingApiResult;
   }
 
-  const bookings: Booking[] = Array.isArray(responseData.items) ? responseData.items : [];
+  const bookings: Booking[] = Array.isArray(responseData.items)
+    ? responseData.items
+    : [];
 
   const meta: BookingMeta = {
     ok: responseData.ok ?? true,
@@ -51,7 +59,16 @@ export const useAllBookings = ({
   limit = 10,
 }: AllBookingQueryParams) => {
   return useQuery<BookingApiResult>({
-    queryKey: ['all-bookings', search ?? '', sortDir, dateFrom ?? '', dateTo ?? '', companyId ?? '', page, limit],
+    queryKey: [
+      'all-bookings',
+      search ?? '',
+      sortDir,
+      dateFrom ?? '',
+      dateTo ?? '',
+      companyId ?? '',
+      page,
+      limit,
+    ],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (search) params.append('q', search.trim());
@@ -63,9 +80,11 @@ export const useAllBookings = ({
       if (limit) params.append('limit', String(limit));
 
       const endpoint = `/booking/get-all-bookings`;
-      const url = params.toString() ? `${endpoint}?${params.toString()}` : endpoint;
+      const url = params.toString()
+        ? `${endpoint}?${params.toString()}`
+        : endpoint;
 
-      const { data } = await axiosInstance.get(url);
+      const { data } = await apiClient.get(url);
 
       return normalizeResponse(data, {
         ...DEFAULT_META,

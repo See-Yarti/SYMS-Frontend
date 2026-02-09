@@ -26,7 +26,7 @@ export const useFilteredMenu = (menuItems: SideBarItem[]) => {
   // Recursively filter menu items
   const filterByRole = (items: SideBarItem[]): SideBarItem[] =>
     items
-      .filter(item => {
+      .filter((item) => {
         if (item.type === 'separation') return true;
         if (item.type === 'dropdown' && item.items) {
           const filteredItems = filterByRole(item.items);

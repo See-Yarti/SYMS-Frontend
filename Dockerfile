@@ -1,29 +1,41 @@
-# Use an official Node.js runtime as a parent image
-FROM node:18-alpine
+# Next.js Production Dockerfile
+FROM node:20-alpine AS base
 
-# Set the working directory in the container
+# Install dependencies only when needed
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy package.json and package-lock.json to the working directory
 COPY package*.json ./
+RUN npm ci
 
-# Remove node_modules and package-lock.json if they exist
-RUN rm -rf node_modules package-lock.json
-
-# Install dependencies
-RUN npm install --legacy-peer-deps
-
-# Copy the rest of the application code to the working directory
+# Rebuild the source code only when needed
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Build the Vite project
+# Build Next.js
 RUN npm run build
 
-# Install serve to serve static files
-RUN npm install -g serve
+# Production image
+FROM base AS runner
+WORKDIR /app
 
-# Expose the port the app runs on
-EXPOSE 3000
+ENV NODE_ENV=production
 
-# Serve the built files
-CMD ["serve", "-s", "dist"]
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 5173
+
+ENV PORT=5173
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "server.js"]

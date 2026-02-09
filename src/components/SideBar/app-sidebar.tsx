@@ -1,3 +1,5 @@
+'use client';
+
 // src/components/SideBar/app-sidebar.tsx
 
 import * as React from 'react';
@@ -49,7 +51,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             type: 'routed',
             icon: PanelRightDashed,
             roles: rateDropdown.roles,
-          }
+          },
         ];
       } else if (locationsError) {
         rateDropdown.items = [
@@ -60,9 +62,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             type: 'routed',
             icon: PanelRightDashed,
             roles: rateDropdown.roles,
-          }
+          },
         ];
-      } else if (locationData && locationData.success && Array.isArray(locationData.data) && locationData.data.length > 0) {
+      } else if (
+        locationData &&
+        locationData.success &&
+        Array.isArray(locationData.data) &&
+        locationData.data.length > 0
+      ) {
         rateDropdown.items = locationData.data.map((loc: any) => ({
           title: loc.title || loc.city,
           slug: `rate-${loc.id}`,
@@ -80,7 +87,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             type: 'routed',
             icon: PanelRightDashed,
             roles: rateDropdown.roles,
-          }
+          },
         ];
       }
     }
@@ -92,12 +99,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [selectedPath, setSelectedPath] = React.useState<number[]>([]);
 
   // Keyboard navigation
-  useHotkeys('arrowup', () => handleKeyNavigation(-1), { preventDefault: true });
-  useHotkeys('arrowdown', () => handleKeyNavigation(1), { preventDefault: true });
+  useHotkeys('arrowup', () => handleKeyNavigation(-1), {
+    preventDefault: true,
+  });
+  useHotkeys('arrowdown', () => handleKeyNavigation(1), {
+    preventDefault: true,
+  });
 
   let currentMenu = filteredMenu;
   for (const index of selectedPath) {
-    if (currentMenu[index] && currentMenu[index].type === 'dropdown' && currentMenu[index].slug !== 'settings') {
+    if (
+      currentMenu[index] &&
+      currentMenu[index].type === 'dropdown' &&
+      currentMenu[index].slug !== 'settings'
+    ) {
       currentMenu = currentMenu[index].items || [];
     } else {
       break;
@@ -108,8 +123,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const menuItems = document.querySelectorAll('.sidebar-menu-button');
     if (menuItems.length === 0) return;
 
-    const currentIndex = Array.from(menuItems).findIndex(item =>
-      item === document.activeElement
+    const currentIndex = Array.from(menuItems).findIndex(
+      (item) => item === document.activeElement,
     );
 
     let nextIndex = currentIndex + direction;
@@ -126,11 +141,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <Sidebar
-        collapsible="offcanvas"
-        {...props}
-        className=' p-2 border-none'
-      >
+      <Sidebar collapsible="offcanvas" {...props} className=" p-2 border-none">
         <div className="bg-card rounded-2xl border-0 h-full flex flex-col shadow-xl dark:shadow-2xl dark:shadow-black/20 transition-colors duration-300">
           <SidebarHeader className="px-4 py-4">
             <div className="flex items-center justify-center">
@@ -149,7 +160,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               )}
             </div>
           </SidebarHeader>
-          <SidebarContent className='flex-1 overflow-y-hidden py-2 px-3'>
+          <SidebarContent className="flex-1 overflow-y-hidden py-2 px-3">
             <ScrollArea className="h-full">
               <SidebarMenu className="gap-1">
                 <SidebarBackButton

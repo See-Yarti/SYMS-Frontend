@@ -1,12 +1,8 @@
 // src/hooks/useOperatorCarClass.tsx:
 
-import { axiosInstance } from '@/lib/API';
-import {
-  useQuery,
-  useMutation,
-  useInfiniteQuery,
-} from '@tanstack/react-query';
-import { queryClient } from '@/Provider';
+import { apiClient } from '@/api/client';
+import { useQuery, useMutation, useInfiniteQuery } from '@tanstack/react-query';
+import { queryClient } from '@/app/providers';
 
 // Helper function to convert object to FormData
 const toFormData = (data: any) => {
@@ -20,7 +16,7 @@ const toFormData = (data: any) => {
 };
 
 // Fetch data (simple GET)
-export const useFetchData = <T = unknown>(
+export const useFetchData = <T = unknown,>(
   endpoint: string,
   queryKey: string | string[],
   options?: any,
@@ -28,7 +24,7 @@ export const useFetchData = <T = unknown>(
   return useQuery<T>({
     queryKey: Array.isArray(queryKey) ? queryKey : [queryKey],
     queryFn: async () => {
-      const { data } = await axiosInstance.get(endpoint);
+      const { data } = await apiClient.get(endpoint);
       return data.data;
     },
     ...options,
@@ -45,7 +41,7 @@ interface InfiniteQueryOptions {
   limitParamKey?: string;
 }
 
-export const useFetchInfiniteData = <T = unknown>({
+export const useFetchInfiniteData = <T = unknown,>({
   queryKey,
   endpoint,
   limit = 10,
@@ -55,7 +51,7 @@ export const useFetchInfiniteData = <T = unknown>({
     queryKey: [queryKey, extraParams],
     initialPageParam: 1,
     queryFn: async ({ pageParam = 1 }) => {
-      const { data } = await axiosInstance.get<{ data: T[] }>(endpoint, {
+      const { data } = await apiClient.get<{ data: T[] }>(endpoint, {
         params: { page: pageParam, limit, ...extraParams },
       });
       return data.data;
@@ -75,11 +71,15 @@ export const usePostData = <TData = unknown, TResponse = unknown>(
   return useMutation<TResponse, Error, TData>({
     mutationFn: async (data: TData) => {
       const formData = toFormData(data);
-      const { data: responseData } = await axiosInstance.post(endpoint, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
+      const { data: responseData } = await apiClient.post(
+        endpoint,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
         },
-      });
+      );
       return responseData.data;
     },
     ...options,
@@ -94,11 +94,15 @@ export const usePatchData = <TData = unknown, TResponse = unknown>(
   return useMutation<TResponse, Error, TData>({
     mutationFn: async (data: TData) => {
       const formData = toFormData(data);
-      const { data: responseData } = await axiosInstance.patch(endpoint, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
+      const { data: responseData } = await apiClient.patch(
+        endpoint,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
         },
-      });
+      );
       return responseData.data;
     },
     ...options,
@@ -112,11 +116,15 @@ export const usePutData = <TData = unknown, TResponse = unknown>(
   return useMutation<TResponse, Error, { endpoint: string; data?: TData }>({
     mutationFn: async ({ endpoint, data }) => {
       const formData = data ? toFormData(data) : new FormData();
-      const { data: responseData } = await axiosInstance.put(endpoint, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
+      const { data: responseData } = await apiClient.put(
+        endpoint,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
         },
-      });
+      );
       return responseData.data;
     },
     ...options,
@@ -127,7 +135,7 @@ export const usePutData = <TData = unknown, TResponse = unknown>(
 export const useDeleteData = (options?: any) => {
   return useMutation<any, Error, { endpoint: string }>({
     mutationFn: async ({ endpoint }) => {
-      const { data } = await axiosInstance.delete(endpoint);
+      const { data } = await apiClient.delete(endpoint);
       return data.data;
     },
     ...options,
@@ -135,10 +143,10 @@ export const useDeleteData = (options?: any) => {
 };
 
 // File Upload (POST)
-export const useUploadFile = <TResponse = unknown>(endpoint: string) => {
+export const useUploadFile = <TResponse = unknown,>(endpoint: string) => {
   return useMutation<TResponse, Error, FormData>({
     mutationFn: async (formData: FormData) => {
-      const { data } = await axiosInstance.post(endpoint, formData, {
+      const { data } = await apiClient.post(endpoint, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -155,7 +163,7 @@ export const usePostJson = <TData = unknown, TResponse = unknown>(
 ) => {
   return useMutation<TResponse, any, TData>({
     mutationFn: async (data: TData) => {
-      const { data: response } = await axiosInstance.post(endpoint, data, {
+      const { data: response } = await apiClient.post(endpoint, data, {
         headers: { 'Content-Type': 'application/json' },
       });
       return response.data; // assuming your API wraps as { success, data }
@@ -164,16 +172,15 @@ export const usePostJson = <TData = unknown, TResponse = unknown>(
   });
 };
 
-
 type PatchVars = {
   endpoint: string; // e.g. 'blackout/:companyId/:blackoutId'
-  data: any;        // your payload (JSON)
+  data: any; // your payload (JSON)
 };
 
-export const usePatchDataBlackout = <TResponse = unknown>(options?: any) => {
+export const usePatchDataBlackout = <TResponse = unknown,>(options?: any) => {
   return useMutation<TResponse, any, PatchVars>({
     mutationFn: async ({ endpoint, data }: PatchVars) => {
-      const res = await axiosInstance.patch(endpoint, data, {
+      const res = await apiClient.patch(endpoint, data, {
         headers: { 'Content-Type': 'application/json' },
       });
       // adjust if your API shape is different
@@ -186,12 +193,12 @@ export const usePatchDataBlackout = <TResponse = unknown>(options?: any) => {
 // Generic JSON PATCH (reusable beyond blackout)
 type PatchJsonVars = {
   endpoint: string; // e.g. 'company-car-class-rate/:id'
-  data: any;        // JSON payload
+  data: any; // JSON payload
 };
-export const usePatchJson = <TResponse = unknown>(options?: any) => {
+export const usePatchJson = <TResponse = unknown,>(options?: any) => {
   return useMutation<TResponse, any, PatchJsonVars>({
     mutationFn: async ({ endpoint, data }: PatchJsonVars) => {
-      const res = await axiosInstance.patch(endpoint, data, {
+      const res = await apiClient.patch(endpoint, data, {
         headers: { 'Content-Type': 'application/json' },
       });
       return res.data?.data ?? res.data;

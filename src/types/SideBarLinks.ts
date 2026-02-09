@@ -129,7 +129,12 @@ export const sideBarLinks: SideBarItem[] = [
     url: '/operator-accounting',
     slug: 'operator-accounting',
     icon: Calculator,
-    roles: ['adminOperator', 'managerOperator', 'accountantOperator', 'salesOperator'],
+    roles: [
+      'adminOperator',
+      'managerOperator',
+      'accountantOperator',
+      'salesOperator',
+    ],
   },
   {
     title: 'Bookings',

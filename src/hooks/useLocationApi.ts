@@ -1,11 +1,8 @@
 // src/hooks/useLocationApi.ts:
 
-import { axiosInstance } from '@/lib/API';
-import {
-  useQuery,
-  useMutation,
-} from '@tanstack/react-query';
-import { queryClient } from '@/Provider';
+import { apiClient } from '@/api/client';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { queryClient } from '@/app/providers';
 
 // Shared query options
 const defaultQueryOptions = {
@@ -21,7 +18,9 @@ export const useGetLocations = (companyId: string) => {
   return useQuery({
     queryKey: ['locations', companyId],
     queryFn: async () => {
-      const { data } = await axiosInstance.get(`/operator/locations/${companyId}`);
+      const { data } = await apiClient.get(
+        `/operator/locations/${companyId}`,
+      );
       return data;
     },
     enabled: !!companyId,
@@ -33,7 +32,9 @@ export const useGetActiveLocations = (companyId: string) => {
   return useQuery({
     queryKey: ['locations', companyId],
     queryFn: async () => {
-      const { data } = await axiosInstance.get(`/operator/locations/${companyId}/active-locations`);
+      const { data } = await apiClient.get(
+        `/operator/locations/${companyId}/active-locations`,
+      );
       return data;
     },
     enabled: !!companyId,
@@ -41,19 +42,26 @@ export const useGetActiveLocations = (companyId: string) => {
   });
 };
 
-
 export const useCreateLocation = () => {
   return useMutation({
-    mutationFn: async ({ companyId, payload }: { companyId: string; payload: any }) => {
+    mutationFn: async ({
+      companyId,
+      payload,
+    }: {
+      companyId: string;
+      payload: any;
+    }) => {
       // Include companyId in the payload instead of URL
-      const { data } = await axiosInstance.post('/operator/locations/create', {
+      const { data } = await apiClient.post('/operator/locations/create', {
         ...payload,
-        companyId // Add companyId to the payload
+        companyId, // Add companyId to the payload
       });
       return data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['locations', variables.companyId] });
+      queryClient.invalidateQueries({
+        queryKey: ['locations', variables.companyId],
+      });
     },
     retry: false,
   });
@@ -62,7 +70,10 @@ export const useCreateLocation = () => {
 export const useUpdateLocation = () => {
   return useMutation({
     mutationFn: async ({ id, payload }: { id: string; payload: any }) => {
-      const { data } = await axiosInstance.put(`/operator/locations/update/${id}`, payload);
+      const { data } = await apiClient.put(
+        `/operator/locations/update/${id}`,
+        payload,
+      );
       return data;
     },
     onSuccess: (_, variables) => {
@@ -76,7 +87,9 @@ export const useUpdateLocation = () => {
 export const useToggleLocation = () => {
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data } = await axiosInstance.put(`/operator/locations/toggle-active-status/${id}`);
+      const { data } = await apiClient.put(
+        `/operator/locations/toggle-active-status/${id}`,
+      );
       return data;
     },
     onSuccess: (_, id) => {
@@ -97,10 +110,16 @@ export const useCheckLocationKey = (locationKey: string) => {
   return useQuery<CheckLocationKeyResponse, Error>({
     queryKey: ['location-key-check', locationKey],
     queryFn: async () => {
-      const { data } = await axiosInstance.get(`/operator/locations/check-key/${locationKey}`);
+      const { data } = await apiClient.get(
+        `/operator/locations/check-key/${locationKey}`,
+      );
       return data;
     },
-    enabled: !!locationKey && locationKey.length >= 2 && locationKey.length <= 3 && /^[A-Z]+$/.test(locationKey),
+    enabled:
+      !!locationKey &&
+      locationKey.length >= 2 &&
+      locationKey.length <= 3 &&
+      /^[A-Z]+$/.test(locationKey),
     ...defaultQueryOptions,
     staleTime: 0, // Always check fresh
   });
@@ -117,9 +136,16 @@ export interface SuggestLocationKeysRequest {
 }
 
 export const useSuggestLocationKeys = () => {
-  return useMutation<SuggestLocationKeysResponse, Error, SuggestLocationKeysRequest>({
+  return useMutation<
+    SuggestLocationKeysResponse,
+    Error,
+    SuggestLocationKeysRequest
+  >({
     mutationFn: async (payload) => {
-      const { data } = await axiosInstance.post('/operator/locations/suggest-keys', payload);
+      const { data } = await apiClient.post(
+        '/operator/locations/suggest-keys',
+        payload,
+      );
       return data.data;
     },
     retry: false,

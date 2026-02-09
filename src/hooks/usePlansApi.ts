@@ -1,4 +1,4 @@
-import { axiosInstance } from '@/lib/API';
+import { apiClient } from '@/api/client';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   CompanySettingsResponse,
@@ -15,7 +15,7 @@ import {
   EdgeCaseHandlingPayload,
   SetEdgeCaseHandlingResponse,
 } from '@/types/company';
-import { queryClient } from '@/Provider';
+import { queryClient } from '@/app/providers';
 
 // ------- QUERIES -------
 
@@ -23,8 +23,8 @@ export const useGetCompanySettings = (companyId: string) =>
   useQuery<CompanySettingsResponse, Error>({
     queryKey: ['company-settings', companyId],
     queryFn: async () => {
-      const { data } = await axiosInstance.get(
-        `/company-settings/${companyId}`
+      const { data } = await apiClient.get(
+        `/company-settings/${companyId}`,
       );
       return data;
     },
@@ -44,7 +44,7 @@ export const useGetPlanConfigs = () =>
   useQuery<PlanConfigsResponse, Error>({
     queryKey: ['plan-configs'],
     queryFn: async () => {
-      const { data } = await axiosInstance.get(`/plan-configs`);
+      const { data } = await apiClient.get(`/plan-configs`);
       return data;
     },
     staleTime: 5 * 60_000,
@@ -58,14 +58,16 @@ export const useGetPlanConfigs = () =>
 export const useSetCommissionOverride = (companyId: string) =>
   useMutation<GenericOk, Error, OverrideCommissionBody>({
     mutationFn: async (payload) => {
-      const { data } = await axiosInstance.post(
+      const { data } = await apiClient.post(
         `/company-settings/${companyId}/commission-override`,
-        payload
+        payload,
       );
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['company-settings', companyId] });
+      queryClient.invalidateQueries({
+        queryKey: ['company-settings', companyId],
+      });
       queryClient.invalidateQueries({ queryKey: ['company', companyId] });
     },
   });
@@ -73,29 +75,37 @@ export const useSetCommissionOverride = (companyId: string) =>
 export const useStartCompanySubscription = (companyId: string) =>
   useMutation<StartSubscriptionResponse, Error, StartSubscriptionBody>({
     mutationFn: async (payload) => {
-      const { data } = await axiosInstance.post(
+      const { data } = await apiClient.post(
         `/companies/${companyId}/subscriptions`,
-        payload
+        payload,
       );
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['company-settings', companyId] });
+      queryClient.invalidateQueries({
+        queryKey: ['company-settings', companyId],
+      });
       queryClient.invalidateQueries({ queryKey: ['company', companyId] });
     },
   });
 
 // Convenience: read single plan (optional)
-export const getPlanByTier = (configs: PlanConfigsResponse | undefined, tier: Tier) =>
-  configs?.data.find((c) => c.tier === tier);
+export const getPlanByTier = (
+  configs: PlanConfigsResponse | undefined,
+  tier: Tier,
+) => configs?.data.find((c) => c.tier === tier);
 
 // Set status commission settings (includes edge case handling)
 export const useSetStatusCommissionSettings = (companyId: string) =>
-  useMutation<SetStatusCommissionSettingsResponse, Error, StatusCommissionSettingsPayload & { edgeCaseHandling?: 'OWE' | 'CAP' }>({
+  useMutation<
+    SetStatusCommissionSettingsResponse,
+    Error,
+    StatusCommissionSettingsPayload & { edgeCaseHandling?: 'OWE' | 'CAP' }
+  >({
     mutationFn: async (payload) => {
-      const { data } = await axiosInstance.post(
+      const { data } = await apiClient.post(
         `/company-settings/${companyId}/status-commission-settings`,
-        payload
+        payload,
       );
       return data;
     },
@@ -104,11 +114,15 @@ export const useSetStatusCommissionSettings = (companyId: string) =>
 
 // Set fixed cancellation amounts
 export const useSetFixedCancellationAmounts = (companyId: string) =>
-  useMutation<SetFixedCancellationAmountsResponse, Error, FixedCancellationAmountsPayload>({
+  useMutation<
+    SetFixedCancellationAmountsResponse,
+    Error,
+    FixedCancellationAmountsPayload
+  >({
     mutationFn: async (payload) => {
-      const { data } = await axiosInstance.post(
+      const { data } = await apiClient.post(
         `/company-settings/${companyId}/fixed-cancellation-amounts`,
-        payload
+        payload,
       );
       return data;
     },
@@ -119,51 +133,57 @@ export const useSetFixedCancellationAmounts = (companyId: string) =>
 export const useSetEdgeCaseHandling = (companyId: string) =>
   useMutation<SetEdgeCaseHandlingResponse, Error, EdgeCaseHandlingPayload>({
     mutationFn: async (payload) => {
-      const { data } = await axiosInstance.post(
+      const { data } = await apiClient.post(
         `/company-settings/${companyId}/edge-case-handling`,
-        payload
+        payload,
       );
       return data;
     },
     // Don't invalidate here - let the caller handle it once all saves are done
   });
 
-
 // --- Delete commission override ---
 export const useDeleteCommissionOverride = (companyId: string) =>
   useMutation<GenericOk, Error, void>({
     mutationFn: async () => {
-      const { data } = await axiosInstance.delete(
-        `/company-settings/${companyId}/commission-override`
+      const { data } = await apiClient.delete(
+        `/company-settings/${companyId}/commission-override`,
       );
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['company-settings', companyId] });
+      queryClient.invalidateQueries({
+        queryKey: ['company-settings', companyId],
+      });
       queryClient.invalidateQueries({ queryKey: ['company', companyId] });
     },
   });
 
 // --- POST: End subscription early / actions ---
-type EndEarlyAction = 'START_NEXT_SCHEDULED' | 'REVERT_TO_BASE' | 'START_TIER_NOW';
+type EndEarlyAction =
+  | 'START_NEXT_SCHEDULED'
+  | 'REVERT_TO_BASE'
+  | 'START_TIER_NOW';
 interface EndEarlyBody {
   action: EndEarlyAction;
   note?: string;
-  tier?: Tier;   // required when action === 'START_TIER_NOW'
+  tier?: Tier; // required when action === 'START_TIER_NOW'
   days?: number; // required when action === 'START_TIER_NOW'
 }
 
 export const useEndCompanySubscriptionEarly = (companyId: string) =>
   useMutation<GenericOk, Error, EndEarlyBody>({
     mutationFn: async (payload) => {
-      const { data } = await axiosInstance.post(
+      const { data } = await apiClient.post(
         `/companies/${companyId}/subscriptions/end-early`,
-        payload
+        payload,
       );
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['company-settings', companyId] });
+      queryClient.invalidateQueries({
+        queryKey: ['company-settings', companyId],
+      });
       queryClient.invalidateQueries({ queryKey: ['company', companyId] });
     },
   });

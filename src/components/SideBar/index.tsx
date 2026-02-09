@@ -1,16 +1,12 @@
 // src/components/SideBar/index.tsx:
+'use client';
 
 import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
 import { SidebarInset, SidebarProvider, useSidebar } from '../ui/sidebar';
 import { AppSidebar } from './app-sidebar';
 import { Button } from '../ui/button';
-import { Bell, Maximize2,  } from 'lucide-react';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '../ui/popover';
+import { Bell, Maximize2 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import ThemeSelect from '../Select/Theme-Select';
 
 // Sample notifications data
@@ -86,7 +82,9 @@ const Header = () => {
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch((err) => {
-        console.log(`Error attempting to enable full-screen mode: ${err.message}`);
+        console.log(
+          `Error attempting to enable full-screen mode: ${err.message}`,
+        );
       });
     } else {
       if (document.exitFullscreen) {
@@ -144,31 +142,43 @@ const Header = () => {
           >
             <div className="bg-[#F97316] text-white p-5">
               <h3 className="text-xl font-semibold mb-4">Notifications</h3>
-              
+
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-white/90 mb-3">Today</p>
-                  
+                  <p className="text-sm font-medium text-white/90 mb-3">
+                    Today
+                  </p>
+
                   {notifications.slice(0, 2).map((notification, index) => (
                     <div key={notification.id} className="mb-3">
                       <p className="font-semibold text-sm">
-                        {notification.title}: <span className="font-normal">{notification.message}</span>
+                        {notification.title}:{' '}
+                        <span className="font-normal">
+                          {notification.message}
+                        </span>
                       </p>
-                      <p className="text-xs text-white/70 mt-1">{notification.time}</p>
+                      <p className="text-xs text-white/70 mt-1">
+                        {notification.time}
+                      </p>
                       {index < 1 && (
                         <div className="border-t border-white/20 mt-3" />
                       )}
                     </div>
                   ))}
                 </div>
-                
+
                 <div className="border-t border-white/20 pt-3">
                   {notifications.slice(2).map((notification) => (
                     <div key={notification.id}>
                       <p className="font-semibold text-sm">
-                        {notification.title}: <span className="font-normal">{notification.message}</span>
+                        {notification.title}:{' '}
+                        <span className="font-normal">
+                          {notification.message}
+                        </span>
                       </p>
-                      <p className="text-xs text-white/70 mt-1">{notification.time}</p>
+                      <p className="text-xs text-white/70 mt-1">
+                        {notification.time}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -186,16 +196,14 @@ const Header = () => {
   );
 };
 
-const SideBar = () => {
+const SideBar = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="bg-background min-h-screen transition-colors duration-300">
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset className="flex flex-col bg-background transition-colors duration-300">
           <Header />
-          <div className="p-3">
-            <Outlet />
-          </div>
+          <div className="p-3">{children}</div>
         </SidebarInset>
       </SidebarProvider>
     </div>

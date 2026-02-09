@@ -1,15 +1,15 @@
-import { axiosInstance } from '@/lib/API';
+import { apiClient } from '@/api/client';
 import { useMutation } from '@tanstack/react-query';
-import { queryClient } from '@/Provider';
+import { queryClient } from '@/app/providers';
 
 // --- File Upload with Auto-Refresh ---
 export const useUploadFile = <TResponse = unknown>(
   endpoint: string,
-  invalidateKey?: string | string[]
+  invalidateKey?: string | string[],
 ) => {
   return useMutation<TResponse, Error, FormData>({
     mutationFn: async (formData: FormData) => {
-      const { data } = await axiosInstance.post(endpoint, formData, {
+      const { data } = await apiClient.post(endpoint, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -17,8 +17,14 @@ export const useUploadFile = <TResponse = unknown>(
       return data.data;
     },
     onSuccess: () => {
-      if (invalidateKey) queryClient.invalidateQueries({ queryKey: Array.isArray(invalidateKey) ? invalidateKey : [invalidateKey] });
-    },    retry: false,
+      if (invalidateKey)
+        queryClient.invalidateQueries({
+          queryKey: Array.isArray(invalidateKey)
+            ? invalidateKey
+            : [invalidateKey],
+        });
+    },
+    retry: false,
   });
 };
 
@@ -26,7 +32,7 @@ export const useUploadFile = <TResponse = unknown>(
 export const useSendOtp = () => {
   return useMutation<{ success: boolean }, Error, { email: string }>({
     mutationFn: async ({ email }) => {
-      const { data } = await axiosInstance.post('/auth/send-otp', { email });
+      const { data } = await apiClient.post('/auth/send-otp', { email });
       return data;
     },
     onError: (error) => {
@@ -46,7 +52,7 @@ export const useVerifyOtp = () => {
       formData.append('email', email);
       formData.append('otp', otp);
 
-      const { data } = await axiosInstance.post('/auth/verify-otp', formData);
+      const { data } = await apiClient.post('/auth/verify-otp', formData);
       return data;
     },
     onError: (error) => {
