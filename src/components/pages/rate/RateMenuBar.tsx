@@ -5,7 +5,7 @@ import { useParams, useLocation } from '@/hooks/useNextNavigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { CalendarDays, LineChart, Ban, Car, Percent } from 'lucide-react';
+import { CalendarDays, LineChart, Ban, Car, Percent, PiggyBank } from 'lucide-react';
 
 const RATE_TABS = [
   {
@@ -16,6 +16,7 @@ const RATE_TABS = [
   { label: 'Rates', path: '', icon: <CalendarDays className="w-4 h-4 mr-1" /> },
   { label: 'Taxes', path: 'taxes', icon: <Percent className="w-4 h-4 mr-1" /> },
   { label: 'CDW', path: 'cdw', icon: <LineChart className="w-4 h-4 mr-1" /> },
+  { label: 'Bid Management', path: 'bid-management', icon: <PiggyBank className="w-4 h-4 mr-1" /> },
   {
     label: 'Blackouts',
     path: 'blackouts',

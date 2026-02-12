@@ -7,6 +7,7 @@ import {
   useGetCompany,
   useUnverifyCompany,
   useVerifyCompany,
+  useUpdateCompany,
 } from '@/hooks/useCompanyApi';
 import { useParams, useNavigate } from '@/hooks/useNextNavigation';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,7 @@ import {
   Calendar,
   Clock,
   Copy,
+  Zap,
 } from 'lucide-react';
 import {
   useGetLocations,
@@ -945,6 +947,7 @@ const CompanyDetail = () => {
   );
   const verifyCompany = useVerifyCompany();
   const unverifyCompany = useUnverifyCompany();
+  const updateCompany = useUpdateCompany();
   const createLocation = useCreateLocation();
   const updateLocation = useUpdateLocation();
   const toggleLocation = useToggleLocation();
@@ -1340,6 +1343,33 @@ const CompanyDetail = () => {
           description: (err as any).message,
         }),
     });
+  };
+
+  const handleBiddingToggleChange = (checked: boolean) => {
+    if (!companyId) return;
+    updateCompany.mutate(
+      {
+        companyId,
+        payload: { biddingAllowedByAdmin: checked },
+      },
+      {
+        onSuccess: () => {
+          toast.success(
+            checked
+              ? 'Bidding enabled for this company'
+              : 'Bidding disabled for this company',
+          );
+          refetch();
+        },
+        onError: (err: any) => {
+          const msg =
+            err?.response?.data?.message ||
+            err?.message ||
+            'Failed to update bidding status';
+          toast.error(msg);
+        },
+      },
+    );
   };
 
   const openEditLocationDialog = (location: Location) => {
@@ -1906,6 +1936,34 @@ const CompanyDetail = () => {
                   Country
                 </p>
                 <p className="font-medium">{displayCountry}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Bidding card - Admin toggle */}
+          <div className="rounded-xl border bg-card shadow-sm">
+            <div className="flex items-center gap-3 border-b p-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100">
+                <Zap className="h-6 w-6 text-[#F56304]" />
+              </div>
+              <h2 className="text-lg font-semibold">Bidding</h2>
+            </div>
+            <div className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    Allow Bidding
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    When on, bidding becomes available for all locations
+                  </p>
+                </div>
+                <Switch
+                  checked={company.biddingAllowedByAdmin ?? false}
+                  onCheckedChange={handleBiddingToggleChange}
+                  disabled={updateCompany.isPending}
+                  className="data-[state=checked]:bg-[#F56304]"
+                />
               </div>
             </div>
           </div>

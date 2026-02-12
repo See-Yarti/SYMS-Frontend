@@ -185,6 +185,7 @@ export interface UpdateCompanyPayload {
   description?: string;
   tradeLicenseExpiryDate?: string;
   companyKey?: string;
+  biddingAllowedByAdmin?: boolean;
   // Files will be sent as FormData
 }
 

@@ -5,6 +5,7 @@ export interface Company {
   name: string;
   description: string;
   isVerified: boolean;
+  biddingAllowedByAdmin?: boolean;
   unverifiedReason: string | null;
   unverifiedReasonDescription: string | null;
   unverifiedDate: string | null;
