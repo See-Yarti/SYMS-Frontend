@@ -70,17 +70,29 @@ export const usePostData = <TData = unknown, TResponse = unknown>(
 ) => {
   return useMutation<TResponse, Error, TData>({
     mutationFn: async (data: TData) => {
-      const formData = toFormData(data);
-      const { data: responseData } = await apiClient.post(
-        endpoint,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
+      try {
+        const formData = toFormData(data);
+        const { data: responseData } = await apiClient.post(
+          endpoint,
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
           },
-        },
-      );
-      return responseData.data;
+        );
+        return responseData.data;
+      } catch (err: any) {
+        // Re-throw a plain Error so 4xx are handled by onError without showing Axios stack in console/overlay
+        const raw = err?.response?.data?.message;
+        const msg =
+          (typeof raw === 'string' ? raw : Array.isArray(raw) ? raw[0] : null) ??
+          err?.message ??
+          'Request failed';
+        const e = new Error(msg) as Error & { response?: any };
+        e.response = err?.response;
+        throw e;
+      }
     },
     ...options,
   });
@@ -163,10 +175,21 @@ export const usePostJson = <TData = unknown, TResponse = unknown>(
 ) => {
   return useMutation<TResponse, any, TData>({
     mutationFn: async (data: TData) => {
-      const { data: response } = await apiClient.post(endpoint, data, {
-        headers: { 'Content-Type': 'application/json' },
-      });
-      return response.data; // assuming your API wraps as { success, data }
+      try {
+        const { data: response } = await apiClient.post(endpoint, data, {
+          headers: { 'Content-Type': 'application/json' },
+        });
+        return response.data; // assuming your API wraps as { success, data }
+      } catch (err: any) {
+        const raw = err?.response?.data?.message;
+        const msg =
+          (typeof raw === 'string' ? raw : Array.isArray(raw) ? raw[0] : null) ??
+          err?.message ??
+          'Request failed';
+        const e = new Error(msg) as Error & { response?: any };
+        e.response = err?.response;
+        throw e;
+      }
     },
     ...options,
   });

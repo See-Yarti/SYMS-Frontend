@@ -90,28 +90,52 @@ export default function CarClassesPage() {
     locationId || '',
   ]);
 
-  const { mutateAsync: createCarClass } = usePostData('company-car-class', {
+  const { mutate: createCarClass } = usePostData('company-car-class', {
     onSuccess: async () => {
       toast.success('Car class added successfully!');
+      setDialogOpen(false);
+      setEditing(null);
       await refetch();
     },
     onError: (error: any) => {
-      console.error('Error creating car class:', error);
-      if (error?.response?.data?.errors) {
-        error.response.data.errors.forEach((err: any) => {
-          toast.error(`${err.field}: ${err.constraints.join(', ')}`);
-        });
-      } else {
+      const status = error?.response?.status;
+      const data = error?.response?.data;
+      const message =
+        typeof data?.message === 'string'
+          ? data.message
+          : Array.isArray(data?.message)
+            ? data.message[0]
+            : null;
+
+      if (status === 400) {
+        const isAlreadyAdded =
+          message &&
+          (message.toLowerCase().includes('already') ||
+            message.toLowerCase().includes('exist'));
         toast.error(
-          error?.response?.data?.message || 'Failed to add car class',
+          isAlreadyAdded
+            ? 'This car class is already added for this location.'
+            : message || 'This car class cannot be added. It may already exist at this location.',
         );
+        return;
       }
+      if (data?.errors?.length) {
+        data.errors.forEach((err: any) => {
+          toast.error(
+            err.constraints?.length ? `${err.field}: ${err.constraints.join(', ')}` : String(err),
+          );
+        });
+        return;
+      }
+      toast.error(message || error?.message || 'Failed to add car class.');
     },
   });
 
-  const { mutateAsync: updateCarClass } = usePutData({
+  const { mutate: updateCarClass } = usePutData({
     onSuccess: async () => {
       toast.success('Car class updated successfully!');
+      setDialogOpen(false);
+      setEditing(null);
       await refetch();
     },
     onError: (error: any) => {
@@ -184,19 +208,13 @@ export default function CarClassesPage() {
       images: values.image, // The hook will handle FormData conversion
     };
 
-    try {
-      if (editing) {
-        await updateCarClass({
-          endpoint: `company-car-class/${companyId}/${locationId}/${editing.id}`,
-          data: payload,
-        });
-      } else {
-        await createCarClass(payload);
-      }
-      setDialogOpen(false);
-      setEditing(null);
-    } catch (error) {
-      console.error('Error saving car class:', error);
+    if (editing) {
+      updateCarClass({
+        endpoint: `company-car-class/${companyId}/${locationId}/${editing.id}`,
+        data: payload,
+      });
+    } else {
+      createCarClass(payload);
     }
   }
 

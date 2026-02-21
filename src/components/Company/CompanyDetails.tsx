@@ -138,11 +138,18 @@ const LocationAutocomplete = React.forwardRef<
     const [showSuggestions, setShowSuggestions] = useState(false);
     const autocompleteService = useRef<any>(null);
 
+    const getAutocompleteService = () => {
+      if (autocompleteService.current) return autocompleteService.current;
+      if (typeof window !== 'undefined' && window.google?.maps?.places) {
+        autocompleteService.current =
+          new window.google.maps.places.AutocompleteService();
+        return autocompleteService.current;
+      }
+      return null;
+    };
+
     useEffect(() => {
-      if (!window.google || !window.google.maps || !window.google.maps.places)
-        return;
-      autocompleteService.current =
-        new window.google.maps.places.AutocompleteService();
+      getAutocompleteService();
       return () => {
         autocompleteService.current = null;
       };
@@ -153,7 +160,8 @@ const LocationAutocomplete = React.forwardRef<
       onChange(inputValue);
 
       if (inputValue.length > 2) {
-        autocompleteService.current?.getPlacePredictions(
+        const service = getAutocompleteService();
+        service?.getPlacePredictions(
           {
             input: inputValue,
             componentRestrictions: { country: countryCode },
@@ -200,12 +208,12 @@ const LocationAutocomplete = React.forwardRef<
             id={id}
             type="text"
             ref={ref}
-            value={value}
+            value={value ?? ''}
             onChange={handleInputChange}
             placeholder={placeholder}
             className={`pl-10 ${className}`}
             autoComplete="off"
-            onFocus={() => value.length > 2 && setShowSuggestions(true)}
+            onFocus={() => (value ?? '').length > 2 && setShowSuggestions(true)}
             onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
           />
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -1007,26 +1015,44 @@ const CompanyDetail = () => {
         : '',
     );
 
-  // Load Google Maps API
+  // Load Google Maps API once (no cleanup – removing script breaks the loader in dev/Strict Mode)
   useEffect(() => {
     const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    if (!googleMapsApiKey) return;
 
-    if (window.google && window.google.maps && window.google.maps.places) {
+    if (typeof window !== 'undefined' && window.google?.maps?.places) {
       setGoogleMapsLoaded(true);
       return;
     }
 
+    // Avoid duplicate script when React Strict Mode double-mounts
+    const existing = document.querySelector(
+      'script[src*="maps.googleapis.com/maps/api/js"]'
+    );
+    if (existing) {
+      let attempts = 0;
+      const maxAttempts = 100; // ~1.5s at 60fps
+      const checkReady = () => {
+        if (window.google?.maps?.places) {
+          setGoogleMapsLoaded(true);
+          return;
+        }
+        if (++attempts < maxAttempts) requestAnimationFrame(checkReady);
+      };
+      if (window.google?.maps?.places) setGoogleMapsLoaded(true);
+      else requestAnimationFrame(checkReady);
+      return;
+    }
+
     const script = document.createElement('script');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places&loading=async`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places`;
     script.async = true;
     script.defer = true;
     script.onload = () => setGoogleMapsLoaded(true);
     script.onerror = () =>
       toast.error('Failed to load Google Maps. Please refresh the page.');
     document.head.appendChild(script);
-    return () => {
-      document.head.removeChild(script);
-    };
+    // Do not remove script on cleanup – it breaks the loader and causes "already defined" in dev
   }, []);
 
   const handleAddressSelect = (place: any) => {

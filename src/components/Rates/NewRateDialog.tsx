@@ -22,6 +22,7 @@ import {
   SelectItem,
   SelectValue,
 } from '@/components/ui/select';
+import { toast } from 'sonner';
 
 // ---------- Types ----------
 type CarClassOption = { value: string; label: string };
@@ -229,6 +230,13 @@ export default function NewRateDialog({
     if (!open) resetForm();
   }, [open]);
 
+  // End date cannot be before start date: if start moves after current end, reset end
+  React.useEffect(() => {
+    if (startDate && endDate && endDate < startDate) {
+      setEndDate(startDate);
+    }
+  }, [startDate, endDate]);
+
   const toApiDate = (yyyyMmDd: string) => {
     if (!yyyyMmDd) return '';
     const [y, m, d] = yyyyMmDd.split('-');
@@ -236,6 +244,10 @@ export default function NewRateDialog({
   };
 
   const handleAdd = () => {
+    if (startDate && endDate && endDate < startDate) {
+      toast.error('End date must be on or after start date.');
+      return;
+    }
     const payload: CreateRatePayload = {
       companyCarClassId,
       startDateTime: toApiDate(startDate),
@@ -348,6 +360,7 @@ export default function NewRateDialog({
               <Input
                 type="date"
                 value={endDate}
+                min={startDate || undefined}
                 onChange={(e) => setEndDate(e.target.value)}
                 required
               />
@@ -613,7 +626,14 @@ export default function NewRateDialog({
             <Button
               type="submit"
               form="rate-form"
-              disabled={!(companyCarClassId && startDate && endDate)}
+              disabled={
+                !(
+                  companyCarClassId &&
+                  startDate &&
+                  endDate &&
+                  endDate >= startDate
+                )
+              }
               className="bg-[#F56304] hover:bg-[#e05503] text-white"
             >
               Add Rate

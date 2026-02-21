@@ -162,9 +162,10 @@ function normalizeRatesData(obj: unknown): RateRow[] {
 function getErrMessage(e: unknown): string {
   if (typeof e === 'string') return e;
   if (e && typeof e === 'object') {
-    const maybe = (e as { response?: { data?: { message?: string } } })
-      ?.response?.data?.message;
+    const err = e as { response?: { data?: { message?: string } }; message?: string };
+    const maybe = err?.response?.data?.message;
     if (typeof maybe === 'string' && maybe) return maybe;
+    if (typeof err?.message === 'string' && err.message) return err.message;
   }
   return 'Something went wrong.';
 }
@@ -220,12 +221,13 @@ export default function RatesPage() {
   }, [companyClasses]);
 
   // Create / Delete
-  const { mutateAsync: createRate, isPending: creating } = usePostJson<
+  const { mutate: createRate, isPending: creating } = usePostJson<
     CreateRatePayload,
     unknown
   >('company-car-class-rate', {
     onSuccess: () => {
       toast.success('Rate created');
+      setDialogOpenCreate(false);
       refetchRates();
     },
     onError: (err: unknown) => toast.error(getErrMessage(err)),
@@ -259,9 +261,8 @@ export default function RatesPage() {
     return matchesClass && matchesSearch;
   });
 
-  const handleAddRate = async (payload: CreateRatePayload) => {
-    await createRate(payload);
-    setDialogOpenCreate(false);
+  const handleAddRate = (payload: CreateRatePayload) => {
+    createRate(payload);
   };
 
   const handleDelete = async (id: string) => {

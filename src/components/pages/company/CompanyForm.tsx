@@ -1041,7 +1041,7 @@ const CompanyForm: React.FC = () => {
                   id="companyKey"
                   type="text"
                   placeholder="ABC"
-                  value={companyKey}
+                  value={companyKey ?? ''}
                   onChange={(e) => {
                     if (!isEditMode) {
                       // Filter: only uppercase A-Z, max 3 characters
