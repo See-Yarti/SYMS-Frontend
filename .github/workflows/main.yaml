@@ -1,4 +1,4 @@
-name: CI/CD Pipeline for YalaRide CRM (Next.js)
+name: CI/CD Pipeline for yalaride-crm
 
 on:
   push:
@@ -10,13 +10,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v1
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
@@ -33,39 +33,16 @@ jobs:
     needs: Build_Docker_Image
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
 
       - name: Install sshpass
         run: sudo apt-get update && sudo apt-get install -y sshpass
 
-      - name: Create docker-compose.yaml for Next.js
-        run: |
-          cat > docker-compose.yaml << 'EOF'
-          version: '3.8'
-          services:
-            yalaride-crm:
-              image: ${DOCKER_IMAGE}
-              container_name: yalaride-crm
-              restart: unless-stopped
-              ports:
-                - "5173:5173"
-              environment:
-                - NODE_ENV=production
-              env_file:
-                - .env
-              networks:
-                - yalaride-network
-          
-          networks:
-            yalaride-network:
-              driver: bridge
-          EOF
-
-      - name: Replace Docker image in docker-compose.yaml
+      - name: Replace the Docker image in docker-compose.yaml
         run: |
           sed -i 's|${DOCKER_IMAGE}|${{ secrets.DOCKER_HUB_USERNAME }}/yalaride-crm:${{ github.sha }}|g' docker-compose.yaml
 
-      - name: Transfer docker-compose.yaml
+      - name: Transfer docker-compose.yaml as docker-compose.yaml
         env:
           HOST: ${{ secrets.VPS_HOST }}
           USERNAME: ${{ secrets.VPS_USERNAME }}
@@ -103,5 +80,4 @@ jobs:
           cd /home/${{ secrets.VPS_USERNAME }}/yalaride-crm &&
           echo '$SUDO_PASSWORD' | sudo -S docker-compose pull &&
           echo '$SUDO_PASSWORD' | sudo -S docker-compose down &&
-          echo '$SUDO_PASSWORD' | sudo -S docker-compose up -d --force-recreate &&
-          echo '$SUDO_PASSWORD' | sudo -S docker system prune -f"
+          echo '$SUDO_PASSWORD' | sudo -S docker-compose up -d --force-recreate"
