@@ -10,6 +10,7 @@ import {
   Package,
   PanelRightDashed,
   Calculator,
+  Gavel,
   Settings,
   User,
   Shield,
@@ -129,6 +130,19 @@ export const sideBarLinks: SideBarItem[] = [
     url: '/operator-accounting',
     slug: 'operator-accounting',
     icon: Calculator,
+    roles: [
+      'adminOperator',
+      'managerOperator',
+      'accountantOperator',
+      'salesOperator',
+    ],
+  },
+  {
+    title: 'Bidding',
+    type: 'routed',
+    url: '/bidding',
+    slug: 'bidding',
+    icon: Gavel,
     roles: [
       'adminOperator',
       'managerOperator',

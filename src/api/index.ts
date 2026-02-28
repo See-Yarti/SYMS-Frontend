@@ -28,3 +28,7 @@ export type * from './rates/rates.types';
 // Accounting API
 export { accountingApi } from './accounting/accounting.api';
 export type * from './accounting/accounting.types';
+
+// Bidding API
+export { biddingApi } from './bidding/bidding.api';
+export type * from './bidding/bidding.types';
