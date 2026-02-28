@@ -171,6 +171,10 @@ interface EndEarlyBody {
   days?: number; // required when action === 'START_TIER_NOW'
 }
 
+interface AddonsCommissionPayload {
+  addonsCommissionPercentage: number;
+}
+
 export const useEndCompanySubscriptionEarly = (companyId: string) =>
   useMutation<GenericOk, Error, EndEarlyBody>({
     mutationFn: async (payload) => {
@@ -185,5 +189,16 @@ export const useEndCompanySubscriptionEarly = (companyId: string) =>
         queryKey: ['company-settings', companyId],
       });
       queryClient.invalidateQueries({ queryKey: ['company', companyId] });
+    },
+  });
+
+export const useSetAddonsCommission = (companyId: string) =>
+  useMutation<GenericOk, Error, AddonsCommissionPayload>({
+    mutationFn: async (payload) => {
+      const { data } = await apiClient.post(
+        `/company-settings/${companyId}/addons-commission`,
+        payload,
+      );
+      return data;
     },
   });

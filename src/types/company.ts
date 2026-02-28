@@ -217,6 +217,9 @@ export interface CompanySettingsPayload {
   fixedCancellationAmountCustomerFault?: string | null;
   fixedCancellationAmountPartialUse?: string | null;
   edgeCaseHandling?: 'CAP' | 'OWE';
+  addonsCommission?: {
+    addonsCommissionPercentage: string;
+  };
 }
 
 export interface CompanySettingsResponse {

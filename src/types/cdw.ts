@@ -105,5 +105,8 @@ export interface CompanySettingsResponse {
     statusCommissionSettings: any;
     edgeCaseHandling: string;
     cdw: CompanyCDWSettings;
+    addonsCommission?: {
+      addonsCommissionPercentage: string;
+    };
   };
 }

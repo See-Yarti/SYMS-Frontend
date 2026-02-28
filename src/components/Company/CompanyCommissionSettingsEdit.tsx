@@ -4,12 +4,14 @@
 
 import { useParams, useNavigate } from '@/hooks/useNextNavigation';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAppSelector } from '@/store';
 import { useGetCompany } from '@/hooks/useCompanyApi';
 import {
   useGetCompanySettings as useGetCompanySettingsOld,
   useSetStatusCommissionSettings,
   useSetFixedCancellationAmounts,
   useSetEdgeCaseHandling,
+  useSetAddonsCommission,
 } from '@/hooks/usePlansApi';
 import {
   useGetCompanySettings,
@@ -53,6 +55,8 @@ import { toast } from 'sonner';
 const COMMISSION_ORANGE = '#F56304';
 
 function CompanyCommissionSettingsEditPage() {
+  const { user } = useAppSelector((s) => s.auth);
+  const isAdminUser = user?.role === 'admin';
   const { companyId } = useParams<{ companyId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -67,6 +71,7 @@ function CompanyCommissionSettingsEditPage() {
   const setStatusSettings = useSetStatusCommissionSettings(companyId || '');
   const setFixedAmounts = useSetFixedCancellationAmounts(companyId || '');
   const setEdgeCase = useSetEdgeCaseHandling(companyId || '');
+  const setAddonsCommission = useSetAddonsCommission(companyId || '');
   const updateCDWSettings = useUpdateCompanyCDWSettings(companyId || '');
 
   const [modeChangeModalOpen, setModeChangeModalOpen] = useState(false);
@@ -99,6 +104,7 @@ function CompanyCommissionSettingsEditPage() {
   const [cdwMin, setCdwMin] = useState('5');
   const [cdwMax, setCdwMax] = useState('20');
   const [cdwCommission, setCdwCommission] = useState('10');
+  const [addonsCommissionPct, setAddonsCommissionPct] = useState('0');
   const [edgeCaseOWE, setEdgeCaseOWE] = useState(false);
   const [edgeCaseCAP, setEdgeCaseCAP] = useState(true);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -174,6 +180,11 @@ function CompanyCommissionSettingsEditPage() {
     setCdwMax(cdw.cdwMaxPercentage ? String(cdw.cdwMaxPercentage) : '20');
     setCdwCommission(
       cdw.cdwCommissionPercentage ? String(cdw.cdwCommissionPercentage) : '10',
+    );
+    setAddonsCommissionPct(
+      settingsRes.settings?.addonsCommission?.addonsCommissionPercentage
+        ? String(settingsRes.settings.addonsCommission.addonsCommissionPercentage)
+        : '0',
     );
   }, [settingsRes]);
 
@@ -358,6 +369,12 @@ function CompanyCommissionSettingsEditPage() {
       }
     }
 
+    const addonsPctNum = parseFloat(addonsCommissionPct);
+    if (isAdminUser && (isNaN(addonsPctNum) || addonsPctNum < 0 || addonsPctNum > 100)) {
+      toast.error('Add-ons commission must be between 0 and 100');
+      return;
+    }
+
     // Build payload (validation already passed - values are in valid range)
     const payload: StatusCommissionSettingsPayload = {
       COMPLETED: {
@@ -430,7 +447,14 @@ function CompanyCommissionSettingsEditPage() {
         }),
       });
 
-      // 4. Invalidate queries once at the end
+      // 4. Add-ons commission settings (percentage only)
+      if (isAdminUser) {
+        await setAddonsCommission.mutateAsync({
+          addonsCommissionPercentage: addonsPctNum,
+        });
+      }
+
+      // 5. Invalidate queries once at the end
       await queryClient.invalidateQueries({
         queryKey: ['company-settings', companyId],
       });
@@ -891,6 +915,41 @@ function CompanyCommissionSettingsEditPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {isAdminUser && (
+              <Card className="overflow-hidden rounded-xl border border-l-4 border-l-orange-500 border-gray-200 bg-white shadow-sm">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100">
+                      <Percent className="h-4 w-4 text-[#F56304]" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold">Add-ons Commission</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Separate percentage for add-ons revenue (0–100)
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Add-ons commission (%)
+                    </Label>
+                    <div className="mt-1.5 flex items-center">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.1}
+                        value={addonsCommissionPct}
+                        onChange={(e) => setAddonsCommissionPct(e.target.value)}
+                        className="h-10 flex-1 rounded-lg border-gray-200 bg-gray-50"
+                      />
+                      <span className="ml-2 text-sm font-medium text-[#F56304]">%</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <div className="flex items-center justify-end gap-3">
               {hasUnsavedChanges && (
