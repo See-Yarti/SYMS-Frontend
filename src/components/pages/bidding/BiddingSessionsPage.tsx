@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -37,6 +38,23 @@ const STATUS_OPTIONS: Array<{ label: string; value: 'ALL' | BiddingSessionStatus
   { label: 'COMPLETED', value: 'COMPLETED' },
 ];
 
+const toDateInputValue = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getCurrentMonthRange = () => {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  return {
+    from: toDateInputValue(start),
+    to: toDateInputValue(end),
+  };
+};
+
 const formatDate = (value?: string | null) => {
   if (!value) return '—';
   const date = new Date(value);
@@ -45,6 +63,19 @@ const formatDate = (value?: string | null) => {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
+  }).format(date);
+};
+
+const formatDateTime = (value?: string | null) => {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   }).format(date);
 };
 
@@ -81,18 +112,33 @@ const getLocationLabel = (item: CompanyBiddingSessionItem) => {
   return item.location.title || item.location.addressLine || item.location.city || '—';
 };
 
+const getStatusBadgeClass = (status: BiddingSessionStatus) => {
+  switch (status) {
+    case 'ACTIVE':
+      return 'bg-blue-50 text-blue-700 border-blue-200';
+    case 'ACCEPTED':
+      return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    case 'LOCKED':
+      return 'bg-amber-50 text-amber-700 border-amber-200';
+    case 'CANCELLED':
+      return 'bg-rose-50 text-rose-700 border-rose-200';
+    case 'COMPLETED':
+      return 'bg-violet-50 text-violet-700 border-violet-200';
+    default:
+      return '';
+  }
+};
+
 export default function BiddingSessionsPage() {
   const { otherInfo } = useAppSelector((state) => state.auth);
   const companyId = otherInfo?.companyId || '';
+  const monthRange = React.useMemo(() => getCurrentMonthRange(), []);
 
   const [page, setPage] = React.useState(1);
   const [limit, setLimit] = React.useState(20);
-  const [sortBy, setSortBy] = React.useState<'createdAt' | 'pickupAt' | 'dropAt' | 'status'>('createdAt');
-  const [sortDir, setSortDir] = React.useState<'ASC' | 'DESC'>('DESC');
   const [status, setStatus] = React.useState<'ALL' | BiddingSessionStatus>('ALL');
-  const [dateFrom, setDateFrom] = React.useState('');
-  const [dateTo, setDateTo] = React.useState('');
-  const [operationalLocationId, setOperationalLocationId] = React.useState('');
+  const [dateFrom, setDateFrom] = React.useState(monthRange.from);
+  const [dateTo, setDateTo] = React.useState(monthRange.to);
 
   const dateFromIso = React.useMemo(() => {
     if (!dateFrom) return undefined;
@@ -114,17 +160,14 @@ export default function BiddingSessionsPage() {
   } = useCompanyBiddingSessions(companyId, {
     page,
     limit,
-    sortBy,
-    sortDir,
     status: status === 'ALL' ? undefined : status,
     dateFrom: dateFromIso,
     dateTo: dateToIso,
-    operationalLocationId: operationalLocationId || undefined,
   });
 
   React.useEffect(() => {
     setPage(1);
-  }, [limit, sortBy, sortDir, status, dateFromIso, dateToIso, operationalLocationId]);
+  }, [limit, status, dateFromIso, dateToIso]);
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -147,7 +190,7 @@ export default function BiddingSessionsPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 min-w-0 w-full max-w-[1400px] overflow-hidden">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Bidding Sessions</h1>
@@ -161,15 +204,15 @@ export default function BiddingSessionsPage() {
         </Button>
       </div>
 
-      <Card>
+      <Card className="w-full min-w-0">
         <CardHeader>
           <CardTitle className="text-base">Filters</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          <div className="space-y-1.5">
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-4 min-w-0">
+          <div className="space-y-1.5 min-w-0">
             <Label>Status</Label>
             <Select value={status} onValueChange={(v) => setStatus(v as 'ALL' | BiddingSessionStatus)}>
-              <SelectTrigger>
+              <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -182,72 +225,20 @@ export default function BiddingSessionsPage() {
             </Select>
           </div>
 
-          <div className="space-y-1.5">
-            <Label>Sort By</Label>
-            <Select value={sortBy} onValueChange={(v) => setSortBy(v as 'createdAt' | 'pickupAt' | 'dropAt' | 'status')}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="createdAt">Created At</SelectItem>
-                <SelectItem value="pickupAt">Pickup Date</SelectItem>
-                <SelectItem value="dropAt">Drop Date</SelectItem>
-                <SelectItem value="status">Status</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Sort Direction</Label>
-            <Select value={sortDir} onValueChange={(v) => setSortDir(v as 'ASC' | 'DESC')}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="DESC">DESC</SelectItem>
-                <SelectItem value="ASC">ASC</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Rows Per Page</Label>
-            <Select value={String(limit)} onValueChange={(v) => setLimit(Number(v))}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="10">10</SelectItem>
-                <SelectItem value="20">20</SelectItem>
-                <SelectItem value="50">50</SelectItem>
-                <SelectItem value="100">100</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 min-w-0">
             <Label>Date From</Label>
-            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            <Input className="w-full" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 min-w-0">
             <Label>Date To</Label>
-            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-          </div>
-
-          <div className="space-y-1.5 md:col-span-2">
-            <Label>Operational Location ID</Label>
-            <Input
-              value={operationalLocationId}
-              placeholder="Filter by location UUID"
-              onChange={(e) => setOperationalLocationId(e.target.value.trim())}
-            />
+            <Input className="w-full" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="pt-6">
+      <Card className="w-full min-w-0">
+        <CardContent className="pt-6 min-w-0 overflow-hidden">
           {isLoading ? (
             <div className="flex items-center justify-center py-14">
               <Loader2 className="h-6 w-6 animate-spin text-[#F56304]" />
@@ -258,16 +249,23 @@ export default function BiddingSessionsPage() {
             </div>
           ) : (
             <>
-              <Table>
-                <TableHeader>
+              <div className="w-full max-w-full rounded-lg border border-gray-200 overflow-x-auto">
+                <Table className="min-w-[2400px] text-sm">
+                <TableHeader className="bg-gray-50">
                   <TableRow>
+                    <TableHead>Session ID</TableHead>
                     <TableHead>Customer Name</TableHead>
+                    <TableHead>Customer Email</TableHead>
                     <TableHead>Car Class</TableHead>
                     <TableHead>Pickup Date</TableHead>
                     <TableHead>Drop Date</TableHead>
-                    <TableHead>Location</TableHead>
                     <TableHead>Time</TableHead>
+                    <TableHead>Location ID</TableHead>
+                    <TableHead>Location Title</TableHead>
+                    <TableHead>Location City</TableHead>
+                    <TableHead>Location Address</TableHead>
                     <TableHead>Actual Rental</TableHead>
+                    <TableHead>Currency</TableHead>
                     <TableHead>Attempt #</TableHead>
                     <TableHead>Bid 1</TableHead>
                     <TableHead>Bid 2</TableHead>
@@ -276,40 +274,76 @@ export default function BiddingSessionsPage() {
                     <TableHead>Status</TableHead>
                     <TableHead>Reason</TableHead>
                     <TableHead>Approval Bid</TableHead>
+                    <TableHead>Accepted At</TableHead>
+                    <TableHead>Expires At</TableHead>
+                    <TableHead>Lock End At</TableHead>
+                    <TableHead>Created At</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {items.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={15} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={24} className="text-center py-8 text-muted-foreground">
                         No bidding sessions found for current filters.
                       </TableCell>
                     </TableRow>
                   ) : (
                     items.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell>{item.customerName || '—'}</TableCell>
-                        <TableCell>{item.carClass || '—'}</TableCell>
-                        <TableCell>{formatDate(item.pickupDate)}</TableCell>
-                        <TableCell>{formatDate(item.dropDate)}</TableCell>
-                        <TableCell>{getLocationLabel(item)}</TableCell>
+                      <TableRow key={item.id} className="hover:bg-gray-50/80">
+                        <TableCell className="font-mono text-xs">{item.id}</TableCell>
+                        <TableCell className="whitespace-nowrap">{item.customerName || '—'}</TableCell>
+                        <TableCell className="whitespace-nowrap">{item.customerEmail || '—'}</TableCell>
+                        <TableCell className="whitespace-nowrap">{item.carClass || '—'}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatDate(item.pickupDate)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatDate(item.dropDate)}</TableCell>
                         <TableCell>
                           {formatTime(item.pickupTime)} - {formatTime(item.dropTime)}
                         </TableCell>
-                        <TableCell>{formatCurrency(item.actualRentalAmount, item.currency)}</TableCell>
-                        <TableCell>{item.bidAttemptNo ?? '—'}</TableCell>
-                        <TableCell>{formatBidNumber(item.bidAmount1)}</TableCell>
-                        <TableCell>{formatBidNumber(item.bidAmount2)}</TableCell>
-                        <TableCell>{formatBidNumber(item.bidAmount3)}</TableCell>
-                        <TableCell>{item.bidStatus || '—'}</TableCell>
-                        <TableCell>{item.status}</TableCell>
-                        <TableCell>{item.reason || '—'}</TableCell>
-                        <TableCell>{formatBidNumber(item.approvalBid)}</TableCell>
+                        <TableCell className="font-mono text-xs">{item.location?.id || '—'}</TableCell>
+                        <TableCell className="whitespace-nowrap">{item.location?.title || '—'}</TableCell>
+                        <TableCell className="whitespace-nowrap">{item.location?.city || '—'}</TableCell>
+                        <TableCell className="max-w-[280px] truncate" title={item.location?.addressLine || ''}>
+                          {item.location?.addressLine || '—'}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">{formatCurrency(item.actualRentalAmount, item.currency)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{item.currency || '—'}</TableCell>
+                        <TableCell className="whitespace-nowrap">{item.bidAttemptNo ?? '—'}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatBidNumber(item.bidAmount1)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatBidNumber(item.bidAmount2)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatBidNumber(item.bidAmount3)}</TableCell>
+                        <TableCell>
+                          {item.bidStatus ? (
+                            <Badge
+                              variant="outline"
+                              className={
+                                item.bidStatus === 'Passed'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-rose-50 text-rose-700 border-rose-200'
+                              }
+                            >
+                              {item.bidStatus}
+                            </Badge>
+                          ) : (
+                            '—'
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={getStatusBadgeClass(item.status)}>
+                            {item.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">{item.reason || '—'}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatBidNumber(item.approvalBid)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatDateTime(item.acceptedAt)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatDateTime(item.expiresAt)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatDateTime(item.lockEndAt)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatDateTime(item.createdAt)}</TableCell>
                       </TableRow>
                     ))
                   )}
                 </TableBody>
               </Table>
+              </div>
 
               <div className="mt-4 flex items-center justify-between gap-3">
                 <p className="text-sm text-muted-foreground">

@@ -23,7 +23,12 @@ export const biddingApi = {
 
     const endpoint = `/bidding/sessions/company/${companyId}`;
     const url = query.toString() ? `${endpoint}?${query.toString()}` : endpoint;
-    const { data } = await apiClient.get<CompanyBiddingSessionsResponse>(url);
-    return data;
+    const { data } = await apiClient.get<
+      | CompanyBiddingSessionsResponse
+      | { data: CompanyBiddingSessionsResponse }
+    >(url);
+    return (data && typeof data === 'object' && 'data' in data
+      ? data.data
+      : data) as CompanyBiddingSessionsResponse;
   },
 };
