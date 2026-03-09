@@ -11,8 +11,9 @@ export function NavUser() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  const { user: reduxUser, otherInfo } = useAppSelector((state) => state.auth);
+  const { user: reduxUser, otherInfo, company } = useAppSelector((state) => state.auth);
   const email = reduxUser?.email || '';
+  const companyName = company?.name || null;
 
   // Fetch latest user info from API
   const { data, isLoading } = useGetUserByEmail(email);
@@ -74,6 +75,11 @@ export function NavUser() {
                 {displayRole && (
                   <div className="text-xs text-muted-foreground truncate">
                     {displayRole}
+                  </div>
+                )}
+                {(user.role === 'operator' || otherInfo?.operatorRole) && companyName && (
+                  <div className="text-xs text-orange-600 truncate font-medium">
+                    {companyName}
                   </div>
                 )}
               </div>

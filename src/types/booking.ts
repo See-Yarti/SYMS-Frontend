@@ -62,6 +62,7 @@ export type Booking = {
   pickup?: LocationPoint;
   dropoff?: LocationPoint;
   createdAt: string;
+  fromBidding?: boolean;
 };
 
 export type BookingMeta = {
@@ -169,6 +170,19 @@ export type BookingDetail = {
   cdwCommissionAmount?: string | null;
   cdwOption?: string | null;
   cdwBreakdown?: any | null;
+  addons?: Array<{
+    id: string;
+    addonKey: string;
+    addonName: string;
+    perDayRate: string;
+    rentalDays: number;
+    totalAmount: string;
+  }>;
+  addonsTotal?: string | null;
+  addonsCommission?: string | null;
+  addonsOperatorPayout?: string | null;
+  fromBidding?: boolean;
+  acceptedBidAmount?: string | null;
   cancelledBy: string | null;
   cancellationReason: string | null;
   cancelledAt: string | null;

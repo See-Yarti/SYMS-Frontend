@@ -58,6 +58,7 @@ import {
   AlertCircle,
   Check,
   MoreVertical,
+  TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -137,6 +138,45 @@ const formatTime = (value?: string | null) => {
   }).format(date);
 };
 
+const formatCancellationType = (value?: string | null) => {
+  if (!value) return '—';
+  return value
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (ch) => ch.toUpperCase());
+};
+
+const getBookingCancellationType = (booking: unknown): CancelType | null => {
+  if (!booking || typeof booking !== 'object') return null;
+  const asRecord = booking as Record<string, unknown>;
+
+  const fromReason =
+    typeof asRecord.cancellationReason === 'string'
+      ? asRecord.cancellationReason
+      : null;
+  const fromBreakdown =
+    asRecord.accountingBreakdown &&
+    typeof asRecord.accountingBreakdown === 'object' &&
+    typeof (asRecord.accountingBreakdown as Record<string, unknown>).cancelType ===
+      'string'
+      ? ((asRecord.accountingBreakdown as Record<string, unknown>)
+          .cancelType as string)
+      : null;
+
+  const candidate = (fromReason ?? fromBreakdown)?.toUpperCase();
+  const supported: CancelType[] = [
+    'FREE_CANCEL',
+    'LATE_CANCEL',
+    'NO_SHOW',
+    'CUSTOMER_FAULT',
+    'OPERATOR_FAULT',
+    'PARTIAL_USE',
+  ];
+  return candidate && supported.includes(candidate as CancelType)
+    ? (candidate as CancelType)
+    : null;
+};
+
 const BookingDetails: React.FC = () => {
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
@@ -188,9 +228,7 @@ const BookingDetails: React.FC = () => {
   const handleEditClick = () => {
     if (booking?.status === 'CANCELLED') {
       // Pre-populate with existing cancellation data if available
-      // Note: We'll need to get cancelType from booking data if available
-      // For now, we'll set default and let user change it
-      setCancelType('LATE_CANCEL'); // Default, user can change
+      setCancelType(getBookingCancellationType(booking) ?? 'LATE_CANCEL');
       setCancelNote(booking.cancellationReason || '');
       setCancelResponse(null); // Clear previous response
       setIsCancelDialogOpen(true);
@@ -271,6 +309,53 @@ const BookingDetails: React.FC = () => {
   const paymentKey = booking.paidStatus?.toUpperCase() ?? 'PENDING';
   const paymentStyle =
     paymentStatusStyles[paymentKey] ?? paymentStatusStyles.PENDING;
+  const cancellationType = getBookingCancellationType(booking);
+  const addonItemsFromBooking = Array.isArray(booking.addons) ? booking.addons : [];
+  const snapshotAddonItems =
+    booking &&
+    typeof booking === 'object' &&
+    'priceBreakdown' in (booking as Record<string, unknown>) &&
+    (booking as { priceBreakdown?: { addons?: { items?: unknown } } }).priceBreakdown
+      ?.addons?.items &&
+    Array.isArray(
+      (booking as { priceBreakdown?: { addons?: { items?: unknown } } }).priceBreakdown
+        ?.addons?.items,
+    )
+      ? (booking as {
+          priceBreakdown?: {
+            addons?: {
+              items?: Array<{
+                key?: string;
+                name?: string;
+                perDayRate?: string | number;
+                rentalDays?: number;
+                totalAmount?: string | number;
+              }>;
+            };
+          };
+        }).priceBreakdown?.addons?.items ?? []
+      : [];
+  const addonItems =
+    addonItemsFromBooking.length > 0
+      ? addonItemsFromBooking
+      : snapshotAddonItems.map((item, idx) => ({
+          id: `snapshot-${idx}`,
+          addonKey: String(item.key ?? 'UNKNOWN'),
+          addonName: String(item.name ?? item.key ?? 'Addon'),
+          perDayRate: String(item.perDayRate ?? '0'),
+          rentalDays: Number(item.rentalDays ?? 1),
+          totalAmount: String(item.totalAmount ?? '0'),
+        }));
+  const computedAddonsTotal = addonItems.reduce(
+    (sum, addon) => sum + Number(addon.totalAmount || 0),
+    0,
+  );
+  const addonsTotalValue =
+    booking.addonsTotal != null
+      ? Number(booking.addonsTotal)
+      : computedAddonsTotal > 0
+        ? computedAddonsTotal
+        : null;
 
   return (
     <div className="p-6 space-y-6">
@@ -305,6 +390,17 @@ const BookingDetails: React.FC = () => {
         </button>
 
         <div className="flex items-center gap-3">
+          {booking.fromBidding && (
+            <span className="inline-flex items-center gap-1.5 h-12 px-3 py-1.5 text-sm font-semibold rounded-xl bg-purple-50 border border-purple-200 text-purple-700">
+              <TrendingUp className="h-4 w-4" />
+              Bid Booking
+              {booking.acceptedBidAmount && (
+                <span className="ml-1">
+                  (${parseFloat(booking.acceptedBidAmount).toFixed(2)})
+                </span>
+              )}
+            </span>
+          )}
           <span
             className={cn(
               'inline-flex items-center gap-1.5 h-12 px-3 py-1.5 text-sm font-medium rounded-xl',
@@ -663,6 +759,16 @@ const BookingDetails: React.FC = () => {
                   </p>
                 </div>
                 {isAdmin && (
+                  <div>
+                    <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">
+                      Cancellation Type
+                    </p>
+                    <p className="text-sm text-foreground">
+                      {formatCancellationType(cancellationType)}
+                    </p>
+                  </div>
+                )}
+                {isAdmin && (
                   <>
                     <div>
                       <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">
@@ -997,6 +1103,57 @@ const BookingDetails: React.FC = () => {
                 </div>
               </div>
             </div>
+          </Card>
+
+          {/* Add-ons */}
+          <Card className="p-6 bg-card border border-border rounded-xl">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-xl bg-[#F56304] dark:bg-orange-900/30 flex items-center justify-center">
+                <Receipt className="h-5 w-5 text-white" />
+              </div>
+              <h2 className="text-lg font-medium text-foreground">Add-ons</h2>
+            </div>
+
+            {addonItems.length > 0 ? (
+              <div className="space-y-3">
+                {addonItems.map((addon) => (
+                  <div
+                    key={addon.id}
+                    className="flex items-center justify-between py-2 border-b border-border last:border-0"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        {addon.addonName || addon.addonKey}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatCurrency(addon.perDayRate)} x {addon.rentalDays} day
+                        {addon.rentalDays > 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    <p className="text-sm font-semibold text-foreground">
+                      {formatCurrency(addon.totalAmount)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg bg-muted/50 p-4 text-center">
+                <p className="text-sm text-muted-foreground">
+                  {addonsTotalValue != null && addonsTotalValue > 0
+                    ? 'Add-on total exists, but item-level details are unavailable for this booking record.'
+                    : 'No add-ons selected for this booking.'}
+                </p>
+              </div>
+            )}
+
+            {addonsTotalValue != null && addonsTotalValue > 0 && (
+              <div className="mt-4 p-3 rounded-lg bg-muted/40 border border-border flex items-center justify-between">
+                <p className="text-sm font-medium text-foreground">Add-ons Total</p>
+                <p className="text-base font-semibold text-foreground">
+                  {formatCurrency(addonsTotalValue)}
+                </p>
+              </div>
+            )}
           </Card>
 
           {/* Taxes Breakdown */}

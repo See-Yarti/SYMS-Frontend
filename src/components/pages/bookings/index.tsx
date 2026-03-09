@@ -485,6 +485,9 @@ const AllBookings: React.FC = () => {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Booking Code
                 </th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Type
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Company
                 </th>
@@ -515,7 +518,7 @@ const AllBookings: React.FC = () => {
               {isLoading ? (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={10}
                     className="px-4 py-12 text-center text-muted-foreground"
                   >
                     <div className="flex items-center justify-center gap-2">
@@ -526,7 +529,7 @@ const AllBookings: React.FC = () => {
                 </tr>
               ) : bookings.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center">
+                  <td colSpan={10} className="px-4 py-12 text-center">
                     <CalendarRange className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
                     <p className="text-lg font-semibold text-foreground">
                       No bookings found
@@ -565,6 +568,18 @@ const AllBookings: React.FC = () => {
                         >
                           {booking.bookingCode || `#${booking.id.slice(0, 8)}`}
                         </button>
+                      </td>
+
+                      {/* Type - Bid or Regular */}
+                      <td className="px-4 py-3 whitespace-nowrap text-center">
+                        {booking.fromBidding ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-purple-50 text-purple-700 border border-purple-200">
+                            <CircleDot className="w-3 h-3" />
+                            Bid
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </td>
 
                       {/* Company */}

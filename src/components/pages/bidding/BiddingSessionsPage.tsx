@@ -255,15 +255,11 @@ export default function BiddingSessionsPage() {
                   <TableRow>
                     <TableHead>Session ID</TableHead>
                     <TableHead>Customer Name</TableHead>
-                    <TableHead>Customer Email</TableHead>
                     <TableHead>Car Class</TableHead>
                     <TableHead>Pickup Date</TableHead>
                     <TableHead>Drop Date</TableHead>
                     <TableHead>Time</TableHead>
-                    <TableHead>Location ID</TableHead>
-                    <TableHead>Location Title</TableHead>
-                    <TableHead>Location City</TableHead>
-                    <TableHead>Location Address</TableHead>
+                    <TableHead>Location Name</TableHead>
                     <TableHead>Actual Rental</TableHead>
                     <TableHead>Currency</TableHead>
                     <TableHead>Attempt #</TableHead>
@@ -283,7 +279,7 @@ export default function BiddingSessionsPage() {
                 <TableBody>
                   {items.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={24} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={21} className="text-center py-8 text-muted-foreground">
                         No bidding sessions found for current filters.
                       </TableCell>
                     </TableRow>
@@ -292,18 +288,14 @@ export default function BiddingSessionsPage() {
                       <TableRow key={item.id} className="hover:bg-gray-50/80">
                         <TableCell className="font-mono text-xs">{item.id}</TableCell>
                         <TableCell className="whitespace-nowrap">{item.customerName || '—'}</TableCell>
-                        <TableCell className="whitespace-nowrap">{item.customerEmail || '—'}</TableCell>
                         <TableCell className="whitespace-nowrap">{item.carClass || '—'}</TableCell>
                         <TableCell className="whitespace-nowrap">{formatDate(item.pickupDate)}</TableCell>
                         <TableCell className="whitespace-nowrap">{formatDate(item.dropDate)}</TableCell>
                         <TableCell>
                           {formatTime(item.pickupTime)} - {formatTime(item.dropTime)}
                         </TableCell>
-                        <TableCell className="font-mono text-xs">{item.location?.id || '—'}</TableCell>
-                        <TableCell className="whitespace-nowrap">{item.location?.title || '—'}</TableCell>
-                        <TableCell className="whitespace-nowrap">{item.location?.city || '—'}</TableCell>
-                        <TableCell className="max-w-[280px] truncate" title={item.location?.addressLine || ''}>
-                          {item.location?.addressLine || '—'}
+                        <TableCell className="max-w-[280px] truncate" title={getLocationLabel(item)}>
+                          {getLocationLabel(item)}
                         </TableCell>
                         <TableCell className="whitespace-nowrap">{formatCurrency(item.actualRentalAmount, item.currency)}</TableCell>
                         <TableCell className="whitespace-nowrap">{item.currency || '—'}</TableCell>

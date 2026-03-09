@@ -4,6 +4,7 @@
 import React, { useState } from 'react';
 import { useAppSelector } from '@/store';
 import { useGetUserByEmail } from '@/hooks/useOperatorApi';
+import { useGetCompany } from '@/hooks/useCompanyApi';
 import { Card } from '@/components/ui/card';
 import {
   Select,
@@ -585,7 +586,7 @@ const TopCompanyItem: React.FC<TopCompanyProps> = ({
 };
 
 const Home: React.FC = () => {
-  const { user: authUser } = useAppSelector((state) => state.auth);
+  const { user: authUser, company, otherInfo } = useAppSelector((state) => state.auth);
   const [revenueView, setRevenueView] = useState<
     'daily' | 'monthly' | 'yearly'
   >('daily');
@@ -600,6 +601,14 @@ const Home: React.FC = () => {
   } = useGetUserByEmail(email);
 
   const user = userRes?.data?.user;
+  const isOperator = authUser?.role === 'operator' || otherInfo?.operatorRole != null;
+  const operatorCompanyId = otherInfo?.companyId || null;
+  
+  const { data: companyRes } = useGetCompany(operatorCompanyId || '');
+  const fetchedCompanyName = companyRes?.data?.company?.name || null;
+  const companyName = company?.name || fetchedCompanyName;
+  
+  console.log('[DASHBOARD] Debug - user role:', authUser?.role, 'operatorRole:', otherInfo?.operatorRole, 'companyId:', operatorCompanyId, 'companyName:', companyName, 'isOperator:', isOperator);
 
   const stats = {
     totalRevenue: '$102k',
@@ -648,6 +657,12 @@ const Home: React.FC = () => {
         <p className="text-muted-foreground text-sm mt-1">
           Here's what's happening with your platform today.
         </p>
+        {isOperator && companyName && (
+          <div className="mt-3 inline-flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-lg px-4 py-2">
+            <Building2 className="h-4 w-4 text-orange-600" />
+            <span className="text-sm font-semibold text-orange-900">{companyName}</span>
+          </div>
+        )}
       </div>
 
       {/* Stats Grid */}

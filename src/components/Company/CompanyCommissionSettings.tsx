@@ -128,6 +128,8 @@ function CompanyCommissionSettingsPage() {
   // Use new settings API for CDW data
   // useFetchData already extracts data.data, so settingsRes is CompanySettingsResponse directly
   const cdwSettings = settingsRes?.settings?.cdw || null;
+  const addonsCommissionSettings = settingsRes?.settings?.addonsCommission || null;
+  const addonsCommissionPct = addonsCommissionSettings?.addonsCommissionPercentage || '0';
 
   // Get status commission settings
   const lateCancelSetting = scs.LATE_CANCEL as
@@ -488,6 +490,57 @@ function CompanyCommissionSettingsPage() {
                       Enable it in edit mode to configure CDW settings
                     </p>
                   </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Add-ons Commission Card */}
+            <Card className="overflow-hidden border-l-4 border-l-purple-500 shadow-sm">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Percent className="h-5 w-5 text-purple-600" />
+                    <CardTitle className="text-sm font-semibold">
+                      Add-ons Commission
+                    </CardTitle>
+                  </div>
+                  <span className="rounded-full bg-purple-100 px-2.5 py-1 text-xs font-semibold text-purple-700">
+                    {parseFloat(addonsCommissionPct) > 0 ? 'ACTIVE' : 'NOT SET'}
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {settingsLoading ? (
+                  <div className="rounded-lg bg-gray-50 p-4 text-center">
+                    <Loader2 className="h-4 w-4 animate-spin mx-auto text-gray-400" />
+                    <p className="text-sm text-gray-600 mt-2">Loading...</p>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-gray-600">
+                        Platform Commission on Add-ons
+                      </p>
+                      <p className="mt-1 text-4xl font-bold text-purple-700">
+                        {addonsCommissionPct}%
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-purple-50 p-3">
+                      <p className="text-xs font-medium uppercase tracking-wide text-gray-600">
+                        Operator Payout
+                      </p>
+                      <p className="mt-1 text-2xl font-bold text-green-700">
+                        {100 - parseFloat(addonsCommissionPct)}%
+                      </p>
+                    </div>
+                    {parseFloat(addonsCommissionPct) === 0 && (
+                      <div className="rounded-lg bg-gray-50 p-3 text-center">
+                        <p className="text-xs text-gray-600">
+                          No commission on add-ons. Operator keeps 100% of add-ons revenue.
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
               </CardContent>
             </Card>
