@@ -86,6 +86,7 @@ const formatTime = (value?: string | null) => {
   return new Intl.DateTimeFormat('en-US', {
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'UTC',
   }).format(date);
 };
 
@@ -253,7 +254,7 @@ export default function BiddingSessionsPage() {
                 <Table className="min-w-[2400px] text-sm">
                 <TableHeader className="bg-gray-50">
                   <TableRow>
-                    <TableHead>Session ID</TableHead>
+                    <TableHead>Bid Code</TableHead>
                     <TableHead>Customer Name</TableHead>
                     <TableHead>Car Class</TableHead>
                     <TableHead>Pickup Date</TableHead>
@@ -286,7 +287,7 @@ export default function BiddingSessionsPage() {
                   ) : (
                     items.map((item) => (
                       <TableRow key={item.id} className="hover:bg-gray-50/80">
-                        <TableCell className="font-mono text-xs">{item.id}</TableCell>
+                        <TableCell className="font-mono text-xs">{item.bidCode ?? item.id}</TableCell>
                         <TableCell className="whitespace-nowrap">{item.customerName || '—'}</TableCell>
                         <TableCell className="whitespace-nowrap">{item.carClass || '—'}</TableCell>
                         <TableCell className="whitespace-nowrap">{formatDate(item.pickupDate)}</TableCell>

@@ -31,6 +31,7 @@ export interface BiddingSessionLocationInfo {
 
 export interface CompanyBiddingSessionItem {
   id: string;
+  bidCode?: string | null;
   customerName: string | null;
   customerEmail: string | null;
   carClass: string | null;
