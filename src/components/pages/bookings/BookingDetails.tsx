@@ -310,6 +310,8 @@ const BookingDetails: React.FC = () => {
   const paymentStyle =
     paymentStatusStyles[paymentKey] ?? paymentStatusStyles.PENDING;
   const cancellationType = getBookingCancellationType(booking);
+  
+  console.log('[BOOKING DETAIL] fromBidding:', booking.fromBidding, 'acceptedBidAmount:', booking.acceptedBidAmount);
   const addonItemsFromBooking = Array.isArray(booking.addons) ? booking.addons : [];
   const snapshotAddonItems =
     booking &&
@@ -501,6 +503,115 @@ const BookingDetails: React.FC = () => {
           </DropdownMenu>
         </div>
       </div>
+
+      {/* Booking Status/Type Alert */}
+      {booking.status === 'CANCELLED' ? (
+        <Card className="p-6 bg-rose-50 border-2 border-rose-200 rounded-xl">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-rose-600 flex-shrink-0">
+              <XCircle className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="text-lg font-bold text-rose-900">
+                  Booking Cancelled
+                </h3>
+                <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-rose-600 text-white text-xs font-semibold uppercase">
+                  CANCELLED
+                </span>
+              </div>
+              <p className="text-sm text-rose-800">
+                This booking was cancelled on {formatDateTime(booking.cancelledAt)}
+              </p>
+              <div className="mt-3 space-y-2">
+                {cancellationType && (
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-rose-700" />
+                    <div>
+                      <p className="text-xs font-medium text-rose-700 uppercase">
+                        Cancellation Type
+                      </p>
+                      <p className="text-sm font-semibold text-rose-900">
+                        {formatCancellationType(cancellationType)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {booking.cancellationReason && (
+                  <div className="flex items-start gap-2">
+                    <Receipt className="h-4 w-4 text-rose-700 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-medium text-rose-700 uppercase">
+                        Cancellation Reason
+                      </p>
+                      <p className="text-sm text-rose-900">
+                        {booking.cancellationReason}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </Card>
+      ) : booking.fromBidding ? (
+        <Card className="p-6 bg-purple-50 border-2 border-purple-200 rounded-xl">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-600 flex-shrink-0">
+              <TrendingUp className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="text-lg font-bold text-purple-900">
+                  Bid Booking - Approved
+                </h3>
+                <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-purple-600 text-white text-xs font-semibold uppercase">
+                  BID ACCEPTED
+                </span>
+              </div>
+              <p className="text-sm text-purple-800">
+                This booking was created from an accepted customer bid on{' '}
+                {formatDateTime(booking.createdAt)}
+              </p>
+              {booking.acceptedBidAmount && (
+                <div className="mt-3 flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-purple-700" />
+                  <div>
+                    <p className="text-xs font-medium text-purple-700 uppercase">
+                      Accepted Bid Amount
+                    </p>
+                    <p className="text-lg font-bold text-purple-900">
+                      {formatCurrency(booking.acceptedBidAmount)}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+      ) : (
+        <Card className="p-6 bg-emerald-50 border-2 border-emerald-200 rounded-xl">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-600 flex-shrink-0">
+              <Check className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-2">
+                <h3 className="text-lg font-bold text-emerald-900">
+                  Direct Booking
+                </h3>
+                <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-emerald-600 text-white text-xs font-semibold uppercase">
+                  REGULAR RESERVATION
+                </span>
+              </div>
+              <p className="text-sm text-emerald-800">
+                This booking was created through standard reservation flow on{' '}
+                {formatDateTime(booking.createdAt)}
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Details - 2 columns */}

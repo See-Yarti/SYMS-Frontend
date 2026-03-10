@@ -273,6 +273,7 @@ export default function TaxDialog({
             />
           </div>
 
+          {/* Tax Type - FIXED temporarily commented out */}
           <div>
             <Label>Tax Type *</Label>
             <Select
@@ -280,15 +281,19 @@ export default function TaxDialog({
               onValueChange={(value: 'PERCENTAGE' | 'FIXED') =>
                 setTaxType(value)
               }
+              disabled
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select tax type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="PERCENTAGE">Percentage</SelectItem>
-                <SelectItem value="FIXED">Fixed Amount</SelectItem>
+                {/* <SelectItem value="FIXED">Fixed Amount</SelectItem> */}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Only percentage-based taxes are supported at this time.
+            </p>
           </div>
 
           {taxType === 'PERCENTAGE' ? (

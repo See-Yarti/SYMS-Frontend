@@ -536,34 +536,6 @@ export default function ProfileUpdate() {
         </div>
       </div>
 
-      {/* Danger Zone */}
-      <div className="bg-[#FEF2F2] dark:bg-red-950/20 rounded-2xl p-4 sm:p-6 border border-[#FFC9C9] dark:border-red-900/40">
-        <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-[#E7000B] flex items-center justify-center">
-            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-          </div>
-          <h3 className="text-base sm:text-lg font-medium">Danger Zone</h3>
-        </div>
-
-        <div className="bg-white dark:bg-card rounded-xl p-4 sm:p-5 border border-[#FFC9C9]">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <h4 className="font-normal text-sm sm:text-base text-foreground">
-                Deactivate Account
-              </h4>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                Temporarily disable your account. You can reactivate it anytime.
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              className="border-[#E7000B] rounded-lg sm:rounded-xl text-[#E7000B] hover:bg-[#FFF7ED] hover:text-[#EA580C] w-full sm:w-auto"
-            >
-              Deactivate
-            </Button>
-          </div>
-        </div>
-      </div>
 
       {/* Footer Buttons - Only show when editing */}
       {isEditing && (

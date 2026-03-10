@@ -21,6 +21,7 @@ type AddonFormItem = {
   description: string;
   isEnabled: boolean;
   perDayRate: string;
+  chargeType: 'per_day' | 'one_time';
 };
 
 export default function AddonsPage() {
@@ -51,9 +52,19 @@ export default function AddonsPage() {
           a.perDayRate != null && Number.isFinite(Number(a.perDayRate))
             ? String(a.perDayRate)
             : '',
+        chargeType: a.chargeType || 'per_day',
       })),
     );
   }, [data]);
+
+  const dailyAddons = React.useMemo(
+    () => addons.filter((a) => a.chargeType === 'per_day'),
+    [addons],
+  );
+  const oneTimeAddons = React.useMemo(
+    () => addons.filter((a) => a.chargeType === 'one_time'),
+    [addons],
+  );
 
   const handleToggle = (key: string, checked: boolean) => {
     setAddons((prev) =>
@@ -155,42 +166,101 @@ export default function AddonsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {addons.map((addon) => (
-          <Card key={addon.key} className="rounded-xl border border-gray-200 shadow-sm">
-            <CardContent className="p-4 space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900">{addon.name}</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">{addon.description}</p>
-                </div>
-                <Switch
-                  checked={addon.isEnabled}
-                  onCheckedChange={(checked) => handleToggle(addon.key, checked)}
-                  className="data-[state=checked]:bg-[#F56304]"
-                />
-              </div>
+      {/* Daily Charges Section */}
+      {dailyAddons.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="h-1 w-1 rounded-full bg-blue-600" />
+            <h3 className="text-base font-bold text-gray-900">
+              Daily Charges (Charged Per Day)
+            </h3>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {dailyAddons.map((addon) => (
+              <Card key={addon.key} className="rounded-xl border border-gray-200 shadow-sm">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900">{addon.name}</h4>
+                      <p className="text-xs text-gray-500 mt-0.5">{addon.description}</p>
+                    </div>
+                    <Switch
+                      checked={addon.isEnabled}
+                      onCheckedChange={(checked) => handleToggle(addon.key, checked)}
+                      className="data-[state=checked]:bg-[#F56304]"
+                    />
+                  </div>
 
-              <div>
-                <Label className="text-xs text-muted-foreground">Per day rate</Label>
-                <div className="mt-1.5 flex items-center">
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={addon.perDayRate}
-                    onChange={(e) => handleRateChange(addon.key, e.target.value)}
-                    disabled={!addon.isEnabled}
-                    placeholder="0.00"
-                    className="h-10 flex-1 rounded-lg border-gray-200 bg-gray-50"
-                  />
-                  <span className="ml-2 text-sm text-gray-500">USD</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Per day rate</Label>
+                    <div className="mt-1.5 flex items-center">
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={addon.perDayRate}
+                        onChange={(e) => handleRateChange(addon.key, e.target.value)}
+                        disabled={!addon.isEnabled}
+                        placeholder="0.00"
+                        className="h-10 flex-1 rounded-lg border-gray-200 bg-gray-50"
+                      />
+                      <span className="ml-2 text-sm text-gray-500">USD/day</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* One-Time Charges Section */}
+      {oneTimeAddons.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="h-1 w-1 rounded-full bg-purple-600" />
+            <h3 className="text-base font-bold text-gray-900">
+              One-Time Charges (Charged Once Per Rental)
+            </h3>
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {oneTimeAddons.map((addon) => (
+              <Card key={addon.key} className="rounded-xl border border-gray-200 shadow-sm">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900">{addon.name}</h4>
+                      <p className="text-xs text-gray-500 mt-0.5">{addon.description}</p>
+                    </div>
+                    <Switch
+                      checked={addon.isEnabled}
+                      onCheckedChange={(checked) => handleToggle(addon.key, checked)}
+                      className="data-[state=checked]:bg-[#F56304]"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs text-muted-foreground">One-time rate</Label>
+                    <div className="mt-1.5 flex items-center">
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={addon.perDayRate}
+                        onChange={(e) => handleRateChange(addon.key, e.target.value)}
+                        disabled={!addon.isEnabled}
+                        placeholder="0.00"
+                        className="h-10 flex-1 rounded-lg border-gray-200 bg-gray-50"
+                      />
+                      <span className="ml-2 text-sm text-gray-500">USD</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       {addons.length === 0 && (
         <Card className="rounded-xl border border-gray-200 shadow-sm">

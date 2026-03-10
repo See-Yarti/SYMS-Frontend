@@ -4,6 +4,7 @@ export interface LocationAddonItem {
   description: string;
   isEnabled: boolean;
   perDayRate: number | null;
+  chargeType?: 'per_day' | 'one_time';
 }
 
 export interface LocationAddonsResponse {
