@@ -193,6 +193,7 @@ export const useUpdateOperator = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['operators'] });
+      queryClient.invalidateQueries({ queryKey: ['user'] });
     },
   });
 };
@@ -224,6 +225,9 @@ export const useUpdateAdmin = () => {
 
       // Assuming a similar response shape to operator update; adjust if your API differs
       return data?.data?.user ?? data?.data?.data?.user ?? data?.user;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['user'] });
     },
   });
 };

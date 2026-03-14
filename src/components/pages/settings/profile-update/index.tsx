@@ -36,6 +36,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Briefcase,
+  Camera,
 } from 'lucide-react';
 
 // Validation schema
@@ -54,6 +55,7 @@ export default function ProfileUpdate() {
   const { user: authUser, otherInfo } = useAppSelector((state) => state.auth);
   const email = authUser?.email || '';
   const [isEditing, setIsEditing] = useState(false);
+  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
 
   // Fetch user profile from backend via email
   const { data, isLoading, isError, refetch } = useGetUserByEmail(email);
@@ -99,6 +101,12 @@ export default function ProfileUpdate() {
     }
   }, [user, form]);
 
+  useEffect(() => {
+    return () => {
+      if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
+    };
+  }, [avatarPreviewUrl]);
+
   const onSubmit = (values: ProfileFormValues) => {
     if (!user) {
       toast.error('User data not available');
@@ -119,6 +127,7 @@ export default function ProfileUpdate() {
 
     const commonCallbacks = {
       onSuccess: () => {
+        setAvatarPreviewUrl(null);
         toast.success('Profile updated successfully');
         setIsEditing(false);
         refetch();
@@ -218,7 +227,9 @@ export default function ProfileUpdate() {
           <div className="flex flex-col sm:flex-row items-center sm:items-start sm:justify-between gap-4">
             <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
               <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-4 border-[#2A2A2A]">
-                <AvatarImage src={user.avatar || undefined} />
+                <AvatarImage
+                  src={avatarPreviewUrl || user.avatar || undefined}
+                />
                 <AvatarFallback className="bg-white text-[#F97316] text-2xl sm:text-4xl font-normal">
                   {getInitials(user.name)}
                 </AvatarFallback>
@@ -245,7 +256,13 @@ export default function ProfileUpdate() {
               </div>
             </div>
             <Button
-              onClick={() => setIsEditing(!isEditing)}
+              onClick={() => {
+                if (isEditing && avatarPreviewUrl) {
+                  URL.revokeObjectURL(avatarPreviewUrl);
+                  setAvatarPreviewUrl(null);
+                }
+                setIsEditing(!isEditing);
+              }}
               className="bg-[#F97316] hover:bg-[#EA580C] text-xs sm:text-sm text-white px-4 sm:px-6 h-9 sm:h-11 w-full sm:w-auto"
             >
               {isEditing ? 'Cancel' : 'Edit Profile'}
@@ -330,6 +347,65 @@ export default function ProfileUpdate() {
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-4 sm:space-y-5"
           >
+            <FormField
+              control={form.control}
+              name="avatar"
+              render={({ field: { value, onChange, ...field } }) => (
+                <FormItem>
+                  <FormLabel className="text-muted-foreground text-xs sm:text-sm font-normal">
+                    Profile photo
+                  </FormLabel>
+                  <div className="flex flex-wrap items-center gap-4">
+                    <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-2 border-[#E5E7EB]">
+                      <AvatarImage
+                        src={
+                          avatarPreviewUrl ||
+                          user.avatar ||
+                          undefined
+                        }
+                      />
+                      <AvatarFallback className="bg-muted text-muted-foreground text-xl">
+                        {getInitials(user.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    {isEditing && (
+                      <div className="flex flex-col gap-1">
+                        <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#E5E7EB] bg-[#F9FAFB] hover:bg-[#F3F4F6] text-sm font-medium text-foreground transition-colors">
+                          <Camera className="w-4 h-4" />
+                          <span>Upload photo</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="sr-only"
+                            {...field}
+                            onChange={(e) => {
+                              const files = e.target.files;
+                              if (files?.[0]) {
+                                if (avatarPreviewUrl)
+                                  URL.revokeObjectURL(avatarPreviewUrl);
+                                setAvatarPreviewUrl(
+                                  URL.createObjectURL(files[0]),
+                                );
+                                onChange(files);
+                              }
+                            }}
+                          />
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          JPG, PNG or GIF. Max 5MB.
+                        </p>
+                        {value?.length > 0 && (
+                          <p className="text-xs text-emerald-600">
+                            New photo selected
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
               <FormField
                 control={form.control}
